@@ -1,0 +1,1 @@
+Align admin UI to single-role model via update_user_role RPC. The change updates src/pages/Admin.tsx to display only the primary role and uses the existing update_user_role RPC to update roles (avoids duplicate key errors).
