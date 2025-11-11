@@ -12,11 +12,11 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>; 
-  signUp: (email: string, password: string, nome: string) => Promise<{ error: any }>; 
-  signOut: () => Promise<void>; 
-  userRole: string | null; 
-  hasRole: (role: string) => boolean; 
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, nome: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  userRole: string | null;
+  hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
