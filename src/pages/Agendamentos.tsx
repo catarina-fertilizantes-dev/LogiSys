@@ -112,7 +112,7 @@ const Agendamentos = () => {
                     const active = selectedStatuses.includes(st);
                     const label = st === "pendente" ? "Pendente" : st === "confirmado" ? "Confirmado" : st === "concluido" ? "Concluído" : "Cancelado";
                     return (
-                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}>
+                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
                         {label}
                       </Badge>
                     );

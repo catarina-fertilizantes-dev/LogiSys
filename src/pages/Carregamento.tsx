@@ -117,7 +117,7 @@ const Carregamento = () => {
                     const active = selectedStatuses.includes(st);
                     const label = st === "aguardando" ? "Aguardando" : st === "em_andamento" ? "Em Andamento" : st === "concluido" ? "Concluído" : "Cancelado";
                     return (
-                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}>
+                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
                         {label}
                       </Badge>
                     );
@@ -131,7 +131,7 @@ const Carregamento = () => {
                     {allWarehouses.map((w) => {
                       const active = selectedWarehouses.includes(w);
                       return (
-                        <Badge key={String(w)} onClick={() => toggleWarehouse(w)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}>
+                        <Badge key={String(w)} onClick={() => toggleWarehouse(w)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
                           Armazém {String(w)}
                         </Badge>
                       );
