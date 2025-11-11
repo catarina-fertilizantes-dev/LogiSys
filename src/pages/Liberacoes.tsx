@@ -116,7 +116,7 @@ const Liberacoes = () => {
                     const active = selectedStatuses.includes(st);
                     const label = st === "pendente" ? "Pendente" : st === "parcial" ? "Parcial" : st === "concluido" ? "Concluído" : "Cancelado";
                     return (
-                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}>
+                      <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
                         {label}
                       </Badge>
                     );
@@ -130,7 +130,7 @@ const Liberacoes = () => {
                     {allArmazens.map((a) => {
                       const active = selectedArmazens.includes(a);
                       return (
-                        <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}>
+                        <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
                           {a}
                         </Badge>
                       );

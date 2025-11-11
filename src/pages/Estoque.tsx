@@ -225,7 +225,7 @@ const Estoque = () => {
                       <Badge
                         key={st}
                         onClick={() => toggleStatus(st)}
-                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}
+                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}
                       >
                         {st === "normal" ? "Normal" : "Baixo"}
                       </Badge>
@@ -242,7 +242,7 @@ const Estoque = () => {
                       <Badge
                         key={w}
                         onClick={() => toggleWarehouse(w)}
-                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted"}`}
+                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}
                       >
                         {w}
                       </Badge>
