@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +52,8 @@ const parseDate = (d: string) => {
 
 const Estoque = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
 
   const { data: estoqueData, isLoading, error } = useQuery({
     queryKey: ["estoque"],
@@ -96,14 +99,127 @@ const Estoque = () => {
     unidade: "t" as Unidade,
   });
 
+  // Estado para edição inline
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editQuantity, setEditQuantity] = useState<string>("");
+
   const resetFormNovoProduto = () => {
     setNovoProduto({ nome: "", armazem: "", quantidade: "", unidade: "t" });
   };
 
-  const handleCreateProduto = () => {
-    // Functionality disabled - button is disabled in UI
-    // TODO: Implement real Supabase INSERT when this feature is enabled
-    toast({ variant: "destructive", title: "Funcionalidade desabilitada", description: "Adicionar novos produtos ainda não está implementado." });
+  const handleCreateProduto = async () => {
+    const { nome, armazem, quantidade, unidade } = novoProduto;
+
+    if (!nome.trim() || !armazem.trim() || !quantidade) {
+      toast({ variant: "destructive", title: "Preencha todos os campos" });
+      return;
+    }
+
+    const qtdNum = Number(quantidade);
+    if (Number.isNaN(qtdNum) || qtdNum <= 0) {
+      toast({ variant: "destructive", title: "Quantidade inválida" });
+      return;
+    }
+
+    try {
+      // 1. Buscar ou criar produto
+      let produtoId: string;
+      const { data: produtoExistente } = await supabase
+        .from("produtos")
+        .select("id")
+        .ilike("nome", nome.trim())
+        .single();
+
+      if (produtoExistente) {
+        produtoId = produtoExistente.id;
+      } else {
+        const { data: novoProd, error: errProd } = await supabase
+          .from("produtos")
+          .insert({ nome: nome.trim(), unidade })
+          .select("id")
+          .single();
+        
+        if (errProd) throw errProd;
+        produtoId = novoProd.id;
+      }
+
+      // 2. Buscar armazém pelo nome/cidade
+      const { data: armazemData, error: errArmazem } = await supabase
+        .from("armazens")
+        .select("id")
+        .or(`nome.ilike.%${armazem.trim()}%,cidade.ilike.%${armazem.trim()}%`)
+        .limit(1)
+        .single();
+
+      if (errArmazem || !armazemData) {
+        toast({ variant: "destructive", title: "Armazém não encontrado" });
+        return;
+      }
+
+      // 3. Inserir/atualizar estoque
+      const { data: userData } = await supabase.auth.getUser();
+      const { error: errEstoque } = await supabase
+        .from("estoque")
+        .upsert({
+          produto_id: produtoId,
+          armazem_id: armazemData.id,
+          quantidade: qtdNum,
+          updated_by: userData.user?.id,
+        }, {
+          onConflict: "produto_id,armazem_id"
+        });
+
+      if (errEstoque) throw errEstoque;
+
+      toast({ 
+        title: "Produto adicionado", 
+        description: `${nome} adicionado em ${armazem} com ${qtdNum} ${unidade}.` 
+      });
+
+      resetFormNovoProduto();
+      setDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["estoque"] });
+
+    } catch (err: unknown) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar produto",
+        description: err instanceof Error ? err.message : "Erro desconhecido"
+      });
+    }
+  };
+
+  const handleUpdateQuantity = async (id: string) => {
+    const newQty = Number(editQuantity);
+    if (Number.isNaN(newQty) || newQty < 0) {
+      toast({ variant: "destructive", title: "Quantidade inválida" });
+      return;
+    }
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("estoque")
+        .update({ 
+          quantidade: newQty,
+          updated_at: new Date().toISOString(),
+          updated_by: userData.user?.id,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Quantidade atualizada!" });
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["estoque"] });
+
+    } catch (err: unknown) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar",
+        description: err instanceof Error ? err.message : "Erro desconhecido"
+      });
+    }
   };
 
   /* ---------------- Filtros (compacto + colapsável) ---------------- */
@@ -192,7 +308,10 @@ const Estoque = () => {
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary" disabled={true}>
+              <Button 
+                className="bg-gradient-primary" 
+                disabled={!hasRole("logistica") && !hasRole("admin")}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Produto
               </Button>
@@ -329,13 +448,46 @@ const Estoque = () => {
                   </div>
                   <div className="flex items-center gap-5">
                     <div className="text-right">
-                      <p className="text-xl font-bold text-foreground">{item.quantidade} {item.unidade}</p>
-                      <p className="text-xs text-muted-foreground">Disponível</p>
+                      {editingId === item.id ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editQuantity}
+                          onChange={(e) => setEditQuantity(e.target.value)}
+                          className="w-24 h-8"
+                        />
+                      ) : (
+                        <>
+                          <p className="text-xl font-bold text-foreground">{item.quantidade} {item.unidade}</p>
+                          <p className="text-xs text-muted-foreground">Disponível</p>
+                        </>
+                      )}
                     </div>
                     <Badge variant={item.status === "baixo" ? "destructive" : "secondary"}>
                       {item.status === "baixo" ? "Estoque Baixo" : "Normal"}
                     </Badge>
-                    <Button variant="outline" size="sm">Atualizar</Button>
+                    {editingId === item.id ? (
+                      <>
+                        <Button variant="default" size="sm" onClick={() => handleUpdateQuantity(item.id)}>
+                          Salvar
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setEditingId(item.id);
+                          setEditQuantity(item.quantidade.toString());
+                        }}
+                        disabled={!hasRole("logistica") && !hasRole("admin")}
+                      >
+                        Atualizar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
