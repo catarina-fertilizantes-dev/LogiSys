@@ -122,58 +122,98 @@ const Estoque = () => {
     }
 
     try {
+      console.log("🔍 [DEBUG] Iniciando criação de produto:", { nome, armazem, quantidade, unidade });
+
       // 1. Buscar ou criar produto
       let produtoId: string;
-      const { data: produtoExistente } = await supabase
+      console.log("🔍 [DEBUG] Buscando produto existente...");
+      
+      const { data: produtoExistente, error: errBusca } = await supabase
         .from("produtos")
         .select("id")
         .ilike("nome", nome.trim())
-        .single();
+        .maybeSingle(); // Usar maybeSingle() em vez de single()
+
+      if (errBusca) {
+        console.error("❌ [ERROR] Erro ao buscar produto:", errBusca);
+        throw new Error(`Erro ao buscar produto: ${errBusca.message}`);
+      }
 
       if (produtoExistente) {
+        console.log("✅ [DEBUG] Produto existente encontrado:", produtoExistente.id);
         produtoId = produtoExistente.id;
       } else {
+        console.log("🔍 [DEBUG] Produto não existe, criando novo...");
         const { data: novoProd, error: errProd } = await supabase
           .from("produtos")
           .insert({ nome: nome.trim(), unidade })
           .select("id")
           .single();
         
-        if (errProd) throw errProd;
-        produtoId = novoProd.id;
+        if (errProd) {
+          console.error("❌ [ERROR] Erro ao criar produto:", errProd);
+          throw new Error(`Erro ao criar produto: ${errProd.message} (${errProd.code || 'N/A'})`);
+        }
+        
+        console.log("✅ [DEBUG] Produto criado:", novoProd.id);
+        produtoId = novoProd!.id;
       }
 
       // 2. Buscar armazém pelo nome/cidade
+      console.log("🔍 [DEBUG] Buscando armazém:", armazem.trim());
+      
       const { data: armazemData, error: errArmazem } = await supabase
         .from("armazens")
-        .select("id")
+        .select("id, nome, cidade")
         .or(`nome.ilike.%${armazem.trim()}%,cidade.ilike.%${armazem.trim()}%`)
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (errArmazem || !armazemData) {
-        toast({ variant: "destructive", title: "Armazém não encontrado" });
+      if (errArmazem) {
+        console.error("❌ [ERROR] Erro ao buscar armazém:", errArmazem);
+        throw new Error(`Erro ao buscar armazém: ${errArmazem.message}`);
+      }
+
+      if (!armazemData) {
+        console.error("❌ [ERROR] Armazém não encontrado:", armazem);
+        toast({ 
+          variant: "destructive", 
+          title: "Armazém não encontrado",
+          description: `Não foi possível encontrar o armazém "${armazem}". Verifique o nome.`
+        });
         return;
       }
 
+      console.log("✅ [DEBUG] Armazém encontrado:", armazemData);
+
       // 3. Inserir/atualizar estoque
+      console.log("🔍 [DEBUG] Inserindo/atualizando estoque...");
+      
       const { data: userData } = await supabase.auth.getUser();
-      const { error: errEstoque } = await supabase
+      
+      const { data: estoqueData, error: errEstoque } = await supabase
         .from("estoque")
         .upsert({
           produto_id: produtoId,
           armazem_id: armazemData.id,
           quantidade: qtdNum,
           updated_by: userData.user?.id,
+          updated_at: new Date().toISOString(),
         }, {
           onConflict: "produto_id,armazem_id"
-        });
+        })
+        .select();
 
-      if (errEstoque) throw errEstoque;
+      if (errEstoque) {
+        console.error("❌ [ERROR] Erro ao inserir estoque:", errEstoque);
+        throw new Error(`Erro ao atualizar estoque: ${errEstoque.message} (${errEstoque.code || 'N/A'})`);
+      }
+
+      console.log("✅ [SUCCESS] Estoque atualizado:", estoqueData);
 
       toast({ 
-        title: "Produto adicionado", 
-        description: `${nome} adicionado em ${armazem} com ${qtdNum} ${unidade}.` 
+        title: "Produto adicionado com sucesso!", 
+        description: `${nome} adicionado em ${armazemData.cidade || armazemData.nome} com ${qtdNum} ${unidade}.` 
       });
 
       resetFormNovoProduto();
@@ -181,10 +221,29 @@ const Estoque = () => {
       queryClient.invalidateQueries({ queryKey: ["estoque"] });
 
     } catch (err: unknown) {
+      console.error("❌ [ERROR] Erro geral ao criar produto:", err);
+      
+      let errorMessage = "Erro desconhecido";
+      let errorDetails = "";
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        errorDetails = err.stack || "";
+      } else if (typeof err === 'object' && err !== null) {
+        errorMessage = JSON.stringify(err, null, 2);
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao criar produto",
-        description: err instanceof Error ? err.message : "Erro desconhecido"
+        description: errorMessage,
+      });
+
+      // Log adicional para debugging
+      console.error("Detalhes completos do erro:", {
+        message: errorMessage,
+        details: errorDetails,
+        context: { nome, armazem, quantidade, unidade }
       });
     }
   };
@@ -197,27 +256,37 @@ const Estoque = () => {
     }
 
     try {
+      console.log("🔍 [DEBUG] Atualizando quantidade:", { id, newQty });
+      
       const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("estoque")
         .update({ 
           quantidade: newQty,
           updated_at: new Date().toISOString(),
           updated_by: userData.user?.id,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [ERROR] Erro ao atualizar:", error);
+        throw new Error(`${error.message} (${error.code || 'N/A'})`);
+      }
 
-      toast({ title: "Quantidade atualizada!" });
+      console.log("✅ [SUCCESS] Quantidade atualizada:", data);
+
+      toast({ title: "Quantidade atualizada com sucesso!" });
       setEditingId(null);
       queryClient.invalidateQueries({ queryKey: ["estoque"] });
 
     } catch (err: unknown) {
+      console.error("❌ [ERROR] Erro geral ao atualizar:", err);
+      
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
-        description: err instanceof Error ? err.message : "Erro desconhecido"
+        description: err instanceof Error ? err.message : String(err)
       });
     }
   };
