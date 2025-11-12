@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Plus, Filter as FilterIcon } from "lucide-react";
 
@@ -35,15 +35,6 @@ interface Cliente {
   created_at: string;
   updated_at: string;
 }
-
-const gerarSenhaTemporaria = (): string => {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let senha = "Cliente";
-  for (let i = 0; i < 4; i++) {
-    senha += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return senha; // Ex: "ClienteK7P3"
-};
 
 const Clientes = () => {
   const { toast } = useToast();
@@ -115,59 +106,9 @@ const Clientes = () => {
     try {
       console.log("🔍 [DEBUG] Criando cliente:", { nome, cnpj_cpf, email });
 
-      // 1. Gerar senha temporária
-      const senhaTemporaria = gerarSenhaTemporaria();
-      console.log("🔍 [DEBUG] Senha gerada:", senhaTemporaria);
-
-      // 2. Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: email.trim(),
-        password: senhaTemporaria,
-        email_confirm: true,
-        user_metadata: {
-          nome: nome.trim(),
-          cnpj_cpf: cnpj_cpf.trim(),
-          force_password_change: true, // Forçar troca de senha
-        }
-      });
-
-      if (authError) {
-        console.error("❌ [ERROR] Erro ao criar usuário Auth:", authError);
-        throw new Error(`Erro ao criar usuário: ${authError.message}`);
-      }
-
-      console.log("✅ [DEBUG] Usuário Auth criado:", authData.user.id);
-
-      // 3. Adicionar role "cliente"
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: authData.user.id,
-          role: "cliente"
-        });
-
-      if (roleError) {
-        console.error("❌ [ERROR] Erro ao adicionar role:", roleError);
-        // Continua mesmo com erro de role
-      }
-
-      // 4. Criar perfil
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          id: authData.user.id,
-          nome: nome.trim(),
-          email: email.trim()
-        });
-
-      if (profileError) {
-        console.error("❌ [ERROR] Erro ao criar perfil:", profileError);
-      }
-
-      // 5. Criar registro de cliente
-      const { data: clienteData, error: clienteError } = await supabase
-        .from("clientes")
-        .insert({
+      // Call Edge Function
+      const { data, error } = await supabase.functions.invoke('create-customer-user', {
+        body: {
           nome: nome.trim(),
           cnpj_cpf: cnpj_cpf.trim(),
           email: email.trim(),
@@ -176,24 +117,25 @@ const Clientes = () => {
           cidade: cidade?.trim() || null,
           estado: estado || null,
           cep: cep?.trim() || null,
-          user_id: authData.user.id,
-          ativo: true
-        })
-        .select()
-        .single();
+        }
+      });
 
-      if (clienteError) {
-        console.error("❌ [ERROR] Erro ao criar cliente:", clienteError);
-        throw new Error(`Erro ao criar cliente: ${clienteError.message}`);
+      if (error) {
+        console.error("❌ [ERROR] Erro ao chamar função:", error);
+        throw new Error(`Erro ao criar cliente: ${error.message}`);
       }
 
-      console.log("✅ [SUCCESS] Cliente criado:", clienteData);
+      if (!data.success) {
+        throw new Error(data.error || "Erro desconhecido");
+      }
 
-      // 6. Mostrar modal com credenciais
+      console.log("✅ [SUCCESS] Cliente criado:", data.cliente);
+
+      // Show credentials modal
       setCredenciaisModal({
         show: true,
         email: email.trim(),
-        senha: senhaTemporaria,
+        senha: data.senha,
         nome: nome.trim()
       });
 
@@ -317,6 +259,9 @@ const Clientes = () => {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados do cliente. Um usuário de acesso será criado automaticamente.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -425,6 +370,9 @@ const Clientes = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>✅ Cliente cadastrado com sucesso!</DialogTitle>
+            <DialogDescription>
+              Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
