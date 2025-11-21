@@ -40,7 +40,7 @@ auth.users ← user_roles
 
 ### Backend (Supabase)
 
-**Migrations (7 files):**
+**Migrations (8 files):**
 1. `20251120_create_colaboradores_table.sql` - New table for employees
 2. `20251120_add_user_id_to_armazens.sql` - Link warehouses to users
 3. `20251120_update_fks_to_auth_users.sql` - Update all foreign keys
@@ -48,6 +48,7 @@ auth.users ← user_roles
 5. `20251120_remove_profiles_dependencies.sql` - Remove triggers and policies
 6. `20251120_drop_profiles_table.sql` - Final step: drop profiles
 7. `20251121173817_remove_default_role_trigger.sql` - Remove automatic role assignment
+8. `20251121183327_remove_tipo_from_colaboradores.sql` - Remove legacy tipo column (idempotent)
 
 **Edge Functions (4 files):**
 - `supabase/functions/create-armazem-user/index.ts` (UPDATED - explicit role assignment with rollback)
@@ -155,6 +156,27 @@ WITH all_users AS (
 )
 SELECT u.*, array_agg(roles) FROM all_users u LEFT JOIN user_roles...
 ```
+
+## Legacy Column Removal
+
+### `tipo` Column in Colaboradores Table
+
+**Background:** 
+Prior to the standardization on the `user_roles` table, there may have been discussions or attempts to use a `tipo` column in the `colaboradores` table to store role information (e.g., 'logistica', 'admin'). However, this approach was never implemented in the production migrations.
+
+**Current State:**
+- The `colaboradores` table was created in migration `20251120_create_colaboradores_table.sql` **without** a `tipo` column
+- All role information is managed exclusively through the `user_roles` table
+- The codebase has no references to a `tipo` column in colaboradores
+
+**Migration `20251121183327_remove_tipo_from_colaboradores.sql`:**
+- Added as an idempotent safety measure
+- Ensures the `tipo` column does not exist in the colaboradores table
+- Will only drop the column if it was manually added outside of migrations
+- Documents that roles are managed through `user_roles` exclusively
+
+**Single-Role Architecture:**
+The system operates on a single-role model where each user has exactly one role in the `user_roles` table. This simplifies permission logic and ensures consistent role management across all user types.
 
 ## Benefits
 

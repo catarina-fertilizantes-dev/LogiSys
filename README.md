@@ -103,6 +103,8 @@ Available roles (defined in `user_role` enum):
 
 Roles are stored in the `user_roles` table with a many-to-one relationship to `auth.users`.
 
+**Single-Role Model:** The current system architecture assumes each user has exactly **one role** at a time. The `user_roles` table contains one row per user (identified by `user_id`). While the table structure technically supports multiple roles per user (for future extensibility), the application logic and frontend are designed around a single-role model.
+
 ### Role Assignment
 
 **Important:** Role assignment is handled **explicitly** by edge functions during user creation. There is no automatic default role assignment via database triggers. Each edge function is responsible for:

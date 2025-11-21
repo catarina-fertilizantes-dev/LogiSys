@@ -223,7 +223,7 @@ const Colaboradores = () => {
     <div className="min-h-screen bg-background">
       <PageHeader
         title="Colaboradores"
-        description="Gerencie colaboradores do sistema (Admin e Logística)"
+        description="Gerencie colaboradores do sistema (Admin e Logística). Roles exibidas são provenientes de user_roles."
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -349,16 +349,22 @@ const Colaboradores = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
                       </p>
+                      {!user.role && (
+                        <p className="text-xs text-destructive mt-1">
+                          ⚠️ Sem role - contate administrador
+                        </p>
+                      )}
                     </div>
 
                     <Select
-                      value={user.role || 'cliente'}
+                      value={user.role || ''}
                       onValueChange={(value) => handleUpdateUserRole(user.id, value as UserRole)}
                     >
                       <SelectTrigger className="w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        {!user.role && <SelectItem value="">Selecione uma role</SelectItem>}
                         <SelectItem value="admin">Administrador</SelectItem>
                         <SelectItem value="logistica">Logística</SelectItem>
                         <SelectItem value="armazem">Armazém</SelectItem>
