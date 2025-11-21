@@ -14,17 +14,26 @@ BEGIN
       AND column_name = 'tipo'
   ) THEN
     -- Optional: Audit any divergences between tipo and user_roles before dropping
-    -- Uncomment the following block to see any discrepancies:
+    -- Uncomment the following lines to see any discrepancies:
     /*
-    RAISE NOTICE 'Auditing tipo column before removal...';
-    PERFORM 
-      col.id,
-      col.nome,
-      col.tipo as legacy_tipo,
-      ur.role as current_role
-    FROM public.colaboradores col
-    LEFT JOIN public.user_roles ur ON ur.user_id = col.user_id
-    WHERE col.tipo IS DISTINCT FROM ur.role;
+    DECLARE
+      audit_record RECORD;
+    BEGIN
+      RAISE NOTICE 'Auditing tipo column before removal...';
+      FOR audit_record IN 
+        SELECT 
+          col.id,
+          col.nome,
+          col.tipo as legacy_tipo,
+          ur.role as current_role
+        FROM public.colaboradores col
+        LEFT JOIN public.user_roles ur ON ur.user_id = col.user_id
+        WHERE col.tipo IS DISTINCT FROM ur.role
+      LOOP
+        RAISE NOTICE 'Discrepancy found - User: % (%), Legacy tipo: %, Current role: %', 
+          audit_record.nome, audit_record.id, audit_record.legacy_tipo, audit_record.current_role;
+      END LOOP;
+    END;
     */
     
     -- Drop the 'tipo' column
