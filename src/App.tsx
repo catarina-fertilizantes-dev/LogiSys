@@ -17,6 +17,7 @@ import Clientes from "./pages/Clientes";
 import Colaboradores from "./pages/Colaboradores";
 import AuthPage from "./pages/AuthPage";
 import ChangePassword from "./pages/ChangePassword";
+import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 import type { Resource } from "./hooks/usePermissions";
 
@@ -29,7 +30,7 @@ const ProtectedRoute = ({
   children: React.ReactNode;
   resource?: Resource;
 }) => {
-  const { user, loading: authLoading, needsPasswordChange } = useAuth();
+  const { user, loading: authLoading, needsPasswordChange, recoveryMode } = useAuth();
   const { canAccess, loading: permLoading } = usePermissions();
   const location = useLocation();
   
@@ -48,9 +49,9 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to change password if needed, but allow access to the change-password page itself
-  if (needsPasswordChange && location.pathname !== '/change-password') {
-    console.log('🔍 [DEBUG] Redirecting to change password');
+  // Redirect to change password if needed or in recovery mode, but allow access to the change-password page itself
+  if ((needsPasswordChange || recoveryMode) && location.pathname !== '/change-password') {
+    console.log('🔍 [DEBUG] Redirecting to change password (needsPasswordChange:', needsPasswordChange, 'recoveryMode:', recoveryMode, ')');
     return <Navigate to="/change-password" replace />;
   }
 
@@ -70,6 +71,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route
               path="/change-password"
               element={

@@ -18,6 +18,8 @@ interface AuthContextType {
   userRole: string | null;
   hasRole: (role: string) => boolean;
   needsPasswordChange: boolean;
+  recoveryMode: boolean;
+  clearRecoveryMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const { toast } = useToast();
 
   const fetchUserRole = async (userId: string) => {
@@ -49,6 +52,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('🔍 [DEBUG] Auth state change event:', event);
+        
+        // Handle password recovery event
+        if (event === 'PASSWORD_RECOVERY') {
+          setRecoveryMode(true);
+          console.log('🔍 [DEBUG] Password recovery mode activated');
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -61,6 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setUserRole(null);
           setNeedsPasswordChange(false);
+          setRecoveryMode(false);
         }
       }
     );
@@ -169,6 +181,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = (role: string) => userRole === role;
 
+  const clearRecoveryMode = () => {
+    setRecoveryMode(false);
+    console.log('🔍 [DEBUG] Recovery mode cleared');
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -179,7 +196,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signOut,
       userRole,
       hasRole,
-      needsPasswordChange
+      needsPasswordChange,
+      recoveryMode,
+      clearRecoveryMode
     }}>
       {children}
     </AuthContext.Provider>

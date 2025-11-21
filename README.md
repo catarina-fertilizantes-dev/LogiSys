@@ -210,6 +210,29 @@ All edge functions:
 
 ## Development
 
+### Environment Variables
+
+This project requires Supabase environment variables to be configured. Create a `.env` file in the root directory with the following variables:
+
+```env
+VITE_SUPABASE_URL=https://<your-project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-public-anon-key>
+```
+
+**Important:** Never commit your `.env` file or share your keys publicly. Use `.env.example` as a template.
+
+#### Supabase Configuration
+
+Make sure the following redirect URLs are configured in your Supabase project settings (Authentication > URL Configuration):
+
+**Production:**
+- `https://<your-domain>/change-password`
+
+**Development:**
+- `http://localhost:5173/change-password`
+
+These URLs are used for password recovery flows and forced password changes.
+
 ### Running locally
 ```bash
 npm install
