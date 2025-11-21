@@ -7,9 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-
-const emailSchema = z.string().trim().email("Email inválido").max(255, "Email muito longo");
+import { emailSchema } from "@/lib/validationSchemas";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");

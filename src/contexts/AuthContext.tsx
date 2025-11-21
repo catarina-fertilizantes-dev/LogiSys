@@ -2,11 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-
-const emailSchema = z.string().trim().email().max(255);
-const passwordSchema = z.string().min(6);
-const nomeSchema = z.string().trim().min(2).max(100);
+import { emailSchema, passwordSchema, nomeSchema } from "@/lib/validationSchemas";
 
 interface AuthContextType {
   user: User | null;

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
+import { passwordSchema } from "@/lib/validationSchemas";
 
 const ChangePassword = () => {
   const { needsPasswordChange, recoveryMode, clearRecoveryMode } = useAuth();
@@ -24,16 +25,18 @@ const ChangePassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate passwords
-    if (newPassword.length < 6) {
+    // Validate new password using schema
+    const passwordResult = passwordSchema.safeParse(newPassword);
+    if (!passwordResult.success) {
       toast({
         variant: "destructive",
         title: "Erro de validação",
-        description: "A nova senha deve ter no mínimo 6 caracteres"
+        description: passwordResult.error.issues[0].message
       });
       return;
     }
 
+    // Validate passwords match
     if (newPassword !== confirmPassword) {
       toast({
         variant: "destructive",
@@ -66,7 +69,6 @@ const ChangePassword = () => {
             title: "Erro",
             description: "Senha atual incorreta"
           });
-          setLoading(false);
           return;
         }
       }
