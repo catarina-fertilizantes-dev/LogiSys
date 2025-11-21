@@ -14,7 +14,12 @@ RETURNS TABLE(
          col.nome,
          u.email,
          u.created_at,
-         MAX(ur.role) AS role
+         -- Use role precedence: admin > logistica
+         CASE 
+           WHEN 'admin' = ANY(array_agg(ur.role)) THEN 'admin'::user_role
+           WHEN 'logistica' = ANY(array_agg(ur.role)) THEN 'logistica'::user_role
+           ELSE (array_agg(ur.role))[1]
+         END AS role
   FROM auth.users u
   JOIN public.colaboradores col ON col.user_id = u.id
   LEFT JOIN public.user_roles ur ON ur.user_id = u.id
@@ -46,7 +51,12 @@ RETURNS TABLE(
     ) AS nome,
     u.email,
     u.created_at,
-    MAX(ur.role) AS role
+    -- Use role precedence: admin > logistica
+    CASE 
+      WHEN 'admin' = ANY(array_agg(ur.role)) THEN 'admin'::user_role
+      WHEN 'logistica' = ANY(array_agg(ur.role)) THEN 'logistica'::user_role
+      ELSE (array_agg(ur.role))[1]
+    END AS role
   FROM auth.users u
   LEFT JOIN public.colaboradores col ON col.user_id = u.id
   LEFT JOIN public.user_roles ur ON ur.user_id = u.id

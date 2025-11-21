@@ -37,13 +37,25 @@ const USERS_FUNCTION = 'get_users_with_roles';
 
 // Helper para mapear e filtrar colaboradores (admin e logistica)
 const mapAndFilterColaboradores = (usersData: RpcUserData[]): User[] => {
-  const usersMapped: User[] = (usersData || []).map(u => ({
-    id: u.id,
-    nome: u.nome,
-    email: u.email,
-    created_at: u.created_at,
-    role: Array.isArray(u.roles) ? u.roles[0] ?? null : u.role ?? null
-  }));
+  const usersMapped: User[] = (usersData || []).map(u => {
+    // Se roles é um array, selecionar role com prioridade: admin > logistica > outros
+    let selectedRole: string | null = null;
+    if (Array.isArray(u.roles)) {
+      if (u.roles.includes('admin')) selectedRole = 'admin';
+      else if (u.roles.includes('logistica')) selectedRole = 'logistica';
+      else selectedRole = u.roles[0] ?? null;
+    } else {
+      selectedRole = u.role ?? null;
+    }
+    
+    return {
+      id: u.id,
+      nome: u.nome,
+      email: u.email,
+      created_at: u.created_at,
+      role: selectedRole
+    };
+  });
   
   // Filtrar apenas colaboradores (admin ou logistica)
   return usersMapped.filter(u => u.role === 'admin' || u.role === 'logistica');
