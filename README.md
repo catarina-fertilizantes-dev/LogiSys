@@ -199,7 +199,7 @@ The application sidebar organizes features into two main groups:
 **Management Group:**
 6. Clientes - Customer management
 7. Armazéns - Warehouse management
-8. Colaboradores - User & role management (visible only to admin and logistica roles)
+8. Colaboradores - User & role management (visible only to admin role)
 
 The menu dynamically adjusts based on user permissions, showing only accessible features for each role.
 
