@@ -109,7 +109,12 @@ supabase db push supabase/migrations/20251120_drop_profiles_table.sql
 
 # 7. Remove default role trigger (Migration 20251121173817)
 supabase db push supabase/migrations/20251121173817_remove_default_role_trigger.sql
+
+# 8. Remove legacy tipo column from colaboradores (idempotent safety measure)
+supabase db push supabase/migrations/20251121183327_remove_tipo_from_colaboradores.sql
 ```
+
+**Note on Step 8:** This migration is idempotent and will only drop the `tipo` column if it exists. The colaboradores table was created without this column, but this step ensures it doesn't exist if it was manually added. All role management is now exclusively through the `user_roles` table.
 
 ### Step 2: Data Migration (If Needed)
 
