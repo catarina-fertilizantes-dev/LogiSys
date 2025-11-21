@@ -94,7 +94,7 @@ export function AppSidebar() {
     return items.filter(item => {
       // Check role-based requirements (Colaboradores only for admin)
       if ('requiresRole' in item && item.requiresRole) {
-        const hasRequiredRole = userRole ? item.requiresRole.includes(userRole as "admin") : false;
+        const hasRequiredRole = userRole ? item.requiresRole.includes(userRole) : false;
         if (!hasRequiredRole) {
           console.log(`❌ [DEBUG] Menu item "${item.title}" - requires role ${item.requiresRole.join(' or ')}, user has: ${userRole}`);
           return false;
