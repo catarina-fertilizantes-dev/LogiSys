@@ -13,15 +13,15 @@ const BodySchema = z.object({
   role: z.enum(["admin", "logistica"]),
 });
 
-// Weak password blacklist
-const WEAK_PASSWORDS = [
+// Weak password blacklist (as Set for O(1) lookup)
+const WEAK_PASSWORDS = new Set([
   '123456',
   '12345678',
   'password',
   'senha123',
   'admin123',
   'qwerty'
-];
+]);
 
 // Type definitions for better type safety
 interface SupabaseError {
@@ -60,6 +60,16 @@ class RoleAssignmentError extends Error {
     this.code = code;
     this.details = details;
   }
+}
+
+// Type guard for SupabaseError
+function isSupabaseError(error: unknown): error is SupabaseError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as any).message === 'string'
+  );
 }
 
 // Simple UUID v4 generator for request_id
@@ -143,9 +153,8 @@ Deno.serve(async (req) => {
     // Normalize email to lowercase
     const email = rawEmail.toLowerCase();
     
-    // Weak password check (case-insensitive, exact match only)
-    const passwordLower = password.toLowerCase();
-    if (WEAK_PASSWORDS.some(weak => passwordLower === weak)) {
+    // Weak password check (case-insensitive, exact match only, O(1) lookup)
+    if (WEAK_PASSWORDS.has(password.toLowerCase())) {
       console.log(`[admin-users] Weak password detected, request_id: ${requestId}`);
       return new Response(
         JSON.stringify({
@@ -270,9 +279,16 @@ Deno.serve(async (req) => {
       console.error(`[admin-users] User creation failed, request_id: ${requestId}:`, createErr);
       
       // Check for duplicate user pattern using both error code and message
-      const supabaseErr = createErr as unknown as SupabaseError;
-      const errorCode = supabaseErr?.code || supabaseErr?.status?.toString();
-      const errorMsg = supabaseErr?.message?.toLowerCase() || '';
+      let errorCode: string | undefined;
+      let errorMsg = '';
+      let errorDetails = "Database error creating new user";
+      
+      if (isSupabaseError(createErr)) {
+        errorCode = createErr.code || createErr.status?.toString();
+        errorMsg = createErr.message?.toLowerCase() || '';
+        errorDetails = createErr.message;
+      }
+      
       const isDuplicate = errorCode === '23505' || // PostgreSQL unique violation
                           errorCode === 'PGRST116' || // PostgREST unique violation
                           errorMsg.includes('already exists') ||
@@ -282,7 +298,7 @@ Deno.serve(async (req) => {
       const statusCode = isDuplicate ? 409 : 500;
       const errorResponse: ErrorResponse = {
         error: isDuplicate ? "User already exists" : "Failed to create user",
-        details: supabaseErr?.message || "Database error creating new user",
+        details: errorDetails,
         stage: "createUser",
         email,
         role,
@@ -345,12 +361,19 @@ Deno.serve(async (req) => {
           console.error(`[admin-users] Failed to rollback user creation, request_id: ${requestId}:`, deleteError);
         }
         // Throw custom error with structured details
-        const supabaseErr = roleError as unknown as SupabaseError;
-        throw new RoleAssignmentError(
-          supabaseErr.message,
-          supabaseErr.code || 'ROLE_ASSIGNMENT_FAILED',
-          supabaseErr.details || supabaseErr.hint || 'Database error during role assignment'
-        );
+        if (isSupabaseError(roleError)) {
+          throw new RoleAssignmentError(
+            roleError.message,
+            roleError.code || 'ROLE_ASSIGNMENT_FAILED',
+            roleError.details || roleError.hint || 'Database error during role assignment'
+          );
+        } else {
+          throw new RoleAssignmentError(
+            'Unknown role assignment error',
+            'ROLE_ASSIGNMENT_FAILED',
+            'Database error during role assignment'
+          );
+        }
       }
     };
 
