@@ -541,7 +541,7 @@ export type Database = {
         | "nf_entregue"
       status_liberacao: "pendente" | "parcial" | "concluido"
       tipo_foto: "chegada" | "durante" | "carregado" | "saida"
-      user_role: "logistica" | "comercial" | "cliente" | "armazem" | "admin"
+      user_role: "logistica" | "cliente" | "armazem" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -678,7 +678,7 @@ export const Constants = {
       ],
       status_liberacao: ["pendente", "parcial", "concluido"],
       tipo_foto: ["chegada", "durante", "carregado", "saida"],
-      user_role: ["logistica", "comercial", "cliente", "armazem", "admin"],
+      user_role: ["logistica", "cliente", "armazem", "admin"],
     },
   },
 } as const

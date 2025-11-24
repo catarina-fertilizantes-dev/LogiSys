@@ -97,7 +97,6 @@ Each entity table contains:
 Available roles (defined in `user_role` enum):
 - **admin**: Full system access
 - **logistica**: Logistics team - manages products, stock, liberations, warehouses
-- **comercial**: Sales team - can view data and create/manage releases
 - **armazem**: Warehouse operators - manage loading operations
 - **cliente**: Customers - can create scheduling requests and view their data
 
@@ -186,7 +185,6 @@ A tabela abaixo descreve os recursos acessíveis no frontend para cada role e su
 | logistica | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens                            | read, create, update (delete conforme permissões específicas)                     |
 | cliente   | agendamentos, liberacoes                                                                        | agendamentos (read, create), liberacoes (read)                                    |
 | armazem   | carregamentos, liberacoes, agendamentos                                                         | carregamentos (read, create), liberacoes (read), agendamentos (read)              |
-| comercial | liberacoes, agendamentos, clientes                                                              | Conforme permissões específicas definidas no banco                                |
 
 **Notas Importantes:**
 - O recurso **colaboradores** é exclusivamente gerenciado por usuários com role **admin**.
@@ -259,6 +257,14 @@ All edge functions:
 - Generate secure temporary passwords
 - Force password change on first login
 - Return credentials for the admin to share with the user
+
+### Changelog
+
+#### 2025-11-24: Removed "comercial" Role
+- The `comercial` role has been completely removed from the system as it was not being used (0 users)
+- Updated `user_role` enum to only include: `admin`, `logistica`, `armazem`, `cliente`
+- Migration: `20251124_remove_comercial_role.sql`
+- All references removed from codebase, documentation, and UI
 
 ---
 
