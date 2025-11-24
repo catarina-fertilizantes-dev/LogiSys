@@ -23,6 +23,19 @@ const WEAK_PASSWORDS = [
   'qwerty'
 ];
 
+// Custom error class for role assignment failures
+class RoleAssignmentError extends Error {
+  code: string;
+  details: string;
+  
+  constructor(message: string, code: string, details: string) {
+    super(message);
+    this.name = 'RoleAssignmentError';
+    this.code = code;
+    this.details = details;
+  }
+}
+
 // Simple UUID v4 generator for request_id
 function generateRequestId(): string {
   const bytes = new Uint8Array(16);
@@ -30,7 +43,7 @@ function generateRequestId(): string {
   bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
   bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 const corsHeaders = {
@@ -104,8 +117,9 @@ Deno.serve(async (req) => {
     // Normalize email to lowercase
     const email = rawEmail.toLowerCase();
     
-    // Weak password check
-    if (WEAK_PASSWORDS.includes(password.toLowerCase())) {
+    // Weak password check (case-insensitive)
+    const passwordLower = password.toLowerCase();
+    if (WEAK_PASSWORDS.some(weak => passwordLower === weak || passwordLower.includes(weak))) {
       console.log(`[admin-users] Weak password detected for ${email}`);
       return new Response(
         JSON.stringify({
@@ -303,12 +317,12 @@ Deno.serve(async (req) => {
         if (deleteError) {
           console.error("[admin-users] Failed to rollback user creation:", deleteError);
         }
-        // Throw enriched error with details
-        throw new Error(JSON.stringify({
-          message: roleError.message,
-          code: (roleError as any).code || 'ROLE_ASSIGNMENT_FAILED',
-          details: roleError.details || roleError.hint || 'Database error during role assignment'
-        }));
+        // Throw custom error with structured details
+        throw new RoleAssignmentError(
+          roleError.message,
+          (roleError as any).code || 'ROLE_ASSIGNMENT_FAILED',
+          roleError.details || roleError.hint || 'Database error during role assignment'
+        );
       }
     };
 
@@ -318,22 +332,31 @@ Deno.serve(async (req) => {
       await assignRoleOrRollback(newUserId, role);
     } catch (error) {
       console.error(`[admin-users] Role assignment error:`, error);
-      let roleErrorDetails = { message: "Unknown error", code: "UNKNOWN" };
       
-      if (error instanceof Error) {
-        try {
-          roleErrorDetails = JSON.parse(error.message);
-        } catch {
-          roleErrorDetails = { message: error.message, code: "ROLE_ASSIGNMENT_FAILED" };
-        }
+      if (error instanceof RoleAssignmentError) {
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: "Falha ao atribuir role. Usuário não foi criado. Tente novamente ou contate suporte.",
+            details: error.message,
+            code: error.code,
+            stage: "assignRole",
+            email,
+            role,
+            timestamp: new Date().toISOString(),
+            request_id: requestId
+          }),
+          { status: 500, headers: { "content-type": "application/json", ...corsHeaders } },
+        );
       }
       
+      // Fallback for unexpected errors
       return new Response(
         JSON.stringify({ 
           success: false,
           error: "Falha ao atribuir role. Usuário não foi criado. Tente novamente ou contate suporte.",
-          details: roleErrorDetails.message,
-          code: roleErrorDetails.code,
+          details: error instanceof Error ? error.message : "Unknown error",
+          code: "UNKNOWN",
           stage: "assignRole",
           email,
           role,
