@@ -1,6 +1,7 @@
-// Deno Edge Function: admin-users
+// Deno Edge Function: admin-users V2
 // Creates a new user and assigns role atomically using service role
 // Allows bootstrapping the first admin without authentication
+// Enhanced with stage-based error diagnostics, weak password checking, and verification
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
@@ -11,6 +12,26 @@ const BodySchema = z.object({
   nome: z.string().trim().min(2).max(100),
   role: z.enum(["admin", "logistica"]),
 });
+
+// Weak password blacklist
+const WEAK_PASSWORDS = [
+  '123456',
+  '12345678',
+  'password',
+  'senha123',
+  'admin123',
+  'qwerty'
+];
+
+// Simple UUID v4 generator for request_id
+function generateRequestId(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,12 +51,30 @@ Deno.serve(async (req) => {
     });
   }
 
+  const requestId = generateRequestId();
+  console.log(`[admin-users] Starting request ${requestId}`);
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-    return new Response(JSON.stringify({ error: "Server not configured" }), {
+  // Environment verification
+  const envStatus = {
+    hasUrl: !!supabaseUrl,
+    hasAnon: !!supabaseAnonKey,
+    hasServiceRole: !!serviceRoleKey
+  };
+
+  if (!envStatus.hasUrl || !envStatus.hasAnon || !envStatus.hasServiceRole) {
+    console.error(`[admin-users] Environment verification failed:`, envStatus);
+    return new Response(JSON.stringify({ 
+      error: "Server not configured",
+      details: "Missing required environment variables",
+      stage: "env",
+      envStatus,
+      timestamp: new Date().toISOString(),
+      request_id: requestId
+    }), {
       status: 500,
       headers: { "content-type": "application/json", ...corsHeaders },
     });
@@ -45,13 +84,43 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
+      console.log(`[admin-users] Validation failed for request ${requestId}`);
       return new Response(
-        JSON.stringify({ error: "Invalid payload", details: parsed.error.flatten() }),
+        JSON.stringify({ 
+          error: "Invalid payload", 
+          details: parsed.error.flatten(),
+          stage: "validation",
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }),
         { status: 400, headers: { "content-type": "application/json", ...corsHeaders } },
       );
     }
 
-    const { email, password, nome, role } = parsed.data;
+    const { email: rawEmail, password, nome, role } = parsed.data;
+    
+    // Normalize email to lowercase
+    const email = rawEmail.toLowerCase();
+    
+    // Weak password check
+    if (WEAK_PASSWORDS.includes(password.toLowerCase())) {
+      console.log(`[admin-users] Weak password detected for ${email}`);
+      return new Response(
+        JSON.stringify({
+          error: "Weak password",
+          details: "The provided password is too common and easily guessable",
+          stage: "validation",
+          suggestions: ["Use letters, numbers and special characters"],
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }),
+        { status: 400, headers: { "content-type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`[admin-users] Creating user with email: ${email}, role: ${role}`);
 
     // Service role client (bypasses RLS) - used for counting admins and writing system tables
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
@@ -63,13 +132,23 @@ Deno.serve(async (req) => {
       .eq("role", "admin");
 
     if (countError) {
+      console.error(`[admin-users] Failed to check admin count:`, countError);
       return new Response(
-        JSON.stringify({ error: "Failed to check admin count", details: countError.message }),
+        JSON.stringify({ 
+          error: "Failed to check admin count", 
+          details: countError.message,
+          stage: "adminCheck",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }),
         { status: 500, headers: { "content-type": "application/json", ...corsHeaders } },
       );
     }
 
     const noAdminsExist = (adminCount ?? 0) === 0;
+    console.log(`[admin-users] Admin count: ${adminCount ?? 0}, bootstrap mode: ${noAdminsExist}`);
 
     // If admins already exist, requester must be admin
     if (!noAdminsExist) {
@@ -81,11 +160,22 @@ Deno.serve(async (req) => {
       const { data: userInfo } = await userClient.auth.getUser();
       const requester = userInfo?.user;
       if (!requester) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        console.log(`[admin-users] Unauthorized request - no valid auth token`);
+        return new Response(JSON.stringify({ 
+          error: "Unauthorized",
+          details: "Authentication required to create users",
+          stage: "adminCheck",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }), {
           status: 401,
           headers: { "content-type": "application/json", ...corsHeaders },
         });
       }
+
+      console.log(`[admin-users] Requester id: ${requester.id}`);
 
       const { data: isAdmin, error: roleCheckError } = await userClient.rpc("has_role", {
         _user_id: requester.id,
@@ -93,14 +183,32 @@ Deno.serve(async (req) => {
       });
 
       if (roleCheckError) {
-        return new Response(JSON.stringify({ error: "Role check failed", details: roleCheckError.message }), {
+        console.error(`[admin-users] Role check failed:`, roleCheckError);
+        return new Response(JSON.stringify({ 
+          error: "Role check failed", 
+          details: roleCheckError.message,
+          stage: "adminCheck",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }), {
           status: 500,
           headers: { "content-type": "application/json", ...corsHeaders },
         });
       }
 
       if (!isAdmin) {
-        return new Response(JSON.stringify({ error: "Forbidden: Only admins can create users" }), {
+        console.log(`[admin-users] Forbidden - requester ${requester.id} is not admin`);
+        return new Response(JSON.stringify({ 
+          error: "Forbidden: Only admins can create users",
+          details: "Your account does not have admin privileges",
+          stage: "adminCheck",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }), {
           status: 403,
           headers: { "content-type": "application/json", ...corsHeaders },
         });
@@ -108,6 +216,7 @@ Deno.serve(async (req) => {
     }
 
     // Create user (auto-confirm)
+    console.log(`[admin-users] Creating auth user for ${email}`);
     const { data: created, error: createErr } = await serviceClient.auth.admin.createUser({
       email,
       password,
@@ -116,13 +225,61 @@ Deno.serve(async (req) => {
     });
 
     if (createErr || !created?.user) {
-      return new Response(JSON.stringify({ error: "Failed to create user", details: createErr?.message }), {
-        status: 500,
+      console.error(`[admin-users] User creation failed:`, createErr);
+      
+      // Check for duplicate user pattern
+      const isDuplicate = createErr?.message?.toLowerCase().includes('already exists') ||
+                          createErr?.message?.toLowerCase().includes('duplicate') ||
+                          createErr?.message?.toLowerCase().includes('unique');
+      
+      const statusCode = isDuplicate ? 409 : 500;
+      const errorResponse: any = {
+        error: isDuplicate ? "User already exists" : "Failed to create user",
+        details: createErr?.message || "Database error creating new user",
+        stage: "createUser",
+        email,
+        role,
+        timestamp: new Date().toISOString(),
+        request_id: requestId
+      };
+      
+      // Add supabase error code if available
+      if (createErr && ('status' in createErr || 'code' in createErr)) {
+        errorResponse.supabase_error_code = (createErr as any).status || (createErr as any).code;
+      }
+      
+      return new Response(JSON.stringify(errorResponse), {
+        status: statusCode,
         headers: { "content-type": "application/json", ...corsHeaders },
       });
     }
 
     const newUserId = created.user.id;
+    console.log(`[admin-users] User created with id: ${newUserId}`);
+
+    // Post-creation verification
+    console.log(`[admin-users] Verifying user creation via getUserById`);
+    const { data: verifiedUser, error: verifyError } = await serviceClient.auth.admin.getUserById(newUserId);
+    
+    if (verifyError || !verifiedUser?.user) {
+      console.error(`[admin-users] Post-creation verification failed:`, verifyError);
+      // Rollback: delete the auth user
+      await serviceClient.auth.admin.deleteUser(newUserId);
+      return new Response(
+        JSON.stringify({
+          error: "User creation verification failed",
+          details: "Created user could not be verified, operation rolled back",
+          stage: "postCreateVerify",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
+        }),
+        { status: 500, headers: { "content-type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    console.log(`[admin-users] User verified successfully`);
 
     // Helper function to rollback user creation if role assignment fails
     const assignRoleOrRollback = async (uid: string, desiredRole: string) => {
@@ -131,37 +288,75 @@ Deno.serve(async (req) => {
         .upsert({ user_id: uid, role: desiredRole }, { onConflict: "user_id,role" });
 
       if (roleError) {
-        console.error("Role assignment failed, rolling back user:", roleError);
+        console.error("[admin-users] Role assignment failed, rolling back user:", roleError);
         // Rollback: delete the auth user
         const { error: deleteError } = await serviceClient.auth.admin.deleteUser(uid);
         if (deleteError) {
-          console.error("Failed to rollback user creation:", deleteError);
+          console.error("[admin-users] Failed to rollback user creation:", deleteError);
         }
-        throw new Error(`Failed to assign role: ${roleError.message}`);
+        // Throw enriched error with details
+        throw new Error(JSON.stringify({
+          message: roleError.message,
+          code: (roleError as any).code || 'ROLE_ASSIGNMENT_FAILED',
+          details: roleError.details || roleError.hint || 'Database error during role assignment'
+        }));
       }
     };
 
     // Assign role (admin or logistica only) with rollback on error
+    console.log(`[admin-users] Assigning role: ${role}`);
     try {
       await assignRoleOrRollback(newUserId, role);
     } catch (error) {
+      console.error(`[admin-users] Role assignment error:`, error);
+      let roleErrorDetails = { message: "Unknown error", code: "UNKNOWN" };
+      
+      if (error instanceof Error) {
+        try {
+          roleErrorDetails = JSON.parse(error.message);
+        } catch {
+          roleErrorDetails = { message: error.message, code: "ROLE_ASSIGNMENT_FAILED" };
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: false,
           error: "Falha ao atribuir role. Usuário não foi criado. Tente novamente ou contate suporte.",
-          details: error instanceof Error ? error.message : "Unknown error"
+          details: roleErrorDetails.message,
+          code: roleErrorDetails.code,
+          stage: "assignRole",
+          email,
+          role,
+          timestamp: new Date().toISOString(),
+          request_id: requestId
         }),
         { status: 500, headers: { "content-type": "application/json", ...corsHeaders } },
       );
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: newUserId }), {
+    console.log(`[admin-users] User creation completed successfully for ${email}`);
+    return new Response(JSON.stringify({ 
+      success: true, 
+      user_id: newUserId,
+      email,
+      role,
+      timestamp: new Date().toISOString(),
+      first_admin_bootstrap: noAdminsExist,
+      request_id: requestId
+    }), {
       status: 200,
       headers: { "content-type": "application/json", ...corsHeaders },
     });
   } catch (e) {
-    console.error("Unexpected error:", e);
-    return new Response(JSON.stringify({ error: "Unexpected error occurred while creating user" }), {
+    console.error("[admin-users] Unexpected error:", e);
+    return new Response(JSON.stringify({ 
+      error: "Unexpected error occurred while creating user",
+      details: e instanceof Error ? e.message : "Unknown error",
+      stage: "unexpected",
+      timestamp: new Date().toISOString(),
+      request_id: requestId
+    }), {
       status: 500,
       headers: { "content-type": "application/json", ...corsHeaders },
     });
