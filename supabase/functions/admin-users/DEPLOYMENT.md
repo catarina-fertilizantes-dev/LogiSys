@@ -305,20 +305,24 @@ For other roles (cliente, armazem, colaborador), use the respective edge functio
 If the deployment causes issues:
 
 1. **Identify the problem** from logs
-2. **Revert using CLI**:
+2. **Revert using Git**:
    ```bash
-   # List deployments
-   supabase functions list
+   # Checkout previous version of the function
+   git checkout <previous-commit> supabase/functions/admin-users/
    
-   # Deploy previous version if you have it
-   supabase functions deploy admin-users --legacy-bundle <previous-bundle-path>
+   # Deploy the reverted version
+   supabase functions deploy admin-users
    ```
 
 3. **Or use Dashboard**:
    - Navigate to Edge Functions → admin-users
-   - Click on "Deployment History"
+   - Click on "Versions" or "Deployment History"
    - Select previous working version
-   - Click "Redeploy"
+   - Click "Redeploy" or "Restore"
+
+4. **Quick hotfix**:
+   - Make necessary fixes directly in the code
+   - Deploy immediately: `supabase functions deploy admin-users`
 
 ## Troubleshooting
 
