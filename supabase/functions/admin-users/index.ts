@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     // Weak password check (case-insensitive, exact match only)
     const passwordLower = password.toLowerCase();
     if (WEAK_PASSWORDS.some(weak => passwordLower === weak)) {
-      console.log(`[admin-users] Weak password detected for ${email}`);
+      console.log(`[admin-users] Weak password detected, request_id: ${requestId}`);
       return new Response(
         JSON.stringify({
           error: "Weak password",
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[admin-users] Creating user with email: ${email}, role: ${role}`);
+    console.log(`[admin-users] Creating user with role: ${role}, request_id: ${requestId}`);
 
     // Service role client (bypasses RLS) - used for counting admins and writing system tables
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log(`[admin-users] Requester id: ${requester.id}`);
+      console.log(`[admin-users] Request authenticated, request_id: ${requestId}`);
 
       const { data: isAdmin, error: roleCheckError } = await userClient.rpc("has_role", {
         _user_id: requester.id,
@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
       }
 
       if (!isAdmin) {
-        console.log(`[admin-users] Forbidden - requester ${requester.id} is not admin`);
+        console.log(`[admin-users] Forbidden - requester is not admin, request_id: ${requestId}`);
         return new Response(JSON.stringify({ 
           error: "Forbidden: Only admins can create users",
           details: "Your account does not have admin privileges",
@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
     }
 
     // Create user (auto-confirm)
-    console.log(`[admin-users] Creating auth user for ${email}`);
+    console.log(`[admin-users] Creating auth user, request_id: ${requestId}`);
     const { data: created, error: createErr } = await serviceClient.auth.admin.createUser({
       email,
       password,
@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
     });
 
     if (createErr || !created?.user) {
-      console.error(`[admin-users] User creation failed:`, createErr);
+      console.error(`[admin-users] User creation failed, request_id: ${requestId}:`, createErr);
       
       // Check for duplicate user pattern using both error code and message
       const supabaseErr = createErr as unknown as SupabaseError;
@@ -302,18 +302,18 @@ Deno.serve(async (req) => {
     }
 
     const newUserId = created.user.id;
-    console.log(`[admin-users] User created with id: ${newUserId}`);
+    console.log(`[admin-users] User created, request_id: ${requestId}`);
 
     // Post-creation verification
-    console.log(`[admin-users] Verifying user creation via getUserById`);
+    console.log(`[admin-users] Verifying user creation, request_id: ${requestId}`);
     const { data: verifiedUser, error: verifyError } = await serviceClient.auth.admin.getUserById(newUserId);
     
     if (verifyError || !verifiedUser?.user) {
-      console.error(`[admin-users] Post-creation verification failed:`, verifyError);
+      console.error(`[admin-users] Post-creation verification failed, request_id: ${requestId}:`, verifyError);
       // Rollback: delete the auth user
       const { error: deleteError } = await serviceClient.auth.admin.deleteUser(newUserId);
       if (deleteError) {
-        console.error(`[admin-users] CRITICAL: Failed to rollback user ${newUserId} after verification failure:`, deleteError);
+        console.error(`[admin-users] CRITICAL: Failed to rollback user after verification failure, request_id: ${requestId}:`, deleteError);
       }
       return new Response(
         JSON.stringify({
@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
       );
     }
     
-    console.log(`[admin-users] User verified successfully`);
+    console.log(`[admin-users] User verified successfully, request_id: ${requestId}`);
 
     // Helper function to rollback user creation if role assignment fails
     const assignRoleOrRollback = async (uid: string, desiredRole: string) => {
@@ -338,11 +338,11 @@ Deno.serve(async (req) => {
         .upsert({ user_id: uid, role: desiredRole }, { onConflict: "user_id,role" });
 
       if (roleError) {
-        console.error("[admin-users] Role assignment failed, rolling back user:", roleError);
+        console.error(`[admin-users] Role assignment failed, rolling back user, request_id: ${requestId}:`, roleError);
         // Rollback: delete the auth user
         const { error: deleteError } = await serviceClient.auth.admin.deleteUser(uid);
         if (deleteError) {
-          console.error("[admin-users] Failed to rollback user creation:", deleteError);
+          console.error(`[admin-users] Failed to rollback user creation, request_id: ${requestId}:`, deleteError);
         }
         // Throw custom error with structured details
         const supabaseErr = roleError as unknown as SupabaseError;
@@ -355,11 +355,11 @@ Deno.serve(async (req) => {
     };
 
     // Assign role (admin or logistica only) with rollback on error
-    console.log(`[admin-users] Assigning role: ${role}`);
+    console.log(`[admin-users] Assigning role: ${role}, request_id: ${requestId}`);
     try {
       await assignRoleOrRollback(newUserId, role);
     } catch (error) {
-      console.error(`[admin-users] Role assignment error:`, error);
+      console.error(`[admin-users] Role assignment error, request_id: ${requestId}:`, error);
       
       if (error instanceof RoleAssignmentError) {
         return new Response(
@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[admin-users] User creation completed successfully for ${email}`);
+    console.log(`[admin-users] User creation completed successfully, request_id: ${requestId}`);
     return new Response(JSON.stringify({ 
       success: true, 
       user_id: newUserId,
