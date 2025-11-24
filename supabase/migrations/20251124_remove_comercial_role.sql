@@ -31,7 +31,7 @@ ALTER TYPE user_role_new RENAME TO user_role;
 -- 6. Dropar enum antigo
 DROP TYPE user_role_old;
 
-COMMIT;
-
 -- 7. Comentário de documentação
 COMMENT ON TYPE user_role IS 'Enum de roles ativas no sistema: admin, logistica, armazem, cliente. Role "comercial" foi removida em 2025-11-24 pois não estava em uso.';
+
+COMMIT;
