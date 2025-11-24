@@ -78,6 +78,12 @@ SUPABASE_ANON_KEY=<your-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 ```
 
+**⚠️ Security Warning**: These variables contain sensitive credentials:
+- **NEVER** commit them to version control
+- **NEVER** share them in plain text (chat, email, documentation)
+- The `SUPABASE_SERVICE_ROLE_KEY` has full database access - treat it like a database password
+- Store them securely in your password manager or secrets management system
+
 These are automatically available in Supabase Edge Functions. No manual configuration needed unless running locally.
 
 ## Testing Procedures
@@ -280,8 +286,12 @@ Example logs:
 
 - **Minimum length**: 6 characters (enforced by Zod schema)
 - **Maximum length**: 128 characters (enforced by Zod schema)
-- **Blacklist check**: Rejects common passwords (case-insensitive)
+- **Blacklist check**: Rejects 6 common passwords (case-insensitive):
+  - `123456`, `12345678`, `password`, `senha123`, `admin123`, `qwerty`
 - **Not logged**: Passwords never appear in logs or error messages
+- **Force change on first login**: All created users must change their temporary password
+
+**Note**: Password complexity requirements are defined by business requirements. Users are required to change their temporary password on first login, at which point they can choose a stronger password that meets their security needs.
 
 ### User Enumeration Protection
 
