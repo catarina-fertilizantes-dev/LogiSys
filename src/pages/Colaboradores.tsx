@@ -195,8 +195,7 @@ const Colaboradores = () => {
       admin: 'Administrador',
       logistica: 'Logística',
       armazem: 'Armazém',
-      cliente: 'Cliente',
-      comercial: 'Comercial'
+      cliente: 'Cliente'
     };
     return labels[role] || role;
   };
@@ -368,7 +367,6 @@ const Colaboradores = () => {
                         <SelectItem value="admin">Administrador</SelectItem>
                         <SelectItem value="logistica">Logística</SelectItem>
                         <SelectItem value="armazem">Armazém</SelectItem>
-                        <SelectItem value="comercial">Comercial</SelectItem>
                         <SelectItem value="cliente">Cliente</SelectItem>
                       </SelectContent>
                     </Select>

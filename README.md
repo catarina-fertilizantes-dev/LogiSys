@@ -97,7 +97,6 @@ Each entity table contains:
 Available roles (defined in `user_role` enum):
 - **admin**: Full system access
 - **logistica**: Logistics team - manages products, stock, liberations, warehouses
-- **comercial**: Sales team - can view data and create/manage releases
 - **armazem**: Warehouse operators - manage loading operations
 - **cliente**: Customers - can create scheduling requests and view their data
 
@@ -186,7 +185,6 @@ A tabela abaixo descreve os recursos acessíveis no frontend para cada role e su
 | logistica | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens                            | read, create, update (delete conforme permissões específicas)                     |
 | cliente   | agendamentos, liberacoes                                                                        | agendamentos (read, create), liberacoes (read)                                    |
 | armazem   | carregamentos, liberacoes, agendamentos                                                         | carregamentos (read, create), liberacoes (read), agendamentos (read)              |
-| comercial | liberacoes, agendamentos, clientes                                                              | Conforme permissões específicas definidas no banco                                |
 
 **Notas Importantes:**
 - O recurso **colaboradores** é exclusivamente gerenciado por usuários com role **admin**.
