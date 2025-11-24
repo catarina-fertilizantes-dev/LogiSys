@@ -258,6 +258,14 @@ All edge functions:
 - Force password change on first login
 - Return credentials for the admin to share with the user
 
+### Changelog
+
+#### 2025-11-24: Removed "comercial" Role
+- The `comercial` role has been completely removed from the system as it was not being used (0 users)
+- Updated `user_role` enum to only include: `admin`, `logistica`, `armazem`, `cliente`
+- Migration: `20251124_remove_comercial_role.sql`
+- All references removed from codebase, documentation, and UI
+
 ---
 
 ## Development
