@@ -196,41 +196,40 @@ const Colaboradores = () => {
       console.log('🔍 [DEBUG] Resposta da Edge Function:', { status: response.status, data });
       
       // Handle non-2xx responses
-      if (!response.ok) {
-        console.error('❌ [ERROR] Edge Function returned non-2xx status:', response.status);
-        
+      if (! response.ok) {
+        console.error('❌ [ERROR] Edge Function returned non-2xx status:', response. status);
+  
         let errorMessage = "Erro ao criar colaborador";
-        
+  
         if (data) {
           // Extract error message from backend response
           let rawDetails = data.details || data.error || "";
-  
+    
           // Traduzir mensagens comuns do Supabase em inglês
-          if (rawDetails.includes('already been registered') || rawDetails.includes('already exists')) {
+          if (rawDetails. includes('already been registered') || rawDetails.includes('already exists')) {
             errorMessage = "Este email já está cadastrado no sistema.";
-          } else if (data.details) {
+          } else if (data. details) {
             errorMessage = data.details;
           } else if (data.error) {
             errorMessage = data.error;
           }
-  
+    
           // Specific messages by stage (sobrescreve tradução genérica se necessário)
           if (data.stage === 'validation' && data.error?.includes('Weak password')) {
-            errorMessage = "Senha muito fraca. Use pelo menos 6 caracteres e evite senhas comuns.";
-          } else if (data. stage === 'createUser') {
+            errorMessage = "Senha muito fraca.   Use pelo menos 6 caracteres e evite senhas comuns.  ";
+          } else if (data.stage === 'createUser') {
             // Mensagens específicas de criação de usuário
-            if (rawDetails.includes('already been registered') || rawDetails.includes('already exists')) {
+            if (rawDetails.includes('already been registered') || rawDetails. includes('already exists')) {
               errorMessage = "Este email já está cadastrado no sistema.";
             }
           } else if (data.stage === 'createColaborador') {
             // Nome duplicado ou email duplicado (já vem traduzido do backend)
             errorMessage = data.details || "Falha ao criar registro de colaborador.";
-          } else if (data.stage === 'adminCheck' && data.error?.includes('Forbidden')) {
-            errorMessage = "Você não tem permissão para criar usuários.";
+          } else if (data.stage === 'adminCheck' && data.error?. includes('Forbidden')) {
+            errorMessage = "Você não tem permissão para criar usuários. ";
           }
         }
-        }
-        
+  
         toast({
           variant: "destructive",
           title: "Erro ao criar colaborador",
