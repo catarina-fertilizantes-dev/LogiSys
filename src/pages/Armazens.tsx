@@ -223,7 +223,8 @@ const Armazens = () => {
         const matches = 
           armazem.nome.toLowerCase().includes(term) ||
           armazem.cidade.toLowerCase().includes(term) ||
-          armazem.estado.toLowerCase().includes(term);
+          armazem.estado.toLowerCase().includes(term) ||
+          armazem.email.toLowerCase().includes(term);
         if (!matches) return false;
       }
       
@@ -426,7 +427,7 @@ const Armazens = () => {
         <div className="flex items-center gap-3 mb-4">
           <Input
             className="h-9 flex-1"
-            placeholder="Buscar por nome ou cidade..."
+            placeholder="Buscar por nome, cidade, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -478,13 +479,35 @@ const Armazens = () => {
                     {armazem.ativo ? "Ativo" : "Inativo"}
                   </Badge>
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <Switch
-                    checked={armazem.ativo}
-                    onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
-                    disabled={!canCreate}
-                  />
+                
+                <div className="mt-3 space-y-1 text-sm">
+                  <p><span className="text-muted-foreground">Email:</span> {armazem.email}</p>
+                  {armazem.telefone && (
+                    <p><span className="text-muted-foreground">Telefone:</span> {armazem.telefone}</p>
+                  )}
+                  {armazem.endereco && (
+                    <p><span className="text-muted-foreground">Endereço:</span> {armazem.endereco}</p>
+                  )}
+                  {armazem.capacidade_total && (
+                    <p>
+                      <span className="text-muted-foreground">Capacidade:</span>{" "}
+                      {armazem.capacidade_disponivel || 0} / {armazem.capacidade_total}
+                    </p>
+                  )}
                 </div>
+
+                {canCreate && (
+                  <div className="flex items-center justify-between pt-3 border-t mt-3">
+                    <Label htmlFor={`switch-${armazem.id}`} className="text-sm">
+                      {armazem.ativo ? "Ativo" : "Inativo"}
+                    </Label>
+                    <Switch
+                      id={`switch-${armazem.id}`}
+                      checked={armazem.ativo}
+                      onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
