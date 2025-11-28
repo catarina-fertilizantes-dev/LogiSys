@@ -129,27 +129,12 @@ const Armazens = () => {
       if (data?.error || !data?.success) {
         console.error("❌ [ERROR] Erro nos dados retornados:", data);
         
+        // Use backend error message directly (already in Portuguese)
         let errorMessage = data?.error || "Falha ao criar armazém";
         
-        if (data?.details) {
+        // Only override if backend didn't provide a clear message
+        if (!data?.error && data?.details) {
           errorMessage = data.details;
-        }
-        
-        // Mensagens específicas em português
-        if (data?.stage === 'validation' && data?.error?.includes('Weak password')) {
-          errorMessage = "Senha gerada muito fraca. Por favor, tente novamente.";
-        } else if (data?.error?.includes('duplicate key') || data?.error?.includes('already exists')) {
-          if (data?.error?.includes('email')) {
-            errorMessage = "Este email já está cadastrado no sistema.";
-          } else if (data?.error?.includes('nome')) {
-            errorMessage = "Já existe um armazém com este nome.";
-          } else if (data?.error?.includes('cidade')) {
-            errorMessage = "Já existe um armazém nesta cidade.";
-          } else {
-            errorMessage = "Este registro já existe no sistema.";
-          }
-        } else if (data?.error?.includes('Invalid payload')) {
-          errorMessage = "Campos obrigatórios faltando ou inválidos.";
         }
         
         throw new Error(errorMessage);

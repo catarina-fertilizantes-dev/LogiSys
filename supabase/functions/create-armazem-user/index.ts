@@ -144,8 +144,21 @@ Deno.serve(async (req) => {
     });
 
     if (authError || !authUser?.user) {
+      let errorMessage = "Falha ao criar usuário";
+      
+      if (authError?.message?.includes('already registered')) {
+        errorMessage = "Este email já está cadastrado no sistema.";
+      } else if (authError?.message?.includes('Email rate limit')) {
+        errorMessage = "Limite de emails excedido. Tente novamente em alguns minutos.";
+      }
+      
       return new Response(
-        JSON.stringify({ error: "Failed to create user", details: authError?.message }),
+        JSON.stringify({ 
+          success: false,
+          error: errorMessage, 
+          details: authError?.message,
+          stage: "createUser"
+        }),
         { status: 500, headers: { "content-type": "application/json", ...corsHeaders } },
       );
     }
@@ -221,8 +234,30 @@ Deno.serve(async (req) => {
         .single();
 
       if (createError) {
+        let errorMessage = "Falha ao criar armazém";
+        
+        // Handle specific PostgreSQL errors
+        if (createError.code === '23505') { // Unique constraint violation
+          if (createError.message.includes('email')) {
+            errorMessage = "Este email já está cadastrado no sistema.";
+          } else if (createError.message.includes('nome')) {
+            errorMessage = "Já existe um armazém com este nome.";
+          } else if (createError.message.includes('cidade')) {
+            errorMessage = "Já existe um armazém nesta cidade.";
+          } else {
+            errorMessage = "Este registro já existe no sistema.";
+          }
+        } else if (createError.code === '23502') { // Not null violation
+          errorMessage = "Campos obrigatórios faltando.";
+        }
+        
         return new Response(
-          JSON.stringify({ error: "Failed to create armazem", details: createError.message }),
+          JSON.stringify({ 
+            success: false,
+            error: errorMessage, 
+            details: createError.message,
+            code: createError.code 
+          }),
           { status: 500, headers: { "content-type": "application/json", ...corsHeaders } },
         );
       }
