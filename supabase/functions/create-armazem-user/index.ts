@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
       if (createError) {
         // Check if error is due to duplicate nome or cidade
         const errorMsg = createError.message?.toLowerCase() || '';
-        const errorCode = (createError as any).code || '';
+        const errorCode = (createError as { code?: string }).code || '';
         
         const isDuplicateNome = errorMsg.includes('armazens_nome') || 
                                  errorCode === '23505' && errorMsg.includes('nome');

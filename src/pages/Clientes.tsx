@@ -265,7 +265,7 @@ const Clientes = () => {
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
             <FilterIcon className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>

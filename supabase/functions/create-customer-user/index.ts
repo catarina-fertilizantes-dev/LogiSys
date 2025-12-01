@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
     if (clienteError) {
       // Check if error is due to duplicate CNPJ/CPF or email
       const errorMsg = clienteError.message?.toLowerCase() || '';
-      const errorCode = (clienteError as any).code || '';
+      const errorCode = (clienteError as { code?: string }).code || '';
       
       const isDuplicateCNPJ = errorMsg.includes('clientes_cnpj_cpf') || 
                                errorMsg.includes('cnpj_cpf') ||
