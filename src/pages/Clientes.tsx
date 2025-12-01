@@ -59,16 +59,16 @@ const Clientes = () => {
   const { data: clientesData, isLoading, error } = useQuery({
     queryKey: ["clientes"],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Buscando clientes...");
+      console.log("🔍 [DEBUG] Buscando clientes.. .");
       const { data, error } = await supabase
         .from("clientes")
         .select("*")
-        .order("nome", { ascending: true });
+        . order("nome", { ascending: true });
       if (error) {
-        console.error("❌ [ERROR] Erro ao buscar clientes:", error);
+        console. error("❌ [ERROR] Erro ao buscar clientes:", error);
         throw error;
       }
-      console.log("✅ [DEBUG] Clientes carregados:", data?.length);
+      console.log("✅ [DEBUG] Clientes carregados:", data?. length);
       return data as Cliente[];
     },
     refetchInterval: 30000,
@@ -112,7 +112,7 @@ const Clientes = () => {
   const handleCreateCliente = async () => {
     const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep } = novoCliente;
 
-    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
+    if (!nome. trim() || !cnpj_cpf.trim() || !email.trim()) {
       toast({ variant: "destructive", title: "Preencha os campos obrigatórios" });
       return;
     }
@@ -133,13 +133,13 @@ const Clientes = () => {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase. auth.getSession();
 
       if (!session) {
         toast({
           variant: "destructive",
           title: "Não autenticado",
-          description: "Sessão expirada. Faça login novamente."
+          description: "Sessão expirada.  Faça login novamente."
         });
         return;
       }
@@ -157,7 +157,7 @@ const Clientes = () => {
           estado: estado || null,
           cep: cep?.trim() || null,
         },
-        session.access_token
+        session. access_token
       );
 
       if (window._debugCreateCustomer) {
@@ -165,18 +165,34 @@ const Clientes = () => {
         debugger; // Permite inspecionar o resultado
       }
 
-      if (!result.success) {
+      if (! result.success) {
         console.error("❌ [ERROR] Erro ao criar cliente:", result);
+
+        // Tratamento melhorado de erros - prioriza details sobre error
+        let errorMessage = "Ocorreu um erro inesperado. ";
+        
+        if (result.details) {
+          errorMessage = result.details;
+        } else if (result. error) {
+          errorMessage = result.error;
+        }
+        
+        // Log detalhado para debug
+        console.log("🔍 [DEBUG] Error details:", {
+          error: result.error,
+          details: result.details,
+          status: result.status
+        });
 
         toast({
           variant: "destructive",
           title: result.error || "Erro ao criar cliente",
-          description: result.details || "Ocorreu um erro inesperado."
+          description: errorMessage
         });
         return;
       }
 
-      console.log("✅ [SUCCESS] Cliente criado:", result.cliente);
+      console.log("✅ [SUCCESS] Cliente criado:", result. cliente);
 
       setCredenciaisModal({
         show: true,
@@ -204,16 +220,16 @@ const Clientes = () => {
 
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     try {
-      console.log("🔍 [DEBUG] Alterando status cliente:", { id, novoStatus: !ativoAtual });
+      console.log("🔍 [DEBUG] Alterando status cliente:", { id, novoStatus: ! ativoAtual });
 
       const { error } = await supabase
         .from("clientes")
-        .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({ ativo: ! ativoAtual, updated_at: new Date().toISOString() })
+        . eq("id", id);
 
       if (error) throw error;
 
-      toast({ title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!` });
+      toast({ title: `Cliente ${! ativoAtual ? "ativado" : "desativado"} com sucesso! ` });
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
     } catch (err) {
       toast({ variant: "destructive", title: "Erro ao alterar status" });
@@ -224,16 +240,16 @@ const Clientes = () => {
     if (!clientesData) return [];
     return clientesData.filter((cliente) => {
       // Status filter
-      if (filterStatus === "ativo" && !cliente.ativo) return false;
+      if (filterStatus === "ativo" && ! cliente.ativo) return false;
       if (filterStatus === "inativo" && cliente.ativo) return false;
 
-      if (searchTerm.trim()) {
+      if (searchTerm. trim()) {
         const term = searchTerm.toLowerCase();
         const matches =
-          cliente.nome.toLowerCase().includes(term) ||
+          cliente.nome.toLowerCase(). includes(term) ||
           cliente.email.toLowerCase().includes(term) ||
           cliente.cnpj_cpf.toLowerCase().includes(term) ||
-          (cliente.cidade && cliente.cidade.toLowerCase().includes(term));
+          (cliente.cidade && cliente.cidade. toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
@@ -306,7 +322,7 @@ const Clientes = () => {
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
                 <DialogDescription>
-                  Preencha os dados do cliente. Um usuário de acesso será criado automaticamente.
+                  Preencha os dados do cliente.  Um usuário de acesso será criado automaticamente.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -317,7 +333,7 @@ const Clientes = () => {
                       id="nome"
                       value={novoCliente.nome}
                       onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, nome: e.target.value })
+                        setNovoCliente({ ...novoCliente, nome: e.target. value })
                       }
                       placeholder="Nome completo"
                     />
@@ -330,7 +346,7 @@ const Clientes = () => {
                       onChange={(e) =>
                         setNovoCliente({ ...novoCliente, cnpj_cpf: e.target.value })
                       }
-                      placeholder="00.000.000/0000-00"
+                      placeholder="00. 000.000/0000-00"
                     />
                   </div>
                   <div>
@@ -373,7 +389,7 @@ const Clientes = () => {
                       id="endereco"
                       value={novoCliente.endereco}
                       onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, endereco: e.target.value })
+                        setNovoCliente({ ...novoCliente, endereco: e. target.value })
                       }
                       placeholder="Rua, número, complemento"
                     />
@@ -411,7 +427,7 @@ const Clientes = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
+                  * Campos obrigatórios.  Um usuário será criado automaticamente com uma senha temporária.
                 </p>
               </div>
               <DialogFooter>
@@ -428,12 +444,12 @@ const Clientes = () => {
       </div>
 
       {/* Credentials Modal */}
-      <Dialog open={credenciaisModal.show} onOpenChange={(open) => setCredenciaisModal({...credenciaisModal, show: open})}>
+      <Dialog open={credenciaisModal. show} onOpenChange={(open) => setCredenciaisModal({...credenciaisModal, show: open})}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>✅ Cliente cadastrado com sucesso!</DialogTitle>
             <DialogDescription>
-              Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
+              Credenciais de acesso criadas.  Envie ao cliente por email ou WhatsApp.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -453,8 +469,8 @@ const Clientes = () => {
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente. 
-                Por segurança, esta senha só aparece uma vez. O cliente será obrigado a trocar a senha no primeiro login.
+                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente.  
+                Por segurança, esta senha só aparece uma vez.  O cliente será obrigado a trocar a senha no primeiro login.
               </p>
             </div>
           </div>
@@ -487,7 +503,7 @@ const Clientes = () => {
                   <p className="text-sm text-muted-foreground">{cliente.email}</p>
                 </div>
                 <Badge variant={cliente.ativo ? "default" : "secondary"}>
-                  {cliente.ativo ? "Ativo" : "Inativo"}
+                  {cliente.ativo ?  "Ativo" : "Inativo"}
                 </Badge>
               </div>
               <div className="space-y-1 text-sm">
@@ -514,7 +530,7 @@ const Clientes = () => {
                   </Label>
                   <Switch
                     id={`switch-${cliente.id}`}
-                    checked={cliente.ativo}
+                    checked={cliente. ativo}
                     onCheckedChange={() =>
                       handleToggleAtivo(cliente.id, cliente.ativo)
                     }
