@@ -108,7 +108,7 @@ const ChangePassword = () => {
 
       // **NOVO:** força logout e redireciona para login para evitar conflito de sessão recovery
       await supabase.auth.signOut();
-      navigate("/login");
+      navigate("/auth");
     } catch (error) {
       console.error("Error changing password:", error);
       toast({
