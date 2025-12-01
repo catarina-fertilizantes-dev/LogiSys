@@ -83,7 +83,7 @@ export async function createCustomer(
           success: false,
           status: 401,
           error: 'Não autenticado',
-          details: 'Sessão expirada. Faça login novamente.'
+          details: data?.details || 'Sessão expirada. Faça login novamente.'
         };
       }
 
@@ -93,80 +93,20 @@ export async function createCustomer(
           success: false,
           status: 403,
           error: 'Sem permissão',
-          details: 'Você não tem permissão para criar clientes.'
+          details: data?.details || 'Você não tem permissão para criar clientes.'
         };
       }
 
-      // Handle 409 - Conflict/Duplicate or explicit Duplicidade error
-      if (response.status === 409 || (data && String(data.error) === 'Duplicidade')) {
-        // Prefer backend's details message if available and meaningful
-        let duplicateMessage = 'Já existe um registro com estes dados.';
-        
-        if (data?.details && typeof data.details === 'string') {
-          // Use backend message if it's already user-friendly (starts with "Já existe")
-          if (data.details.startsWith('Já existe')) {
-            duplicateMessage = data.details;
-          } else {
-            // Otherwise, parse the backend message for specifics
-            const details = data.details.toLowerCase();
-            if (details.includes('clientes_email_unique') || details.includes('email')) {
-              duplicateMessage = 'Este email já está cadastrado no sistema.';
-            } else if (details.includes('clientes_cnpj_cpf_unique') || details.includes('cnpj') || details.includes('cpf')) {
-              duplicateMessage = 'Este CNPJ/CPF já está cadastrado no sistema.';
-            }
-          }
-        }
-
-        return {
-          success: false,
-          status: response.status,
-          error: 'Duplicidade',
-          details: duplicateMessage
-        };
-      }
-
-      // Handle other error status codes
-      let errorMessage = 'Erro ao criar cliente';
-
-      if (data) {
-        // Extract error message from backend response
-        const rawDetails = String(data.details || data.error || '');
-
-        // Translate common Supabase messages
-        if (rawDetails.includes('already been registered') || rawDetails.includes('already exists')) {
-          errorMessage = 'Este email já está cadastrado no sistema.';
-        } else if (rawDetails.includes('duplicate') && rawDetails.includes('email')) {
-          errorMessage = 'Este email já está cadastrado no sistema.';
-        } else if (rawDetails.includes('duplicate') && (rawDetails.includes('cnpj') || rawDetails.includes('cpf'))) {
-          errorMessage = 'Este CNPJ/CPF já está cadastrado no sistema.';
-        } else if (rawDetails.includes('clientes_email_unique')) {
-          errorMessage = 'Este email já está cadastrado no sistema.';
-        } else if (rawDetails.includes('clientes_cnpj_cpf_unique')) {
-          errorMessage = 'Este CNPJ/CPF já está cadastrado no sistema.';
-        } else if (data.details) {
-          errorMessage = data.details;
-        } else if (data.error) {
-          errorMessage = data.error;
-        }
-
-        // Specific messages by stage
-        if (data.stage === 'validation' && data.error?.includes('Weak password')) {
-          errorMessage = 'Senha gerada muito fraca. Por favor, tente novamente.';
-        } else if (data.stage === 'createUser') {
-          if (rawDetails.includes('already been registered') || rawDetails.includes('already exists')) {
-            errorMessage = 'Este email já está cadastrado no sistema.';
-          }
-        } else if (data.stage === 'createCliente') {
-          // Duplicates already handled above
-          errorMessage = data.details || 'Falha ao criar registro de cliente.';
-        }
-      }
+      // Handle all error responses by directly using backend's details field
+      // The backend already provides user-friendly messages
+      const errorMessage = (data?.details as string) || (data?.error as string) || 'Ocorreu um erro ao processar sua solicitação.';
+      const errorType = data?.error || 'Erro ao criar cliente';
 
       return {
         success: false,
         status: response.status,
-        error: 'Erro ao criar cliente',
-        details: errorMessage
+        error: String(errorType),
+        details: String(errorMessage)
       };
     }
 
