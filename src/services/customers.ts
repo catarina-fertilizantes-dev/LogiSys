@@ -36,7 +36,7 @@ export async function createCustomer(
   try {
     // Always normalize CNPJ/CPF before sending
     const normalizedPayload = {
-      ...payload,
+      ... payload,
       cnpj_cpf: payload.cnpj_cpf.replace(/\D/g, '')
     };
 
@@ -68,11 +68,11 @@ export async function createCustomer(
 
     // Show backend's friendly messages for all errors!
     if (!response.ok) {
-      const errorMessage = (data?.details as string) || (data?.error as string) || 'Ocorreu um erro ao processar sua solicitação.';
+      const errorMessage = (data?. details as string) || (data?. error as string) || 'Ocorreu um erro ao processar sua solicitação.';
       const errorType = data?.error || 'Erro ao criar cliente';
       return {
         success: false,
-        status: response.status,
+        status: response. status,
         error: String(errorType),
         details: String(errorMessage)
       };
@@ -91,15 +91,15 @@ export async function createCustomer(
       return {
         success: true,
         status: response.status,
-        cliente: data.cliente,
-        senha: data.senha
+        cliente: data.cliente as Record<string, unknown>,
+        senha: String(data.senha || '')
       };
     } else {
       return {
         success: false,
         status: response.status,
         error: 'Erro inesperado',
-        details: data.error || data.details || 'Resposta inesperada do servidor'
+        details: String(data.error || data.details || 'Resposta inesperada do servidor')
       };
     }
   } catch (err) {
