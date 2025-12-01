@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Warehouse, Plus, Filter as FilterIcon } from "lucide-react";
+import { createWarehouse } from "@/services/warehouses";
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -120,9 +121,37 @@ const Armazens = () => {
     try {
       console.log("🔍 [DEBUG] Criando armazém:", { nome, cidade, estado, email });
 
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke('create-armazem-user', {
-        body: {
+      // Get Supabase URL and anon key
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      // Validate environment variables
+      if (!supabaseUrl || !supabaseAnonKey) {
+        toast({
+          variant: "destructive",
+          title: "Erro de configuração",
+          description: "Variáveis de ambiente do Supabase não configuradas."
+        });
+        return;
+      }
+      
+      // Get current session for Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Não autenticado",
+          description: "Sessão expirada. Faça login novamente."
+        });
+        return;
+      }
+
+      // Call service layer
+      const result = await createWarehouse(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
           nome: nome.trim(),
           email: email.trim(),
           cidade: cidade.trim(),
@@ -130,56 +159,28 @@ const Armazens = () => {
           telefone: telefone?.trim() || undefined,
           endereco: endereco?.trim() || undefined,
           capacidade_total: capacidadeTotalNumber,
-        }
-      });
+        },
+        session.access_token
+      );
 
-      if (error) {
-        console.error("❌ [ERROR] Erro ao chamar função:", error);
-        throw new Error(error.message || "Ocorreu um erro ao criar o armazém.");
+      if (!result.success) {
+        console.error("❌ [ERROR] Erro ao criar armazém:", result);
+        
+        toast({
+          variant: "destructive",
+          title: result.error || "Erro ao criar armazém",
+          description: result.details || "Ocorreu um erro inesperado."
+        });
+        return;
       }
 
-      if (data?.error || !data?.success) {
-        console.error("❌ [ERROR] Erro nos dados retornados:", data);
-        
-        let errorMessage = data?.error || "Ocorreu um erro ao criar o armazém.";
-        
-        // Tratamento específico de erros
-        if (data?.details) {
-          const details = data.details.toLowerCase();
-          
-          // Erro de email duplicado
-          if (details.includes('duplicate') && details.includes('email')) {
-            errorMessage = "Este email já está cadastrado no sistema.";
-          } else if (details.includes('armazens_email_unique')) {
-            errorMessage = "Este email já está cadastrado no sistema.";
-          } else if (details.includes('unique constraint')) {
-            errorMessage = "Este email já está cadastrado no sistema.";
-          }
-          // Campos obrigatórios faltando
-          else if (details.includes('not null') || details.includes('required')) {
-            errorMessage = "Campos obrigatórios não preenchidos.";
-          }
-          // Nome duplicado (se o backend retornar)
-          else if (details.includes('nome') && details.includes('duplicate')) {
-            errorMessage = "Já existe um armazém com este nome.";
-          }
-          // Fallback para detalhes genéricos
-          else {
-            errorMessage = data.details;
-          }
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      console.log("✅ [SUCCESS] Armazém criado:", data.armazem);
+      console.log("✅ [SUCCESS] Armazém criado:", result.armazem);
 
       // Exibir modal de credenciais com fallback
-      const senhaTemporaria = data.senha || "";
       setCredenciaisModal({
         show: true,
         email: email.trim(),
-        senha: senhaTemporaria,
+        senha: result.senha || "",
         nome: nome.trim()
       });
 

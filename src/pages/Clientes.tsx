@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Plus, Filter as FilterIcon } from "lucide-react";
+import { createCustomer } from "@/services/customers";
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -106,9 +107,37 @@ const Clientes = () => {
     try {
       console.log("🔍 [DEBUG] Criando cliente:", { nome, cnpj_cpf, email });
 
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke('create-customer-user', {
-        body: {
+      // Get Supabase URL and anon key
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      // Validate environment variables
+      if (!supabaseUrl || !supabaseAnonKey) {
+        toast({
+          variant: "destructive",
+          title: "Erro de configuração",
+          description: "Variáveis de ambiente do Supabase não configuradas."
+        });
+        return;
+      }
+      
+      // Get current session for Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Não autenticado",
+          description: "Sessão expirada. Faça login novamente."
+        });
+        return;
+      }
+
+      // Call service layer
+      const result = await createCustomer(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
           nome: nome.trim(),
           cnpj_cpf: cnpj_cpf.trim(),
           email: email.trim(),
@@ -117,46 +146,28 @@ const Clientes = () => {
           cidade: cidade?.trim() || null,
           estado: estado || null,
           cep: cep?.trim() || null,
-        }
-      });
+        },
+        session.access_token
+      );
 
-      if (error) {
-        console.error("❌ [ERROR] Erro ao chamar função:", error);
+      if (!result.success) {
+        console.error("❌ [ERROR] Erro ao criar cliente:", result);
         
-        let errorMessage = "Erro ao criar cliente";
-        if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        throw new Error(errorMessage);
+        toast({
+          variant: "destructive",
+          title: result.error || "Erro ao criar cliente",
+          description: result.details || "Ocorreu um erro inesperado."
+        });
+        return;
       }
 
-      if (data?.error || !data?.success) {
-        console.error("❌ [ERROR] Erro nos dados retornados:", data);
-        
-        let errorMessage = data?.error || "Falha ao criar cliente";
-        
-        if (data?.details) {
-          errorMessage = data.details;
-        }
-        
-        // Mensagens específicas
-        if (data?.stage === 'validation' && data?.error?.includes('Weak password')) {
-          errorMessage = "Senha gerada muito fraca. Por favor, tente novamente.";
-        } else if (data?.stage === 'createUser' && errorMessage.includes('already exists')) {
-          errorMessage = "Este email já está cadastrado no sistema.";
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      console.log("✅ [SUCCESS] Cliente criado:", data.cliente);
+      console.log("✅ [SUCCESS] Cliente criado:", result.cliente);
 
       // Show credentials modal
       setCredenciaisModal({
         show: true,
         email: email.trim(),
-        senha: data.senha,
+        senha: result.senha || "",
         nome: nome.trim()
       });
 
