@@ -225,14 +225,17 @@ Deno.serve(async (req) => {
       
       const isDuplicateCNPJ = errorMsg.includes('clientes_cnpj_cpf') || 
                                errorMsg.includes('cnpj_cpf') ||
-                               errorCode === '23505' && (errorMsg.includes('cnpj') || errorMsg.includes('cpf'));
+                               (errorCode === '23505' && (errorMsg.includes('cnpj') || errorMsg.includes('cpf')));
       const isDuplicateEmail = errorMsg.includes('clientes_email') || 
                                 errorMsg.includes('duplicate') && errorMsg.includes('email');
       
       if (isDuplicateCNPJ || isDuplicateEmail) {
         // Rollback: delete the auth user since cliente creation failed
         console.error("Cliente creation failed due to duplicate, rolling back user:", clienteError);
-        await serviceClient.auth.admin.deleteUser(userId);
+        const { error: deleteError } = await serviceClient.auth.admin.deleteUser(userId);
+        if (deleteError) {
+          console.error("Failed to rollback user creation:", deleteError);
+        }
         
         const duplicateMessage = isDuplicateCNPJ 
           ? "Já existe um cliente com este CNPJ/CPF."
@@ -249,7 +252,10 @@ Deno.serve(async (req) => {
       
       // For other errors, also rollback
       console.error("Cliente creation failed, rolling back user:", clienteError);
-      await serviceClient.auth.admin.deleteUser(userId);
+      const { error: deleteError } = await serviceClient.auth.admin.deleteUser(userId);
+      if (deleteError) {
+        console.error("Failed to rollback user creation:", deleteError);
+      }
       
       return new Response(
         JSON.stringify({ error: "Failed to create cliente", details: clienteError.message }),

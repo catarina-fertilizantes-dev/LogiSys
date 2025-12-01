@@ -213,7 +213,10 @@ Deno.serve(async (req) => {
       if (updateError) {
         // Rollback on link error
         console.error("Failed to link armazem, rolling back user:", updateError);
-        await serviceClient.auth.admin.deleteUser(userId);
+        const { error: deleteError } = await serviceClient.auth.admin.deleteUser(userId);
+        if (deleteError) {
+          console.error("Failed to rollback user creation:", deleteError);
+        }
         
         return new Response(
           JSON.stringify({ error: "Failed to link armazem", details: updateError.message }),
@@ -246,14 +249,17 @@ Deno.serve(async (req) => {
         const errorCode = (createError as { code?: string }).code || '';
         
         const isDuplicateNome = errorMsg.includes('armazens_nome') || 
-                                 errorCode === '23505' && errorMsg.includes('nome');
+                                 ((errorCode === '23505') && errorMsg.includes('nome'));
         const isDuplicateCidade = errorMsg.includes('armazens_cidade') || 
-                                   errorCode === '23505' && errorMsg.includes('cidade');
+                                   ((errorCode === '23505') && errorMsg.includes('cidade'));
         
         if (isDuplicateNome || isDuplicateCidade) {
           // Rollback: delete the auth user since armazem creation failed
           console.error("Armazem creation failed due to duplicate, rolling back user:", createError);
-          await serviceClient.auth.admin.deleteUser(userId);
+          const { error: deleteError } = await serviceClient.auth.admin.deleteUser(userId);
+          if (deleteError) {
+            console.error("Failed to rollback user creation:", deleteError);
+          }
           
           let duplicateMessage = "Já existe um armazém com estes dados.";
           if (isDuplicateNome) {
@@ -273,7 +279,10 @@ Deno.serve(async (req) => {
         
         // For other errors, also rollback
         console.error("Armazem creation failed, rolling back user:", createError);
-        await serviceClient.auth.admin.deleteUser(userId);
+        const { error: deleteError } = await serviceClient.auth.admin.deleteUser(userId);
+        if (deleteError) {
+          console.error("Failed to rollback user creation:", deleteError);
+        }
         
         return new Response(
           JSON.stringify({ error: "Failed to create armazem", details: createError.message }),
