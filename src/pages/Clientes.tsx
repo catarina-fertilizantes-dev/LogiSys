@@ -59,11 +59,11 @@ const Clientes = () => {
   const { data: clientesData, isLoading, error } = useQuery({
     queryKey: ["clientes"],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Buscando clientes.. .");
+      console.log("🔍 [DEBUG] Buscando clientes...");
       const { data, error } = await supabase
         .from("clientes")
         .select("*")
-        . order("nome", { ascending: true });
+        .order("nome", { ascending: true });
       if (error) {
         console. error("❌ [ERROR] Erro ao buscar clientes:", error);
         throw error;
@@ -119,9 +119,8 @@ const Clientes = () => {
 
     try {
       console.log("🔍 [DEBUG] Criando cliente:", { nome, cnpj_cpf, email });
-      window._debugCreateCustomer = true;
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseUrl = import.meta. env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
@@ -144,6 +143,7 @@ const Clientes = () => {
         return;
       }
 
+      // Chama o serviço createCustomer (nunca lança exceção, sempre retorna objeto)
       const result = await createCustomer(
         supabaseUrl,
         supabaseAnonKey,
@@ -157,28 +157,19 @@ const Clientes = () => {
           estado: estado || null,
           cep: cep?.trim() || null,
         },
-        session. access_token
+        session.access_token
       );
 
-      if (window._debugCreateCustomer) {
-        console.log('[DEBUG] result objeto:', result);
-        debugger; // Permite inspecionar o resultado
-      }
+      console.log("🔍 [DEBUG] Resultado do createCustomer:", result);
 
-      if (! result.success) {
+      // Tratamento de erro - O serviço SEMPRE retorna um objeto, nunca lança exceção
+      if (!result.success) {
         console.error("❌ [ERROR] Erro ao criar cliente:", result);
 
-        // Tratamento melhorado de erros - prioriza details sobre error
-        let errorMessage = "Ocorreu um erro inesperado. ";
+        // Prioriza details (mensagem amigável do backend) sobre error
+        const errorMessage = result.details || result.error || "Ocorreu um erro inesperado. ";
         
-        if (result.details) {
-          errorMessage = result.details;
-        } else if (result. error) {
-          errorMessage = result.error;
-        }
-        
-        // Log detalhado para debug
-        console.log("🔍 [DEBUG] Error details:", {
+        console.log("🔍 [DEBUG] Detalhes do erro:", {
           error: result.error,
           details: result.details,
           status: result.status
@@ -192,7 +183,8 @@ const Clientes = () => {
         return;
       }
 
-      console.log("✅ [SUCCESS] Cliente criado:", result. cliente);
+      // Sucesso
+      console.log("✅ [SUCCESS] Cliente criado com sucesso:", result. cliente);
 
       setCredenciaisModal({
         show: true,
@@ -206,14 +198,12 @@ const Clientes = () => {
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
 
     } catch (err: unknown) {
-      console.error("❌ [ERROR] Erro geral:", err);
-      if (window._debugCreateCustomer) {
-        debugger; // Permite inspecionar erro inesperado
-      }
+      // Este catch só deve pegar erros realmente inesperados (falha de rede, etc)
+      console.error("❌ [ERROR] Exceção inesperada ao criar cliente:", err);
       toast({
         variant: "destructive",
-        title: "Erro ao criar cliente",
-        description: err instanceof Error ? err.message : "Erro desconhecido"
+        title: "Erro de conexão",
+        description: err instanceof Error ? err.message : "Erro desconhecido ao conectar com o servidor"
       });
     }
   };
@@ -229,9 +219,10 @@ const Clientes = () => {
 
       if (error) throw error;
 
-      toast({ title: `Cliente ${! ativoAtual ? "ativado" : "desativado"} com sucesso! ` });
+      toast({ title: `Cliente ${! ativoAtual ? "ativado" : "desativado"} com sucesso!` });
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
     } catch (err) {
+      console.error("❌ [ERROR] Erro ao alterar status:", err);
       toast({ variant: "destructive", title: "Erro ao alterar status" });
     }
   };
@@ -249,7 +240,7 @@ const Clientes = () => {
           cliente.nome.toLowerCase(). includes(term) ||
           cliente.email.toLowerCase().includes(term) ||
           cliente.cnpj_cpf.toLowerCase().includes(term) ||
-          (cliente.cidade && cliente.cidade. toLowerCase().includes(term));
+          (cliente.cidade && cliente.cidade.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
@@ -306,7 +297,7 @@ const Clientes = () => {
           <Input
             placeholder="Buscar por nome, email, CNPJ/CPF..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target. value)}
             className="max-w-md"
           />
         </div>
@@ -333,7 +324,7 @@ const Clientes = () => {
                       id="nome"
                       value={novoCliente.nome}
                       onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, nome: e.target. value })
+                        setNovoCliente({ ...novoCliente, nome: e.target.value })
                       }
                       placeholder="Nome completo"
                     />
@@ -378,7 +369,7 @@ const Clientes = () => {
                       id="cep"
                       value={novoCliente.cep}
                       onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, cep: e.target.value })
+                        setNovoCliente({ ...novoCliente, cep: e. target.value })
                       }
                       placeholder="00000-000"
                     />
@@ -447,7 +438,7 @@ const Clientes = () => {
       <Dialog open={credenciaisModal. show} onOpenChange={(open) => setCredenciaisModal({...credenciaisModal, show: open})}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>✅ Cliente cadastrado com sucesso!</DialogTitle>
+            <DialogTitle>✅ Cliente cadastrado com sucesso! </DialogTitle>
             <DialogDescription>
               Credenciais de acesso criadas.  Envie ao cliente por email ou WhatsApp.
             </DialogDescription>
@@ -478,7 +469,7 @@ const Clientes = () => {
             <Button
               variant="outline"
               onClick={() => {
-                const texto = `Credenciais de acesso ao LogisticPro\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                const texto = `Credenciais de acesso ao LogiSys\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso. `;
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
@@ -503,7 +494,7 @@ const Clientes = () => {
                   <p className="text-sm text-muted-foreground">{cliente.email}</p>
                 </div>
                 <Badge variant={cliente.ativo ? "default" : "secondary"}>
-                  {cliente.ativo ?  "Ativo" : "Inativo"}
+                  {cliente.ativo ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
               <div className="space-y-1 text-sm">
