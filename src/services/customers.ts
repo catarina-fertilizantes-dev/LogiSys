@@ -36,8 +36,8 @@ export async function createCustomer(
   try {
     // Always normalize CNPJ/CPF before sending
     const normalizedPayload = {
-      ... payload,
-      cnpj_cpf: payload.cnpj_cpf.replace(/\D/g, '')
+      ...payload,
+      cnpj_cpf: payload. cnpj_cpf.replace(/\D/g, '')
     };
 
     // Manual fetch – never use supabase.functions.invoke
@@ -45,7 +45,7 @@ export async function createCustomer(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken ?? ''}`,
+        'Authorization': `Bearer ${authToken ??  ''}`,
         'apikey': supabaseAnonKey
       },
       body: JSON.stringify(normalizedPayload)
@@ -53,26 +53,26 @@ export async function createCustomer(
 
     let data: Record<string, unknown> | null = null;
     try {
-      data = await response.json();
+      data = await response. json();
     } catch (parseError) {
       console.error('❌ [ERROR] Failed to parse response JSON:', parseError);
       return {
         success: false,
         status: response.status,
         error: 'Resposta inválida do servidor',
-        details: 'Não foi possível processar a resposta do servidor. Verifique os logs para mais detalhes.'
+        details: 'Não foi possível processar a resposta do servidor.  Verifique os logs para mais detalhes.'
       };
     }
 
     console.log('🔍 [DEBUG] Edge Function response:', { status: response.status, data });
 
-    // Show backend's friendly messages for all errors!
-    if (!response.ok) {
-      const errorMessage = (data?. details as string) || (data?. error as string) || 'Ocorreu um erro ao processar sua solicitação.';
+    // Show backend's friendly messages for all errors! 
+    if (! response.ok) {
+      const errorMessage = (data?. details as string) || (data?.error as string) || 'Ocorreu um erro ao processar sua solicitação. ';
       const errorType = data?.error || 'Erro ao criar cliente';
       return {
         success: false,
-        status: response. status,
+        status: response.status,
         error: String(errorType),
         details: String(errorMessage)
       };
