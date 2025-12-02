@@ -38,6 +38,7 @@ type Armazem = {
   capacidade_disponivel?: number;
   ativo: boolean;
   created_at: string;
+  cep?: string;
 };
 
 const Armazens = () => {
@@ -57,6 +58,7 @@ const Armazens = () => {
     telefone: "",
     endereco: "",
     capacidade_total: "",
+    cep: "",
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -82,6 +84,7 @@ const Armazens = () => {
       telefone: "",
       endereco: "",
       capacidade_total: "",
+      cep: "",
     });
   };
 
@@ -122,7 +125,7 @@ const Armazens = () => {
   }, []);
 
   const handleCreateArmazem = async () => {
-    const { nome, cidade, estado, email, telefone, endereco, capacidade_total } = novoArmazem;
+    const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep } = novoArmazem;
     if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim()) {
       toast({
         variant: "destructive",
@@ -181,6 +184,7 @@ const Armazens = () => {
           telefone: telefone?.trim() || undefined,
           endereco: endereco?.trim() || undefined,
           capacidade_total: capacidadeTotalNumber,
+          cep: cep?.trim() || undefined,
         }),
       });
 
@@ -335,9 +339,6 @@ const Armazens = () => {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Cadastrar Novo Armazém</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do armazém. Um usuário de acesso será criado automaticamente.
-                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -403,6 +404,15 @@ const Armazens = () => {
                         value={novoArmazem.endereco}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cep">CEP</Label>
+                      <Input
+                        id="cep"
+                        value={novoArmazem.cep}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cep: e.target.value })}
+                        placeholder="00000-000"
                       />
                     </div>
                     <div className="col-span-2">
@@ -473,9 +483,6 @@ const Armazens = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>✅ Armazém cadastrado com sucesso!</DialogTitle>
-            <DialogDescription>
-              Credenciais de acesso criadas. Envie ao responsável por email ou WhatsApp.
-            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
@@ -526,8 +533,8 @@ const Armazens = () => {
           <div className="space-y-2 py-4">
             <p><b>Email:</b> {detalhesArmazem?.email}</p>
             <p><b>Telefone:</b> {detalhesArmazem?.telefone || "—"}</p>
-            <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
             <p><b>CEP:</b> {detalhesArmazem?.cep || "—"}</p>
+            <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
             <p><b>Cidade:</b> {detalhesArmazem?.cidade || "—"}</p>
             <p><b>Estado:</b> {detalhesArmazem?.estado || "—"}</p>
             <p><b>Capacidade Total:</b> {detalhesArmazem?.capacidade_total ?? "—"} t</p>
