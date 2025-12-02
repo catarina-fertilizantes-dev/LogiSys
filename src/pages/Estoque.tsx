@@ -17,13 +17,13 @@ type StockStatus = "normal" | "baixo";
 type Unidade = "t" | "kg";
 
 interface StockItem {
-  id: string; // UUID agora
+  id: string;
   produto: string;
   armazem: string;
   quantidade: number;
   unidade: string;
   status: StockStatus;
-  data: string; // formato ISO ou timestamp
+  data: string;
   produto_id?: string;
   armazem_id?: string;
 }
@@ -44,7 +44,6 @@ interface SupabaseEstoqueItem {
   } | null;
 }
 
-const computeStatus = (qtd: number): StockStatus => (qtd < 10 ? "baixo" : "normal");
 const parseDate = (d: string) => {
   const [dd, mm, yyyy] = d.split("/");
   return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
@@ -68,11 +67,17 @@ const Estoque = () => {
           armazem:armazens(id, nome, cidade)
         `)
         .order("updated_at", { ascending: false });
-      
-      if (error) throw error;
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao buscar estoque",
+          description: error.message,
+        });
+        throw error;
+      }
       return data;
     },
-    refetchInterval: 30000, // Atualiza a cada 30s
+    refetchInterval: 30000,
   });
 
   const estoque = useMemo(() => {
@@ -83,7 +88,7 @@ const Estoque = () => {
       armazem: item.armazem?.cidade || item.armazem?.nome || "N/A",
       quantidade: item.quantidade,
       unidade: item.produto?.unidade || "t",
-      status: (item.quantidade < 10 ? "baixo" : "normal") as StockStatus,
+      status: item.quantidade < 10 ? "baixo" : "normal",
       data: new Date(item.updated_at).toLocaleDateString("pt-BR"),
       produto_id: item.produto?.id,
       armazem_id: item.armazem?.id,
@@ -93,11 +98,19 @@ const Estoque = () => {
   const { data: armazensAtivos } = useQuery({
     queryKey: ["armazens-ativos"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("armazens")
         .select("id, nome, cidade, estado")
         .eq("ativo", true)
         .order("cidade");
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao buscar armazéns",
+          description: error.message,
+        });
+        return [];
+      }
       return data || [];
     },
   });
@@ -105,22 +118,22 @@ const Estoque = () => {
   const { data: armazensParaFiltro } = useQuery({
     queryKey: ["armazens-filtro"],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Buscando armazéns para filtro...");
       const { data, error } = await supabase
         .from("armazens")
         .select("id, cidade, estado, ativo")
         .eq("ativo", true)
         .order("cidade");
-      
       if (error) {
-        console.error("❌ [ERROR] Erro ao buscar armazéns para filtro:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao buscar armazéns para filtro",
+          description: error.message,
+        });
         return [];
       }
-      
-      console.log("✅ [DEBUG] Armazéns para filtro carregados:", data?.length);
       return data || [];
     },
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 10000,
   });
 
   // Dialog "Novo Produto"
@@ -144,57 +157,48 @@ const Estoque = () => {
     const { nome, armazem, quantidade, unidade } = novoProduto;
 
     if (!nome.trim() || !armazem.trim() || !quantidade) {
-      toast({ variant: "destructive", title: "Preencha todos os campos" });
+      toast({ variant: "destructive", title: "Preencha todos os campos obrigatórios" });
       return;
     }
 
     const qtdNum = Number(quantidade);
     if (Number.isNaN(qtdNum) || qtdNum <= 0) {
-      toast({ variant: "destructive", title: "Quantidade inválida" });
+      toast({ variant: "destructive", title: "Quantidade inválida", description: "Informe um valor numérico maior que zero." });
       return;
     }
 
     try {
-      console.log("🔍 [DEBUG] Iniciando criação de produto:", { nome, armazem, quantidade, unidade });
-
-      // 1. Buscar ou criar produto
+      // Buscar produto ou criar (com tratamento de erro)
       let produtoId: string;
-      console.log("🔍 [DEBUG] Buscando produto existente...");
-      
       const { data: produtoExistente, error: errBusca } = await supabase
         .from("produtos")
         .select("id")
         .ilike("nome", nome.trim())
-        .maybeSingle(); // Usar maybeSingle() em vez de single()
+        .maybeSingle();
 
       if (errBusca) {
-        console.error("❌ [ERROR] Erro ao buscar produto:", errBusca);
-        throw new Error(`Erro ao buscar produto: ${errBusca.message}`);
+        toast({ variant: "destructive", title: "Erro ao buscar produto", description: errBusca.message });
+        console.error("❌ [ERROR] Buscar produto:", errBusca);
+        return;
       }
 
       if (produtoExistente) {
-        console.log("✅ [DEBUG] Produto existente encontrado:", produtoExistente.id);
         produtoId = produtoExistente.id;
       } else {
-        console.log("🔍 [DEBUG] Produto não existe, criando novo...");
         const { data: novoProd, error: errProd } = await supabase
           .from("produtos")
           .insert({ nome: nome.trim(), unidade })
           .select("id")
           .single();
-        
         if (errProd) {
-          console.error("❌ [ERROR] Erro ao criar produto:", errProd);
-          throw new Error(`Erro ao criar produto: ${errProd.message} (${errProd.code || 'N/A'})`);
+          toast({ variant: "destructive", title: "Erro ao criar produto", description: errProd.message });
+          console.error("❌ [ERROR] Criar produto:", errProd);
+          return;
         }
-        
-        console.log("✅ [DEBUG] Produto criado:", novoProd.id);
         produtoId = novoProd!.id;
       }
 
-      // 2. Buscar armazém pelo ID (agora é select, não mais busca por nome)
-      console.log("🔍 [DEBUG] Buscando armazém:", armazem);
-
+      // Buscar armazém (com tratamento de erro)
       const { data: armazemData, error: errArmazem } = await supabase
         .from("armazens")
         .select("id, nome, cidade, estado")
@@ -203,8 +207,9 @@ const Estoque = () => {
         .maybeSingle();
 
       if (errArmazem) {
-        console.error("❌ [ERROR] Erro ao buscar armazém:", errArmazem);
-        throw new Error(`Erro ao buscar armazém: ${errArmazem.message}`);
+        toast({ variant: "destructive", title: "Erro ao buscar armazém", description: errArmazem.message });
+        console.error("❌ [ERROR] Buscar armazém:", errArmazem);
+        return;
       }
 
       if (!armazemData) {
@@ -212,11 +217,7 @@ const Estoque = () => {
         return;
       }
 
-      console.log("✅ [DEBUG] Armazém encontrado:", armazemData);
-
-      // 3. Buscar estoque atual
-      console.log("🔍 [DEBUG] Buscando estoque atual...");
-
+      // Buscar estoque atual (com tratamento de erro)
       const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
         .from("estoque")
         .select("quantidade")
@@ -225,18 +226,15 @@ const Estoque = () => {
         .maybeSingle();
 
       if (errBuscaEstoque) {
-        console.error("❌ [ERROR] Erro ao buscar estoque:", errBuscaEstoque);
-        throw new Error(`Erro ao buscar estoque: ${errBuscaEstoque.message}`);
+        toast({ variant: "destructive", title: "Erro ao buscar estoque", description: errBuscaEstoque.message });
+        console.error("❌ [ERROR] Buscar estoque:", errBuscaEstoque);
+        return;
       }
 
       const estoqueAnterior = estoqueAtual?.quantidade || 0;
       const novaQuantidade = estoqueAnterior + qtdNum;
 
-      console.log("✅ [DEBUG] Estoque anterior:", estoqueAnterior, "| Entrada:", qtdNum, "| Novo total:", novaQuantidade);
-
-      // 4. Inserir/atualizar estoque com quantidade SOMADA
-      console.log("🔍 [DEBUG] Atualizando estoque...");
-
+      // Atualizar estoque com tratamento de erro
       const { data: userData } = await supabase.auth.getUser();
 
       const { data: estoqueData, error: errEstoque } = await supabase
@@ -244,7 +242,7 @@ const Estoque = () => {
         .upsert({
           produto_id: produtoId,
           armazem_id: armazemData.id,
-          quantidade: novaQuantidade, // ✅ SOMA
+          quantidade: novaQuantidade,
           updated_by: userData.user?.id,
           updated_at: new Date().toISOString(),
         }, {
@@ -253,15 +251,14 @@ const Estoque = () => {
         .select();
 
       if (errEstoque) {
-        console.error("❌ [ERROR] Erro ao atualizar estoque:", errEstoque);
-        throw new Error(`Erro ao atualizar estoque: ${errEstoque.message} (${errEstoque.code || 'N/A'})`);
+        toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: errEstoque.message });
+        console.error("❌ [ERROR] Atualizar estoque:", errEstoque);
+        return;
       }
-
-      console.log("✅ [SUCCESS] Estoque atualizado:", estoqueData);
 
       toast({ 
         title: "Entrada registrada!", 
-        description: `+${qtdNum}t de ${nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}t` 
+        description: `+${qtdNum}${unidade} de ${nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}` 
       });
 
       resetFormNovoProduto();
@@ -269,43 +266,25 @@ const Estoque = () => {
       queryClient.invalidateQueries({ queryKey: ["estoque"] });
 
     } catch (err: unknown) {
-      console.error("❌ [ERROR] Erro geral ao criar produto:", err);
-      
-      let errorMessage = "Erro desconhecido";
-      let errorDetails = "";
-
-      if (err instanceof Error) {
-        errorMessage = err.message;
-        errorDetails = err.stack || "";
-      } else if (typeof err === 'object' && err !== null) {
-        errorMessage = JSON.stringify(err, null, 2);
-      }
-
+      let errorMessage = "Erro desconhecido ao salvar";
+      if (err instanceof Error) errorMessage = err.message;
       toast({
         variant: "destructive",
         title: "Erro ao criar produto",
-        description: errorMessage,
+        description: errorMessage
       });
-
-      // Log adicional para debugging
-      console.error("Detalhes completos do erro:", {
-        message: errorMessage,
-        details: errorDetails,
-        context: { nome, armazem, quantidade, unidade }
-      });
+      console.error("❌ [ERROR] Criar produto:", err);
     }
   };
 
   const handleUpdateQuantity = async (id: string) => {
     const newQty = Number(editQuantity);
     if (Number.isNaN(newQty) || newQty < 0) {
-      toast({ variant: "destructive", title: "Quantidade inválida" });
+      toast({ variant: "destructive", title: "Quantidade inválida", description: "Digite um valor válido maior ou igual a zero." });
       return;
     }
 
     try {
-      console.log("🔍 [DEBUG] Atualizando quantidade:", { id, newQty });
-      
       const { data: userData } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("estoque")
@@ -318,24 +297,21 @@ const Estoque = () => {
         .select();
 
       if (error) {
-        console.error("❌ [ERROR] Erro ao atualizar:", error);
-        throw new Error(`${error.message} (${error.code || 'N/A'})`);
+        toast({ variant: "destructive", title: "Erro ao atualizar", description: error.message });
+        console.error("❌ [ERROR] Atualizar estoque:", error);
+        return;
       }
-
-      console.log("✅ [SUCCESS] Quantidade atualizada:", data);
 
       toast({ title: "Quantidade atualizada com sucesso!" });
       setEditingId(null);
       queryClient.invalidateQueries({ queryKey: ["estoque"] });
-
     } catch (err: unknown) {
-      console.error("❌ [ERROR] Erro geral ao atualizar:", err);
-      
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
         description: err instanceof Error ? err.message : String(err)
       });
+      console.error("❌ [ERROR] Atualizar estoque:", err);
     }
   };
 
@@ -350,7 +326,6 @@ const Estoque = () => {
   const allStatuses: StockStatus[] = ["normal", "baixo"];
   const allWarehouses = useMemo(() => {
     if (!armazensParaFiltro) return [];
-    // Use cidade from armazens table, filter only active ones
     return armazensParaFiltro
       .filter(a => a.ativo === true)
       .map(a => a.cidade)
@@ -526,12 +501,12 @@ const Estoque = () => {
               <div className="space-y-1">
                 <Label>Status</Label>
                 <div className="flex flex-wrap gap-2">
-                  {allStatuses.map((st) => {
-                    const active = selectedStatuses.includes(st);
+                  {["normal", "baixo"].map((st) => {
+                    const active = selectedStatuses.includes(st as StockStatus);
                     return (
                       <Badge
                         key={st}
-                        onClick={() => toggleStatus(st)}
+                        onClick={() => toggleStatus(st as StockStatus)}
                         className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}
                       >
                         {st === "normal" ? "Normal" : "Baixo"}
