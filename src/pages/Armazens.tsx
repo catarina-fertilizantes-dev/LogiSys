@@ -1,19 +1,25 @@
-import { useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Warehouse, Plus, Filter as FilterIcon } from "lucide-react";
-import { createWarehouse } from "@/services/warehouses";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -21,7 +27,7 @@ const estadosBrasil = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-interface Armazem {
+type Armazem = {
   id: string;
   nome: string;
   cidade: string;
@@ -33,32 +39,17 @@ interface Armazem {
   capacidade_disponivel?: number;
   ativo: boolean;
   created_at: string;
-}
+};
 
 const Armazens = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { hasRole } = useAuth();
 
-  const { data: armazensData, isLoading, error } = useQuery({
-    queryKey: ["armazens"],
-    queryFn: async () => {
-      console.log("🔍 [DEBUG] Buscando armazéns...");
-      const { data, error } = await supabase
-        .from("armazens")
-        .select("id, nome, cidade, estado, email, telefone, endereco, capacidade_total, capacidade_disponivel, ativo, created_at")
-        .order("cidade", { ascending: true });
-      
-      if (error) {
-        console.error("❌ [ERROR] Erro ao buscar armazéns:", error);
-        throw error;
-      }
-      console.log("✅ [DEBUG] Armazéns carregados:", data?.length);
-      return data as Armazem[];
-    },
-    refetchInterval: 30000,
-  });
+  const [armazens, setArmazens] = useState<Armazem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Novo Armazém - Formulário
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoArmazem, setNovoArmazem] = useState({
     nome: "",
@@ -80,186 +71,249 @@ const Armazens = () => {
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Recarrega lista de armazéns do banco
+  const fetchArmazens = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("armazens")
+        .select("*")
+        .order("cidade", { ascending: true });
+      if (error) {
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar armazéns",
+          description: "Não foi possível carregar os armazéns.",
+        });
+        setLoading(false);
+        return;
+      }
+      setArmazens(data as Armazem[]);
+      setLoading(false);
+    } catch (err) {
+      setError("Erro desconhecido");
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar armazéns",
+        description: "Erro inesperado ao carregar armazéns.",
+      });
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchArmazens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reset form fields
   const resetForm = () => {
-    setNovoArmazem({ 
-      nome: "", 
-      cidade: "", 
-      estado: "", 
-      email: "", 
-      telefone: "", 
-      endereco: "", 
-      capacidade_total: "" 
+    setNovoArmazem({
+      nome: "",
+      cidade: "",
+      estado: "",
+      email: "",
+      telefone: "",
+      endereco: "",
+      capacidade_total: "",
     });
   };
 
   const handleCreateArmazem = async () => {
     const { nome, cidade, estado, email, telefone, endereco, capacidade_total } = novoArmazem;
-
-    // Validações básicas
-    if (!nome.trim() || !cidade.trim() || !estado || !email.trim()) {
-      toast({ variant: "destructive", title: "Preencha todos os campos obrigatórios" });
+    if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Preencha os campos obrigatórios",
+      });
       return;
-    }
-
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      toast({ variant: "destructive", title: "Email inválido", description: "Por favor, insira um email válido" });
-      return;
-    }
-
-    // Validação de capacidade_total (se fornecida)
-    let capacidadeTotalNumber: number | undefined;
-    if (capacidade_total && capacidade_total.trim()) {
-      capacidadeTotalNumber = parseFloat(capacidade_total);
-      if (isNaN(capacidadeTotalNumber) || capacidadeTotalNumber < 0) {
-        toast({ variant: "destructive", title: "Capacidade inválida", description: "A capacidade deve ser um número positivo" });
-        return;
-      }
     }
 
     try {
-      console.log("🔍 [DEBUG] Criando armazém:", { nome, cidade, estado, email });
-
-      // Get Supabase URL and anon key
+      // Dados de ambientes Supabase
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      // Validate environment variables
+
       if (!supabaseUrl || !supabaseAnonKey) {
         toast({
           variant: "destructive",
           title: "Erro de configuração",
-          description: "Variáveis de ambiente do Supabase não configuradas."
+          description: "Variáveis de ambiente do Supabase não configuradas.",
         });
         return;
       }
-      
-      // Get current session for Authorization header
+
+      // Verifica sessão
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         toast({
           variant: "destructive",
           title: "Não autenticado",
-          description: "Sessão expirada. Faça login novamente."
+          description: "Sessão expirada. Faça login novamente.",
         });
         return;
       }
 
-      // Call service layer
-      const result = await createWarehouse(
-        supabaseUrl,
-        supabaseAnonKey,
-        {
+      // Prepara payload
+      let capacidadeTotalNumber: number | undefined = undefined;
+      if (capacidade_total && capacidade_total.trim()) {
+        capacidadeTotalNumber = parseFloat(capacidade_total);
+        if (isNaN(capacidadeTotalNumber) || capacidadeTotalNumber < 0) {
+          toast({
+            variant: "destructive",
+            title: "Capacidade inválida",
+            description: "A capacidade deve ser um número positivo",
+          });
+          return;
+        }
+      }
+
+      // Chama Edge Function via fetch
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({
           nome: nome.trim(),
           email: email.trim(),
           cidade: cidade.trim(),
-          estado,
+          estado: estado.trim(),
           telefone: telefone?.trim() || undefined,
           endereco: endereco?.trim() || undefined,
           capacidade_total: capacidadeTotalNumber,
-        },
-        session.access_token
-      );
+        }),
+      });
 
-      if (!result.success) {
-        console.error("❌ [ERROR] Erro ao criar armazém:", result);
-        
+      console.log("[DEBUG][raw response]", response.status, response.statusText, Object.fromEntries(response.headers.entries()));
+      const textBody = await response.text();
+      console.log("[DEBUG][raw body]", textBody);
+
+      let data: any = null;
+      try {
+        data = JSON.parse(textBody);
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        let errorMessage = "Erro ao criar armazém";
+        // Tratamento de erro tipo Zod
+        if (data) {
+          if (
+            typeof data.details === "object" &&
+            data.details !== null &&
+            "fieldErrors" in data.details
+          ) {
+            errorMessage = Object.values(data.details.fieldErrors)
+              .flat()
+              .map(msg =>
+                msg === "Invalid email" ? "Email inválido"
+                : msg === "Required" ? "Campo obrigatório"
+                : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
+                : msg
+              )
+              .join(" | ");
+          } else if (typeof data.details === "string") {
+            errorMessage = data.details;
+          } else if (data.error) {
+            errorMessage = data.error;
+          } else {
+            errorMessage = JSON.stringify(data.details);
+          }
+        }
+
         toast({
           variant: "destructive",
-          title: result.error || "Erro ao criar armazém",
-          description: result.details || "Ocorreu um erro inesperado."
+          title: "Erro ao criar armazém",
+          description: errorMessage,
         });
         return;
       }
 
-      console.log("✅ [SUCCESS] Armazém criado:", result.armazem);
+      if (data && data.success) {
+        toast({
+          title: "Armazém criado com sucesso!",
+          description: `${nome} foi adicionado ao sistema.`,
+        });
 
-      // Exibir modal de credenciais com fallback
-      setCredenciaisModal({
-        show: true,
-        email: email.trim(),
-        senha: result.senha || "",
-        nome: nome.trim()
-      });
+        setCredenciaisModal({
+          show: true,
+          email: email.trim(),
+          senha: data.senha || "",
+          nome: nome.trim(),
+        });
 
-      resetForm();
-      setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["armazens-filtro"] });
-      queryClient.invalidateQueries({ queryKey: ["armazens-ativos"] });
-      queryClient.invalidateQueries({ queryKey: ["armazens"] });
-
-    } catch (err: unknown) {
-      console.error("❌ [ERROR] Erro geral:", err);
-      const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro ao criar o armazém.";
+        resetForm();
+        setDialogOpen(false);
+        fetchArmazens();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar armazém",
+          description: data?.error || data?.details || "Resposta inesperada do servidor",
+        });
+      }
+    } catch (err) {
+      console.error("[DEBUG][fetch catch]", err);
       toast({
         variant: "destructive",
-        title: "Erro ao criar armazém",
-        description: errorMessage
+        title: "Erro de conexão/fetch",
+        description: err instanceof Error ? err.message : JSON.stringify(err),
       });
     }
   };
 
-  const handleToggleAtivo = async (id: string, currentStatus: boolean) => {
+  // Ativar/desativar armazém
+  const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     try {
-      console.log("🔍 [DEBUG] Alterando status do armazém:", id, "para:", !currentStatus);
-
       const { error } = await supabase
         .from("armazens")
-        .update({ ativo: !currentStatus })
+        .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
         .eq("id", id);
-
-      if (error) {
-        console.error("❌ [ERROR] Erro ao atualizar armazém:", error);
-        throw error;
-      }
-
-      console.log("✅ [SUCCESS] Status do armazém atualizado");
-      toast({ title: "Status atualizado com sucesso!" });
-      queryClient.invalidateQueries({ queryKey: ["armazens-filtro"] });
-      queryClient.invalidateQueries({ queryKey: ["armazens-ativos"] });
-      queryClient.invalidateQueries({ queryKey: ["armazens"] });
-    } catch (err: unknown) {
+      if (error) throw error;
+      toast({
+        title: `Armazém ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
+      });
+      fetchArmazens();
+    } catch (err) {
+      console.error("❌ [ERROR] Erro ao alterar status:", err);
       toast({
         variant: "destructive",
-        title: "Erro ao atualizar status",
-        description: err instanceof Error ? err.message : "Erro desconhecido"
+        title: "Erro ao alterar status",
       });
     }
   };
 
+  // Filtros e busca
   const filteredArmazens = useMemo(() => {
-    if (!armazensData) return [];
-    
-    return armazensData.filter((armazem) => {
-      // Filter by status
+    if (!armazens) return [];
+    return armazens.filter((armazem) => {
       if (filterStatus === "ativo" && !armazem.ativo) return false;
       if (filterStatus === "inativo" && armazem.ativo) return false;
-      
-      // Filter by search term
+
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
-        const matches = 
+        const matches =
           armazem.nome.toLowerCase().includes(term) ||
           armazem.cidade.toLowerCase().includes(term) ||
           armazem.estado.toLowerCase().includes(term);
         if (!matches) return false;
       }
-      
       return true;
     });
-  }, [armazensData, filterStatus, searchTerm]);
+  }, [armazens, filterStatus, searchTerm]);
 
-  const canCreate = hasRole("admin") || hasRole("logistica");
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Armazéns" description="Carregando..." actions={<></>} />
-        <div className="container mx-auto px-6 py-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando armazéns...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando armazéns...</p>
         </div>
       </div>
     );
@@ -267,31 +321,54 @@ const Armazens = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Armazéns" description="Erro ao carregar dados" actions={<></>} />
-        <div className="container mx-auto px-6 py-8 text-center">
-          <p className="text-destructive">Erro: {(error as Error).message}</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive">Erro ao carregar armazéns</p>
         </div>
       </div>
     );
   }
 
+  const canCreate = hasRole("admin") || hasRole("logistica");
+
   return (
-    <div className="min-h-screen bg-background">
-      <PageHeader
-        title="Armazéns"
-        description="Gerencie os armazéns do sistema"
-        actions={
+    <div className="min-h-screen bg-background p-6 space-y-6">
+      <PageHeader title="Armazéns" subtitle="Gerencie os armazéns do sistema" icon={Warehouse} />
+
+      {/* Filtros e ações */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="flex gap-2 items-center">
+            <FilterIcon className="h-4 w-4 text-muted-foreground" />
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="ativo">Ativos</SelectItem>
+                <SelectItem value="inativo">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Input
+            placeholder="Buscar por nome, cidade ou estado..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+        {canCreate && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary" disabled={!canCreate}>
+              <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Armazém
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Novo Armazém</DialogTitle>
+                <DialogTitle>Cadastrar Novo Armazém</DialogTitle>
                 <DialogDescription>
                   Preencha os dados do armazém. Um usuário de acesso será criado automaticamente.
                 </DialogDescription>
@@ -304,8 +381,35 @@ const Armazens = () => {
                       id="nome"
                       value={novoArmazem.nome}
                       onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
-                      placeholder="Ex: Armazém Central"
+                      placeholder="Nome do armazém"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="cidade">Cidade *</Label>
+                    <Input
+                      id="cidade"
+                      value={novoArmazem.cidade}
+                      onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
+                      placeholder="Cidade"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="estado">Estado (UF) *</Label>
+                    <Select
+                      value={novoArmazem.estado}
+                      onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
+                    >
+                      <SelectTrigger id="estado">
+                        <SelectValue placeholder="Selecione o estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {estadosBrasil.map((uf) => (
+                          <SelectItem key={uf} value={uf}>
+                            {uf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="email">Email *</Label>
@@ -335,39 +439,11 @@ const Armazens = () => {
                       placeholder="Rua, número, complemento"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="cidade">Cidade *</Label>
-                    <Input
-                      id="cidade"
-                      value={novoArmazem.cidade}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
-                      placeholder="Ex: São Paulo"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="estado">Estado (UF) *</Label>
-                    <Select
-                      value={novoArmazem.estado}
-                      onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
-                    >
-                      <SelectTrigger id="estado">
-                        <SelectValue placeholder="Selecione o estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {estadosBrasil.map((uf) => (
-                          <SelectItem key={uf} value={uf}>
-                            {uf}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="col-span-2">
                     <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
                     <Input
                       id="capacidade_total"
                       type="number"
-                      step="0.01"
                       value={novoArmazem.capacidade_total}
                       onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                       placeholder="Ex: 1000"
@@ -382,174 +458,134 @@ const Armazens = () => {
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button className="bg-gradient-primary" onClick={handleCreateArmazem}>
+                <Button onClick={handleCreateArmazem}>
                   Criar Armazém
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        }
-      />
+        )}
+      </div>
 
-      {/* Credentials Modal */}
-      <Dialog open={credenciaisModal.show} onOpenChange={(open) => setCredenciaisModal({...credenciaisModal, show: open})}>
+      {/* Modal de credenciais temporárias do Armazém */}
+      <Dialog
+        open={credenciaisModal.show}
+        onOpenChange={(open) =>
+          setCredenciaisModal(
+            open
+              ? credenciaisModal
+              : { show: false, email: "", senha: "", nome: "" }
+          )
+        }
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>✅ Armazém cadastrado com sucesso!</DialogTitle>
             <DialogDescription>
-              {credenciaisModal.senha 
-                ? "Credenciais de acesso criadas. Envie ao responsável por email ou WhatsApp."
-                : "Credenciais criadas. Verifique seu email ou consulte o administrador."}
+              Credenciais de acesso criadas. Envie ao responsável por email ou WhatsApp.
             </DialogDescription>
           </DialogHeader>
-          {credenciaisModal.senha ? (
-            <>
-              <div className="space-y-4 py-4">
-                <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
-                  <p className="text-sm font-medium">Credenciais de acesso para:</p>
-                  <p className="text-base font-semibold">{credenciaisModal.nome}</p>
-                  
-                  <div className="space-y-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Email:</Label>
-                      <p className="font-mono text-sm">{credenciaisModal.email}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
-                      <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
-                    </div>
-                  </div>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
+              <p className="text-sm font-medium">Credenciais de acesso para:</p>
+              <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email:</Label>
+                  <p className="font-mono text-sm">{credenciaisModal.email}</p>
                 </div>
-
-                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
-                  <p className="text-xs text-amber-800 dark:text-amber-200">
-                    ⚠️ <strong>Importante:</strong> Envie estas credenciais ao responsável. 
-                    Por segurança, esta senha só aparece uma vez. O usuário será obrigado a trocar a senha no primeiro login.
-                  </p>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
+                  <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
                 </div>
               </div>
-              <DialogFooter className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const texto = `Credenciais de acesso ao Sistema\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
-                    navigator.clipboard.writeText(texto);
-                    toast({ title: "Credenciais copiadas!" });
-                  }}
-                >
-                  📋 Copiar senha
-                </Button>
-                <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
-                  Fechar
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <DialogFooter>
-              <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          )}
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao responsável.
+                Por segurança, esta senha só aparece uma vez. O usuário será obrigado a trocar a senha no primeiro login.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const texto = `Credenciais de acesso ao Sistema\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                navigator.clipboard.writeText(texto);
+                toast({ title: "Credenciais copiadas!" });
+              }}
+            >
+              📋 Copiar credenciais
+            </Button>
+            <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Filters */}
-      <div className="container mx-auto px-6 pt-3">
-        <div className="flex items-center gap-3 mb-4">
-          <Input
-            className="h-9 flex-1"
-            placeholder="Buscar por nome ou cidade..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("all")}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={filterStatus === "ativo" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("ativo")}
-            >
-              Ativos
-            </Button>
-            <Button
-              variant={filterStatus === "inativo" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("inativo")}
-            >
-              Inativos
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid of warehouse cards */}
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredArmazens.map((armazem) => (
-            <Card key={armazem.id} className="transition-all hover:shadow-md">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                      <Warehouse className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{armazem.nome}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {armazem.cidade}/{armazem.estado}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={armazem.ativo ? "default" : "secondary"}>
-                    {armazem.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
+      {/* Grid de armazéns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+        {filteredArmazens.map((armazem) => (
+          <Card key={armazem.id}>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">{armazem.nome}</h3>
+                  <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
                 </div>
-                
-                <div className="space-y-1 text-sm mt-3">
-                  <p><span className="text-muted-foreground">Email:</span> {armazem.email}</p>
-                  {armazem.telefone && (
-                    <p><span className="text-muted-foreground">Telefone:</span> {armazem.telefone}</p>
-                  )}
-                  {armazem.endereco && (
-                    <p><span className="text-muted-foreground">Endereço:</span> {armazem.endereco}</p>
-                  )}
-                  {armazem.capacidade_total != null && (
-                    <p>
-                      <span className="text-muted-foreground">Capacidade:</span> {armazem.capacidade_total}t 
-                      {` / Disponível: ${armazem.capacidade_disponivel != null ? `${armazem.capacidade_disponivel}t` : '—'}`}
-                    </p>
-                  )}
-                </div>
-
-                {canCreate && (
-                  <div className="flex items-center justify-between pt-3 mt-3 border-t">
-                    <Label htmlFor={`switch-${armazem.id}`} className="text-sm">
-                      {armazem.ativo ? "Ativo" : "Inativo"}
-                    </Label>
-                    <Switch
-                      id={`switch-${armazem.id}`}
-                      checked={armazem.ativo}
-                      onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
-                    />
-                  </div>
+                <Badge variant={armazem.ativo ? "default" : "secondary"}>
+                  {armazem.ativo ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+              <div className="space-y-1 text-sm">
+                <p>
+                  <span className="text-muted-foreground">Email:</span> {armazem.email}
+                </p>
+                {armazem.telefone && (
+                  <p><span className="text-muted-foreground">Telefone:</span> {armazem.telefone}</p>
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        {filteredArmazens.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">
-            Nenhum armazém encontrado com os filtros atuais.
-          </div>
-        )}
+                {armazem.endereco && (
+                  <p><span className="text-muted-foreground">Endereço:</span> {armazem.endereco}</p>
+                )}
+                {armazem.capacidade_total != null && (
+                  <p>
+                    <span className="text-muted-foreground">Capacidade total:</span> {armazem.capacidade_total} t
+                  </p>
+                )}
+                {armazem.capacidade_disponivel != null && (
+                  <p>
+                    <span className="text-muted-foreground">Disponível:</span> {armazem.capacidade_disponivel} t
+                  </p>
+                )}
+              </div>
+              {canCreate && (
+                <div className="flex items-center justify-between pt-3 border-t">
+                  <Label htmlFor={`switch-${armazem.id}`} className="text-sm">
+                    {armazem.ativo ? "Ativo" : "Inativo"}
+                  </Label>
+                  <Switch
+                    id={`switch-${armazem.id}`}
+                    checked={armazem.ativo}
+                    onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
+      {filteredArmazens.length === 0 && (
+        <div className="text-center py-12">
+          <Warehouse className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            {searchTerm || filterStatus !== "all"
+              ? "Nenhum armazém encontrado com os filtros aplicados"
+              : "Nenhum armazém cadastrado ainda"}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
