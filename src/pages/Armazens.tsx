@@ -49,7 +49,6 @@ const Armazens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Novo Armazém - Formulário
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoArmazem, setNovoArmazem] = useState({
     nome: "",
@@ -71,7 +70,18 @@ const Armazens = () => {
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Recarrega lista de armazéns do banco
+  const resetForm = () => {
+    setNovoArmazem({
+      nome: "",
+      cidade: "",
+      estado: "",
+      email: "",
+      telefone: "",
+      endereco: "",
+      capacidade_total: "",
+    });
+  };
+
   const fetchArmazens = async () => {
     setLoading(true);
     setError(null);
@@ -108,19 +118,6 @@ const Armazens = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset form fields
-  const resetForm = () => {
-    setNovoArmazem({
-      nome: "",
-      cidade: "",
-      estado: "",
-      email: "",
-      telefone: "",
-      endereco: "",
-      capacidade_total: "",
-    });
-  };
-
   const handleCreateArmazem = async () => {
     const { nome, cidade, estado, email, telefone, endereco, capacidade_total } = novoArmazem;
     if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim()) {
@@ -132,7 +129,6 @@ const Armazens = () => {
     }
 
     try {
-      // Dados de ambientes Supabase
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -145,7 +141,6 @@ const Armazens = () => {
         return;
       }
 
-      // Verifica sessão
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({
@@ -155,8 +150,6 @@ const Armazens = () => {
         });
         return;
       }
-
-      // Prepara payload
       let capacidadeTotalNumber: number | undefined = undefined;
       if (capacidade_total && capacidade_total.trim()) {
         capacidadeTotalNumber = parseFloat(capacidade_total);
@@ -170,7 +163,6 @@ const Armazens = () => {
         }
       }
 
-      // Chama Edge Function via fetch
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -189,10 +181,7 @@ const Armazens = () => {
         }),
       });
 
-      console.log("[DEBUG][raw response]", response.status, response.statusText, Object.fromEntries(response.headers.entries()));
-      const textBody = await response.text();
-      console.log("[DEBUG][raw body]", textBody);
-
+      let textBody = await response.text();
       let data: any = null;
       try {
         data = JSON.parse(textBody);
@@ -202,7 +191,6 @@ const Armazens = () => {
 
       if (!response.ok) {
         let errorMessage = "Erro ao criar armazém";
-        // Tratamento de erro tipo Zod
         if (data) {
           if (
             typeof data.details === "object" &&
@@ -226,7 +214,6 @@ const Armazens = () => {
             errorMessage = JSON.stringify(data.details);
           }
         }
-
         toast({
           variant: "destructive",
           title: "Erro ao criar armazém",
@@ -259,7 +246,6 @@ const Armazens = () => {
         });
       }
     } catch (err) {
-      console.error("[DEBUG][fetch catch]", err);
       toast({
         variant: "destructive",
         title: "Erro de conexão/fetch",
@@ -268,7 +254,6 @@ const Armazens = () => {
     }
   };
 
-  // Ativar/desativar armazém
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     try {
       const { error } = await supabase
@@ -281,7 +266,6 @@ const Armazens = () => {
       });
       fetchArmazens();
     } catch (err) {
-      console.error("❌ [ERROR] Erro ao alterar status:", err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
@@ -289,13 +273,11 @@ const Armazens = () => {
     }
   };
 
-  // Filtros e busca
   const filteredArmazens = useMemo(() => {
     if (!armazens) return [];
     return armazens.filter((armazem) => {
       if (filterStatus === "ativo" && !armazem.ativo) return false;
       if (filterStatus === "inativo" && armazem.ativo) return false;
-
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const matches =
@@ -308,9 +290,11 @@ const Armazens = () => {
     });
   }, [armazens, filterStatus, searchTerm]);
 
+  const canCreate = hasRole("admin") || hasRole("logistica");
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando armazéns...</p>
@@ -321,7 +305,7 @@ const Armazens = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <p className="text-destructive">Erro ao carregar armazéns</p>
         </div>
@@ -329,143 +313,122 @@ const Armazens = () => {
     );
   }
 
-  const canCreate = hasRole("admin") || hasRole("logistica");
-
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      <PageHeader title="Armazéns" subtitle="Gerencie os armazéns do sistema" icon={Warehouse} />
-
-      {/* Filtros e ações */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-          <div className="flex gap-2 items-center">
-            <FilterIcon className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ativo">Ativos</SelectItem>
-                <SelectItem value="inativo">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Input
-            placeholder="Buscar por nome, cidade ou estado..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
-        </div>
-        {canCreate && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Armazém
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Cadastrar Novo Armazém</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados do armazém. Um usuário de acesso será criado automaticamente.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <Label htmlFor="nome">Nome *</Label>
-                    <Input
-                      id="nome"
-                      value={novoArmazem.nome}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
-                      placeholder="Nome do armazém"
-                    />
+      <PageHeader
+        title="Armazéns"
+        subtitle="Gerencie os armazéns do sistema"
+        icon={Warehouse}
+        actions={
+          canCreate && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Armazém
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Novo Armazém</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados do armazém. Um usuário de acesso será criado automaticamente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <Label htmlFor="nome">Nome *</Label>
+                      <Input
+                        id="nome"
+                        value={novoArmazem.nome}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
+                        placeholder="Nome do armazém"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cidade">Cidade *</Label>
+                      <Input
+                        id="cidade"
+                        value={novoArmazem.cidade}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
+                        placeholder="Cidade"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="estado">Estado (UF) *</Label>
+                      <Select
+                        value={novoArmazem.estado}
+                        onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
+                      >
+                        <SelectTrigger id="estado">
+                          <SelectValue placeholder="Selecione o estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {estadosBrasil.map((uf) => (
+                            <SelectItem key={uf} value={uf}>
+                              {uf}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={novoArmazem.email}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="telefone">Telefone</Label>
+                      <Input
+                        id="telefone"
+                        value={novoArmazem.telefone}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, telefone: e.target.value })}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        value={novoArmazem.endereco}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
+                        placeholder="Rua, número, complemento"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
+                      <Input
+                        id="capacidade_total"
+                        type="number"
+                        value={novoArmazem.capacidade_total}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
+                        placeholder="Ex: 1000"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="cidade">Cidade *</Label>
-                    <Input
-                      id="cidade"
-                      value={novoArmazem.cidade}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
-                      placeholder="Cidade"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="estado">Estado (UF) *</Label>
-                    <Select
-                      value={novoArmazem.estado}
-                      onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
-                    >
-                      <SelectTrigger id="estado">
-                        <SelectValue placeholder="Selecione o estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {estadosBrasil.map((uf) => (
-                          <SelectItem key={uf} value={uf}>
-                            {uf}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={novoArmazem.email}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
-                      placeholder="email@exemplo.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="telefone">Telefone</Label>
-                    <Input
-                      id="telefone"
-                      value={novoArmazem.telefone}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, telefone: e.target.value })}
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="endereco">Endereço</Label>
-                    <Input
-                      id="endereco"
-                      value={novoArmazem.endereco}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
-                      placeholder="Rua, número, complemento"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
-                    <Input
-                      id="capacidade_total"
-                      type="number"
-                      value={novoArmazem.capacidade_total}
-                      onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
-                      placeholder="Ex: 1000"
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleCreateArmazem}>
-                  Criar Armazém
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button className="bg-gradient-primary" onClick={handleCreateArmazem}>
+                    Criar Armazém
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )
+        }
+      />
 
       {/* Modal de credenciais temporárias do Armazém */}
       <Dialog
