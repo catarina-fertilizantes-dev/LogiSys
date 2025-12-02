@@ -179,10 +179,37 @@ const handleCreateCliente = async () => {
     }
 
     if (!response.ok) {
+      let errorMessage = "Erro ao criar cliente";
+
+      if (data) {
+        if (
+          typeof data.details === "object" &&
+          data.details !== null &&
+          "fieldErrors" in data.details
+        ) {
+          // Erro de validação schema, traduz mensagens para pt-BR
+          errorMessage = Object.values(data.details.fieldErrors)
+            .flat()
+            .map(msg =>
+              msg === "Invalid email" ? "Email inválido"
+              : msg === "Required" ? "Campo obrigatório"
+              : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
+              : msg
+            )
+            .join(" | ");
+        } else if (typeof data.details === "string") {
+          errorMessage = data.details;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else {
+          errorMessage = JSON.stringify(data.details);
+        }
+      }
+
       toast({
         variant: "destructive",
         title: "Erro ao criar cliente",
-        description: data?.details || data?.error || textBody || `Erro HTTP ${response.status}`,
+        description: errorMessage,
       });
       return;
     }
