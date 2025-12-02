@@ -1,12 +1,8 @@
-import { useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -19,15 +15,12 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Plus, Filter as FilterIcon } from "lucide-react";
-import { createCustomer } from "@/services/customers";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Database } from "@/integrations/supabase/types";
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -35,45 +28,17 @@ const estadosBrasil = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-interface Cliente {
-  id: string;
-  nome: string;
-  cnpj_cpf: string;
-  email: string;
-  telefone: string | null;
-  endereco: string | null;
-  cidade: string | null;
-  estado: string | null;
-  cep: string | null;
-  ativo: boolean;
-  user_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+type Cliente = Database['public']['Tables']['clientes']['Row'];
 
 const Clientes = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { hasRole } = useAuth();
 
-  const { data: clientesData, isLoading, error } = useQuery({
-    queryKey: ["clientes"],
-    queryFn: async () => {
-      console.log("🔍 [DEBUG] Buscando clientes...");
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("*")
-        .order("nome", { ascending: true });
-      if (error) {
-        console. error("❌ [ERROR] Erro ao buscar clientes:", error);
-        throw error;
-      }
-      console.log("✅ [DEBUG] Clientes carregados:", data?. length);
-      return data as Cliente[];
-    },
-    refetchInterval: 30000,
-  });
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Formulário Novo Cliente
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoCliente, setNovoCliente] = useState({
     nome: "",
@@ -109,145 +74,231 @@ const Clientes = () => {
     });
   };
 
+  const fetchClientes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .order("nome", { ascending: true });
+      if (error) {
+        setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar clientes",
+          description: "Não foi possível carregar a lista de clientes.",
+        });
+        setLoading(false);
+        return;
+      }
+      setClientes(data as Cliente[]);
+      setLoading(false);
+    } catch (err) {
+      setError("Erro desconhecido");
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar clientes",
+        description: "Erro inesperado ao carregar clientes.",
+      });
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClientes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Criação de cliente (mesmo padrão de Colaboradores)
   const handleCreateCliente = async () => {
-  const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep } = novoCliente;
-
-  if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
-    toast({ variant: "destructive", title: "Preencha os campos obrigatórios" });
-    return;
-  }
-
-  try {
-    console.log("🔍 [DEBUG] Criando cliente:", { nome, cnpj_cpf, email });
-
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep } = novoCliente;
+    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
       toast({
         variant: "destructive",
-        title: "Erro de configuração",
-        description: "Variáveis de ambiente do Supabase não configuradas."
+        title: "Preencha os campos obrigatórios",
       });
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      console.log("🔍 [DEBUG] Criando cliente:", { nome, cnpj_cpf, email });
 
-    if (!session) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        toast({
+          variant: "destructive",
+          title: "Erro de configuração",
+          description: "Variáveis de ambiente do Supabase não configuradas.",
+        });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Não autenticado",
+          description: "Sessão expirada. Faça login novamente.",
+        });
+        return;
+      }
+
+      // Chamada direta à edge function (fetch manual)
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-customer-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          cnpj_cpf: cnpj_cpf.trim(),
+          email: email.trim(),
+          telefone: telefone?.trim() || null,
+          endereco: endereco?.trim() || null,
+          cidade: cidade?.trim() || null,
+          estado: estado || null,
+          cep: cep?.trim() || null,
+        }),
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("❌ [ERROR] Failed to parse response JSON:", parseError);
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar cliente",
+          description: "Resposta inválida do servidor. Verifique os logs para mais detalhes.",
+        });
+        return;
+      }
+
+      console.log("🔍 [DEBUG] Resposta da Edge Function:", { status: response.status, data });
+
+      // Tratamento de erros personalizado igual ao de Colaboradores
+      if (!response.ok) {
+        let errorMessage = "Erro ao criar cliente";
+        if (data) {
+          let rawDetails = data.details || data.error || "";
+          if (
+            typeof rawDetails === "string" &&
+            (rawDetails.includes("already been registered") ||
+              rawDetails.includes("already exists") ||
+              rawDetails.includes("duplicate"))
+          ) {
+            errorMessage = "Este email ou CNPJ/CPF já está cadastrado.";
+          } else if (data.details) {
+            errorMessage = String(data.details);
+          } else if (data.error) {
+            errorMessage = String(data.error);
+          }
+          if (data.stage === "validation" && String(data.error).includes("Weak password")) {
+            errorMessage = "Senha muito fraca. Use pelo menos 6 caracteres e evite senhas comuns.";
+          } else if (data.stage === "createUser") {
+            if (
+              String(rawDetails).includes("already been registered") ||
+              String(rawDetails).includes("already exists")
+            ) {
+              errorMessage = "Este email já está cadastrado no sistema.";
+            }
+          } else if (data.stage === "createCliente") {
+            errorMessage = String(data.details) || "Falha ao criar cliente.";
+          } else if (data.stage === "authCheck" && String(data.error).includes("Forbidden")) {
+            errorMessage = "Você não tem permissão para criar clientes.";
+          }
+        }
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar cliente",
+          description: errorMessage,
+        });
+        return;
+      }
+
+      // Sucesso
+      if (data && data.success) {
+        toast({
+          title: "Cliente criado com sucesso!",
+          description: `${nome} foi adicionado ao sistema.`,
+        });
+
+        setCredenciaisModal({
+          show: true,
+          email: email.trim(),
+          senha: data.senha || "",
+          nome: nome.trim(),
+        });
+
+        resetForm();
+        setDialogOpen(false);
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        fetchClientes();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar cliente",
+          description: data?.error || data?.details || "Resposta inesperada do servidor",
+        });
+      }
+    } catch (err) {
+      console.error("❌ [ERROR] Exceção ao criar cliente:", err);
+      const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
       toast({
         variant: "destructive",
-        title: "Não autenticado",
-        description: "Sessão expirada.  Faça login novamente."
+        title: "Erro ao criar cliente",
+        description: errorMessage,
       });
-      return;
     }
+  };
 
-    // Chama o serviço createCustomer (nunca lança exceção, sempre retorna objeto)
-    const result = await createCustomer(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        nome: nome.trim(),
-        cnpj_cpf: cnpj_cpf.trim(),
-        email: email.trim(),
-        telefone: telefone?.trim() || null,
-        endereco: endereco?.trim() || null,
-        cidade: cidade?.trim() || null,
-        estado: estado || null,
-        cep: cep?.trim() || null,
-      },
-      session.access_token
-    );
-
-    console.log("🔍 [DEBUG] Resultado do createCustomer:", result);
-
-    // Tratamento de erro - O serviço SEMPRE retorna um objeto, nunca lança exceção
-    if (!result.success) {
-      console.error("❌ [ERROR] Erro ao criar cliente:", result);
-
-      // Prioriza details (mensagem amigável do backend) sobre error
-      const errorMessage = result.details || result.error || "Ocorreu um erro inesperado. ";
-
-      console.log("🔍 [DEBUG] Detalhes do erro:", {
-        error: result.error,
-        details: result.details,
-        status: result.status
-      });
-
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar cliente", // Título sempre será este fixo
-        description: errorMessage      // Mensagem detalhada do backend
-      });
-      return;
-    }
-
-    // Sucesso
-    console.log("✅ [SUCCESS] Cliente criado com sucesso:", result.cliente);
-
-    setCredenciaisModal({
-      show: true,
-      email: email.trim(),
-      senha: result.senha || "",
-      nome: nome.trim()
-    });
-
-    resetForm();
-    setDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: ["clientes"] });
-
-  } catch (err: unknown) {
-    // Este catch só deve pegar erros realmente inesperados (falha de rede, etc)
-    console.error("❌ [ERROR] Exceção inesperada ao criar cliente:", err);
-    toast({
-      variant: "destructive",
-      title: "Erro de conexão",
-      description: err instanceof Error ? err.message : "Erro desconhecido ao conectar com o servidor"
-    });
-  }
-};
-
+  // Ativa/desativa cliente
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     try {
-      console.log("🔍 [DEBUG] Alterando status cliente:", { id, novoStatus: ! ativoAtual });
-
       const { error } = await supabase
         .from("clientes")
-        .update({ ativo: ! ativoAtual, updated_at: new Date().toISOString() })
-        . eq("id", id);
-
+        .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
-
-      toast({ title: `Cliente ${! ativoAtual ? "ativado" : "desativado"} com sucesso!` });
-      queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      toast({
+        title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
+      });
+      fetchClientes();
     } catch (err) {
       console.error("❌ [ERROR] Erro ao alterar status:", err);
-      toast({ variant: "destructive", title: "Erro ao alterar status" });
+      toast({
+        variant: "destructive",
+        title: "Erro ao alterar status",
+      });
     }
   };
 
   const filteredClientes = useMemo(() => {
-    if (!clientesData) return [];
-    return clientesData.filter((cliente) => {
-      // Status filter
-      if (filterStatus === "ativo" && ! cliente.ativo) return false;
+    if (!clientes) return [];
+    return clientes.filter((cliente) => {
+      if (filterStatus === "ativo" && !cliente.ativo) return false;
       if (filterStatus === "inativo" && cliente.ativo) return false;
 
-      if (searchTerm. trim()) {
+      if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const matches =
-          cliente.nome.toLowerCase(). includes(term) ||
-          cliente.email.toLowerCase().includes(term) ||
-          cliente.cnpj_cpf.toLowerCase().includes(term) ||
+          cliente.nome?.toLowerCase().includes(term) ||
+          cliente.email?.toLowerCase().includes(term) ||
+          cliente.cnpj_cpf?.toLowerCase().includes(term) ||
           (cliente.cidade && cliente.cidade.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
     });
-  }, [clientesData, filterStatus, searchTerm]);
+  }, [clientes, filterStatus, searchTerm]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -272,13 +323,9 @@ const Clientes = () => {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      <PageHeader
-        title="Clientes"
-        subtitle="Gerencie os clientes do sistema"
-        icon={Users}
-      />
+      <PageHeader title="Clientes" subtitle="Gerencie os clientes do sistema" icon={Users} />
 
-      {/* Filters and Actions */}
+      {/* Filtros e ações */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
@@ -297,7 +344,7 @@ const Clientes = () => {
           <Input
             placeholder="Buscar por nome, email, CNPJ/CPF..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target. value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
           />
         </div>
@@ -313,7 +360,7 @@ const Clientes = () => {
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
                 <DialogDescription>
-                  Preencha os dados do cliente.  Um usuário de acesso será criado automaticamente.
+                  Preencha os dados do cliente. Um usuário de acesso será criado automaticamente.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -323,9 +370,7 @@ const Clientes = () => {
                     <Input
                       id="nome"
                       value={novoCliente.nome}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, nome: e.target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
                       placeholder="Nome completo"
                     />
                   </div>
@@ -334,10 +379,8 @@ const Clientes = () => {
                     <Input
                       id="cnpj_cpf"
                       value={novoCliente.cnpj_cpf}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, cnpj_cpf: e.target.value })
-                      }
-                      placeholder="00. 000.000/0000-00"
+                      onChange={(e) => setNovoCliente({ ...novoCliente, cnpj_cpf: e.target.value })}
+                      placeholder="00.000.000/0000-00"
                     />
                   </div>
                   <div>
@@ -346,9 +389,7 @@ const Clientes = () => {
                       id="email"
                       type="email"
                       value={novoCliente.email}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, email: e.target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
                       placeholder="email@exemplo.com"
                     />
                   </div>
@@ -357,9 +398,7 @@ const Clientes = () => {
                     <Input
                       id="telefone"
                       value={novoCliente.telefone}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, telefone: e.target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
                       placeholder="(00) 00000-0000"
                     />
                   </div>
@@ -368,9 +407,7 @@ const Clientes = () => {
                     <Input
                       id="cep"
                       value={novoCliente.cep}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, cep: e. target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, cep: e.target.value })}
                       placeholder="00000-000"
                     />
                   </div>
@@ -379,9 +416,7 @@ const Clientes = () => {
                     <Input
                       id="endereco"
                       value={novoCliente.endereco}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, endereco: e. target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
                       placeholder="Rua, número, complemento"
                     />
                   </div>
@@ -390,9 +425,7 @@ const Clientes = () => {
                     <Input
                       id="cidade"
                       value={novoCliente.cidade}
-                      onChange={(e) =>
-                        setNovoCliente({ ...novoCliente, cidade: e.target.value })
-                      }
+                      onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
                       placeholder="Nome da cidade"
                     />
                   </div>
@@ -400,9 +433,7 @@ const Clientes = () => {
                     <Label htmlFor="estado">Estado (UF)</Label>
                     <Select
                       value={novoCliente.estado}
-                      onValueChange={(value) =>
-                        setNovoCliente({ ...novoCliente, estado: value })
-                      }
+                      onValueChange={(value) => setNovoCliente({ ...novoCliente, estado: value })}
                     >
                       <SelectTrigger id="estado">
                         <SelectValue placeholder="Selecione o estado" />
@@ -418,7 +449,7 @@ const Clientes = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  * Campos obrigatórios.  Um usuário será criado automaticamente com uma senha temporária.
+                  * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
                 </p>
               </div>
               <DialogFooter>
@@ -434,13 +465,13 @@ const Clientes = () => {
         )}
       </div>
 
-      {/* Credentials Modal */}
-      <Dialog open={credenciaisModal. show} onOpenChange={(open) => setCredenciaisModal({...credenciaisModal, show: open})}>
+      {/* Modal com credenciais temporárias do Cliente */}
+      <Dialog open={credenciaisModal.show} onOpenChange={(open) => setCredenciaisModal({ ...credenciaisModal, show: open })}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>✅ Cliente cadastrado com sucesso! </DialogTitle>
+            <DialogTitle>✅ Cliente cadastrado com sucesso!</DialogTitle>
             <DialogDescription>
-              Credenciais de acesso criadas.  Envie ao cliente por email ou WhatsApp.
+              Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -460,8 +491,8 @@ const Clientes = () => {
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente.  
-                Por segurança, esta senha só aparece uma vez.  O cliente será obrigado a trocar a senha no primeiro login.
+                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente.
+                Por segurança, esta senha só aparece uma vez. O cliente será obrigado a trocar a senha no primeiro login.
               </p>
             </div>
           </div>
@@ -469,7 +500,7 @@ const Clientes = () => {
             <Button
               variant="outline"
               onClick={() => {
-                const texto = `Credenciais de acesso ao LogiSys\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso. `;
+                const texto = `Credenciais de acesso ao LogiSys\n\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
@@ -483,7 +514,7 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Clientes List */}
+      {/* Lista de clientes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClientes.map((cliente) => (
           <Card key={cliente.id}>
@@ -521,10 +552,8 @@ const Clientes = () => {
                   </Label>
                   <Switch
                     id={`switch-${cliente.id}`}
-                    checked={cliente. ativo}
-                    onCheckedChange={() =>
-                      handleToggleAtivo(cliente.id, cliente.ativo)
-                    }
+                    checked={cliente.ativo}
+                    onCheckedChange={() => handleToggleAtivo(cliente.id, cliente.ativo)}
                   />
                 </div>
               )}
