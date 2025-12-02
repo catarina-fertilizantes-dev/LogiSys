@@ -508,10 +508,7 @@ const Clientes = () => {
       <Dialog open={!!detalhesCliente} onOpenChange={open => !open && setDetalhesCliente(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Informações do Cliente</DialogTitle>
-            <DialogDescription>
-              Informações complementares de <b>{detalhesCliente?.nome}</b>
-            </DialogDescription>
+            <DialogTitle>{detalhesCliente?.nome}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-4">
             <p><b>Email:</b> {detalhesCliente?.email}</p>
