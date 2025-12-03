@@ -36,12 +36,10 @@ const Produtos = () => {
 
   // Permissões de CRUD
   const canCreate = canAccess("produtos", "create");
-  const canUpdate = canAccess("produtos", "update");
-  const canDelete = canAccess("produtos", "delete");
 
   // Dados
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Novo Produto Dialog
@@ -51,26 +49,34 @@ const Produtos = () => {
     unidade: "" as Unidade,
   });
 
-  const [detalhesProduto, setDetalhesProduto] = useState<Produto | null>(null);
-
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch produtos
+  // Buscar produtos
   async function fetchProdutos() {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase.from("produtos").select("*").order("nome", { ascending: true });
-    if (error) {
-      setError("Erro ao carregar produtos");
+    try {
+      const { data, error } = await supabase
+        .from("produtos")
+        .select("*")
+        .order("nome", { ascending: true });
+      if (error) {
+        throw error;
+      }
+      setProdutos(data ?? []);
+    } catch (err: any) {
+      setError("Erro ao carregar produtos: " + (err?.message || "erro desconhecido"));
       setProdutos([]);
-    } else {
-      setProdutos(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
+
   useEffect(() => {
-    if (canAccess("produtos", "read")) fetchProdutos();
+    if (canAccess("produtos", "read")) {
+      fetchProdutos();
+    }
     // eslint-disable-next-line
   }, [canAccess]);
 
@@ -80,7 +86,12 @@ const Produtos = () => {
       toast({ variant: "destructive", title: "Preencha os campos obrigatórios!" });
       return;
     }
-    const { error } = await supabase.from("produtos").insert([{ nome: novoProduto.nome, unidade: novoProduto.unidade }]);
+    setLoading(true);
+    const { error } = await supabase.from("produtos").insert([{
+      nome: novoProduto.nome,
+      unidade: novoProduto.unidade
+    }]);
+    setLoading(false);
     if (error) {
       toast({ variant: "destructive", title: "Erro ao criar produto", description: error.message });
     } else {
@@ -94,23 +105,23 @@ const Produtos = () => {
   // Filtro de busca
   const filteredProdutos = useMemo(() => {
     return produtos.filter((p) =>
-      p.nome.toLowerCase().includes(searchTerm.trim().toLowerCase())
+      p.nome?.toLowerCase().includes(searchTerm.trim().toLowerCase())
     );
   }, [produtos, searchTerm]);
 
-  // Permissão: loading
+  // Loading de permissões
   if (permissionsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary mx-auto mb-4"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando permissões...</p>
         </div>
       </div>
     );
   }
 
-  // Permissão: acesso negado
+  // Acesso negado
   if (!canAccess("produtos", "read")) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -129,15 +140,19 @@ const Produtos = () => {
     );
   }
 
-  // Loading produtos
+  // Loading de dados (produtos)
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Carregando produtos...</p>
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando produtos...</p>
+        </div>
       </div>
     );
   }
-  // Erro ao carregar
+
+  // Erro ao carregar produtos
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -145,12 +160,13 @@ const Produtos = () => {
       </div>
     );
   }
-  // Nenhum produto cadastrado
-  if (produtos.length === 0) {
+
+  // Lista vazia (depois de loading já ter passado)
+  if (!loading && produtos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <PageHeader title="Produtos" icon={Tag} />
-        <p className="text-muted-foreground mt-4">Nenhum produto cadastrado.</p>
+        <p className="text-muted-foreground mt-4">Nenhum produto encontrado.</p>
         {canCreate && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -186,10 +202,10 @@ const Produtos = () => {
     );
   }
 
+  // Renderização padrão (dados, busca, add)
   return (
     <div>
       <PageHeader title="Produtos" icon={Tag} />
-
       <div className="flex items-center mb-6 gap-2">
         <Input
           placeholder="Buscar por nome..."
@@ -229,7 +245,6 @@ const Produtos = () => {
           </Dialog>
         )}
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredProdutos.map(produto => (
           <Card key={produto.id}>
