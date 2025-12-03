@@ -30,8 +30,6 @@ const unidadeLabels: Record<string, string> = {
   kg: "Quilos (kg)",
 };
 
-// -- Página Produtos igual Clientes
-
 const Produtos = () => {
   const { toast } = useToast();
   const { hasRole } = useAuth();
@@ -49,7 +47,7 @@ const Produtos = () => {
 
   const [detalhesProduto, setDetalhesProduto] = useState<Produto | null>(null);
 
-  const [filterAtivo, setFilterAtivo] = useState<"all" | "ativo" | "inativo">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const resetForm = () => {
@@ -66,15 +64,16 @@ const Produtos = () => {
         .select("*")
         .order("nome", { ascending: true });
       if (error) {
-        setError(error.message || "Erro ao carregar produtos");
+        setError(error.message);
         toast({
           variant: "destructive",
           title: "Erro ao carregar produtos",
           description: "Não foi possível carregar a lista de produtos.",
         });
-      } else {
-        setProdutos(data as Produto[]);
+        setLoading(false);
+        return;
       }
+      setProdutos(data as Produto[]);
       setLoading(false);
     } catch (err) {
       setError("Erro desconhecido");
@@ -92,7 +91,6 @@ const Produtos = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cadastro novo produto
   const handleCreateProduto = async () => {
     const { nome, unidade } = novoProduto;
     if (!nome.trim() || !unidade) {
@@ -102,7 +100,32 @@ const Produtos = () => {
       });
       return;
     }
+
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        toast({
+          variant: "destructive",
+          title: "Erro de configuração",
+          description: "Variáveis de ambiente do Supabase não configuradas.",
+        });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Não autenticado",
+          description: "Sessão expirada. Faça login novamente.",
+        });
+        return;
+      }
+
+      // Aqui pode haver uma Function personalizada como no cadastro de clientes,
+      // mas se for direto na tabela, use o insert padrão abaixo:
       const { error } = await supabase
         .from("produtos")
         .insert([{ nome: nome.trim(), unidade, ativo: true }]);
@@ -130,12 +153,12 @@ const Produtos = () => {
     }
   };
 
-  // Ativar/desativar produto (se quiser permitir isso)
+  // Ativar/desativar produto
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     try {
       const { error } = await supabase
         .from("produtos")
-        .update({ ativo: !ativoAtual })
+        .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
       toast({
@@ -150,24 +173,24 @@ const Produtos = () => {
     }
   };
 
-  // Filtro local igual Clientes
   const filteredProdutos = useMemo(() => {
-    let lista = produtos;
-    if (filterAtivo === "ativo") lista = lista.filter(p => p.ativo);
-    if (filterAtivo === "inativo") lista = lista.filter(p => !p.ativo);
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      lista = lista.filter(p =>
-        p.nome?.toLowerCase().includes(term) ||
-        p.unidade?.toLowerCase().includes(term)
-      );
-    }
-    return lista;
-  }, [produtos, filterAtivo, searchTerm]);
+    if (!produtos) return [];
+    return produtos.filter((produto) => {
+      if (filterStatus === "ativo" && !produto.ativo) return false;
+      if (filterStatus === "inativo" && produto.ativo) return false;
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        const matches =
+          produto.nome?.toLowerCase().includes(term) ||
+          produto.unidade?.toLowerCase().includes(term);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [produtos, filterStatus, searchTerm]);
 
   const canCreate = hasRole("logistica") || hasRole("admin");
 
-  // Loading
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -179,7 +202,6 @@ const Produtos = () => {
     );
   }
 
-  // Erro
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -257,7 +279,7 @@ const Produtos = () => {
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
             <FilterIcon className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterAtivo} onValueChange={v => setFilterAtivo(v as "all" | "ativo" | "inativo")}>
+            <Select value={filterStatus} onValueChange={v => setFilterStatus(v as "all" | "ativo" | "inativo")}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
@@ -296,19 +318,21 @@ const Produtos = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Grid de produtos */}
+      {/* Lista de produtos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProdutos.map(produto => (
+        {filteredProdutos.map((produto) => (
           <Card
             key={produto.id}
             className="cursor-pointer transition-all"
             onClick={() => setDetalhesProduto(produto)}
           >
             <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{produto.nome}</h3>
-                  <p className="text-sm text-muted-foreground">Unidade: {unidadeLabels[produto.unidade] || produto.unidade}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Unidade: {unidadeLabels[produto.unidade] || produto.unidade}
+                  </p>
                 </div>
                 <Badge variant={produto.ativo ? "default" : "secondary"}>
                   {produto.ativo ? "Ativo" : "Inativo"}
@@ -341,7 +365,7 @@ const Produtos = () => {
         <div className="text-center py-12">
           <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm || filterAtivo !== "all"
+            {searchTerm || filterStatus !== "all"
               ? "Nenhum produto encontrado com os filtros aplicados"
               : "Nenhum produto cadastrado ainda"}
           </p>
