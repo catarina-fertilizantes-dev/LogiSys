@@ -16,6 +16,7 @@ import Produtos from "./pages/Produtos";
 import Armazens from "./pages/Armazens";
 import Clientes from "./pages/Clientes";
 import Colaboradores from "./pages/Colaboradores";
+import Produtos from "./pages/Produtos";
 import AuthPage from "./pages/AuthPage";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -167,6 +168,16 @@ const App = () => (
                 <ProtectedRoute resource="colaboradores">
                   <Layout>
                     <Colaboradores />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/produtos"
+              element={
+                <ProtectedRoute resource="produtos">
+                  <Layout>
+                    <Produtos />
                   </Layout>
                 </ProtectedRoute>
               }
