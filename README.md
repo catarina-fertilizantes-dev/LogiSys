@@ -181,15 +181,16 @@ The frontend `usePermissions` hook queries this table to dynamically show/hide m
 
 A tabela abaixo descreve os recursos acessíveis no frontend para cada role e suas respectivas ações:
 
-| Role      | Recursos Acessíveis                                                                             | Ações Permitidas                                                                  |
-|-----------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| admin     | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens, colaboradores            | CRUD completo em todos os recursos                                                |
-| logistica | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens                            | read, create, update (delete conforme permissões específicas)                     |
-| cliente   | agendamentos, liberacoes                                                                        | agendamentos (read, create), liberacoes (read)                                    |
-| armazem   | carregamentos, liberacoes, agendamentos                                                         | carregamentos (read, create), liberacoes (read), agendamentos (read)              |
+| Role      | Recursos Acessíveis                                                                                      | Ações Permitidas                                                                  |
+|-----------|----------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| admin     | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens, colaboradores, produtos          | CRUD completo em todos os recursos                                                |
+| logistica | estoque, liberacoes, agendamentos, carregamentos, clientes, armazens, produtos                          | read, create, update (delete conforme permissões específicas)                     |
+| cliente   | agendamentos, liberacoes                                                                                 | agendamentos (read, create), liberacoes (read)                                    |
+| armazem   | carregamentos, liberacoes, agendamentos                                                                  | carregamentos (read, create), liberacoes (read), agendamentos (read)              |
 
 **Notas Importantes:**
 - O recurso **colaboradores** é exclusivamente gerenciado por usuários com role **admin**.
+- O recurso **produtos** é acessível apenas por **admin** e **logistica** (RLS habilitada com policies específicas).
 - As permissões específicas de CRUD são controladas pela tabela `role_permissions` no banco de dados.
 - O menu do sistema se ajusta dinamicamente baseado nas permissões de cada usuário.
 - Apenas itens de menu que o usuário tem permissão `can_read` são exibidos.
@@ -206,9 +207,10 @@ The application sidebar organizes features into two main groups:
 5. Carregamentos - Loading operations
 
 **Management Group:**
-6. Clientes - Customer management
-7. Armazéns - Warehouse management
-8. Colaboradores - Collaborator management (visible only to admin role, displays only admin/logistica users)
+6. Produtos - Product management (visible only to admin and logistica roles)
+7. Clientes - Customer management
+8. Armazéns - Warehouse management
+9. Colaboradores - Collaborator management (visible only to admin role, displays only admin/logistica users)
 
 The menu dynamically adjusts based on user permissions, showing only accessible features for each role.
 
@@ -244,6 +246,36 @@ CREATE POLICY "Clientes podem ver próprio perfil"
   TO authenticated
   USING (user_id = auth.uid());
 ```
+
+#### Produtos Table Structure and Policies
+
+The `produtos` table stores product information with the following structure:
+
+**Table Schema:**
+```sql
+CREATE TABLE public.produtos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  unidade TEXT DEFAULT 't',
+  ativo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS Policies:**
+- RLS is enabled (`relrowsecurity: true`)
+- Only **admin** and **logistica** roles can access produtos
+- Separate policies for SELECT, INSERT, UPDATE, and DELETE operations
+- All policies verify role membership via `user_roles` table
+- The legacy "Todos podem ver produtos" policy has been removed (as of 2025-12-03)
+
+**Access Control:**
+- **SELECT**: Admin and Logistica only
+- **INSERT**: Admin and Logistica only  
+- **UPDATE**: Admin and Logistica only
+- **DELETE**: Admin and Logistica only
+
+Frontend access is further controlled by the `role_permissions` table and the `usePermissions` hook.
 
 ### Edge Functions
 

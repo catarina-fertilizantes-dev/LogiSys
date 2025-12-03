@@ -12,7 +12,8 @@ export type Resource =
   | 'carregamentos'
   | 'clientes'
   | 'armazens'
-  | 'colaboradores';
+  | 'colaboradores'
+  | 'produtos';
 
 export interface Permission {
   can_create: boolean;

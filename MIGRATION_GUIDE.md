@@ -251,3 +251,96 @@ If you encounter issues during migration:
 - Backup database regularly
 - Monitor RLS policy performance after migration
 - Update any custom scripts or integrations that query the profiles table
+
+---
+
+## Migration: Produtos Table Policies Update (2025-12-03)
+
+### Overview
+
+A security audit revealed that the `produtos` table had overly permissive RLS policies. This migration updates the policies to restrict access to only `admin` and `logistica` roles.
+
+### What Changed
+
+#### Removed:
+- ❌ "Todos podem ver produtos" policy (allowed all authenticated users to view products)
+
+#### Updated:
+- ✅ Separate policies for SELECT, INSERT, UPDATE, and DELETE operations
+- ✅ All policies now check `user_roles` table to verify user has 'admin' or 'logistica' role
+- ✅ Updated `role_permissions` table with explicit produtos permissions
+
+### produtos Table Structure
+
+**Current Schema:**
+```sql
+CREATE TABLE public.produtos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome TEXT NOT NULL,
+  unidade TEXT DEFAULT 't',
+  ativo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS Status:** Enabled (`relrowsecurity: true`)
+
+**Current Policies:**
+1. `Admin e Logística podem visualizar produtos` - SELECT for admin/logistica
+2. `Admin e Logística podem inserir produtos` - INSERT for admin/logistica
+3. `Admin e Logística podem atualizar produtos` - UPDATE for admin/logistica
+4. `Admin e Logística podem deletar produtos` - DELETE for admin/logistica
+
+### Frontend Integration
+
+**Resource Type:**
+- Added `'produtos'` to the `Resource` type in `usePermissions` hook
+- Added route `/produtos` in `App.tsx` with proper `ProtectedRoute` guard
+- Menu item "Produtos" in sidebar visible only to users with 'produtos' read permission
+
+**Permissions:**
+```typescript
+// role_permissions table entries
+admin:     { produtos: { can_create: true, can_read: true, can_update: true, can_delete: true } }
+logistica: { produtos: { can_create: true, can_read: true, can_update: true, can_delete: true } }
+```
+
+### Migration Steps
+
+To apply this migration to an existing deployment:
+
+```bash
+# Apply the migration
+supabase db push supabase/migrations/20251203_update_produtos_policies_and_permissions.sql
+```
+
+The migration is idempotent and safe to run multiple times. It:
+1. Drops old policies if they exist
+2. Creates new restrictive policies
+3. Updates role_permissions table with correct entries
+
+### Testing Checklist
+
+After applying this migration, verify:
+
+- [ ] Users with 'admin' role can access /produtos page
+- [ ] Users with 'logistica' role can access /produtos page
+- [ ] Users with 'cliente' role cannot access /produtos page (redirected)
+- [ ] Users with 'armazem' role cannot access /produtos page (redirected)
+- [ ] "Produtos" menu item appears only for admin/logistica users
+- [ ] Admin can create, read, update, and delete produtos
+- [ ] Logistica can create, read, update, and delete produtos
+- [ ] Other roles receive permission denied errors when accessing produtos table directly
+
+### Rollback
+
+If needed, rollback by restoring the original "Todos podem ver produtos" policy:
+
+```sql
+CREATE POLICY "Todos podem ver produtos"
+  ON public.produtos FOR SELECT
+  TO authenticated
+  USING (true);
+```
+
+**Warning:** This reverts to the insecure state. Only use for emergency rollback.
