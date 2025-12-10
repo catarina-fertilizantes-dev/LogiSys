@@ -64,9 +64,25 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "cliente",
   });
 
+  // Buscar armazém atual vinculado ao usuário logado
+  const { data: currentArmazem } = useQuery({
+    queryKey: ["current-armazem", user?.id],
+    queryFn: async () => {
+      if (!user || userRole !== "armazem") return null;
+      const { data, error } = await supabase
+        .from("armazens")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && userRole === "armazem",
+  });
+
   // Buscar agendamentos do banco
   const { data: agendamentosData, isLoading, error } = useQuery({
-    queryKey: ["agendamentos", currentCliente?.id],
+    queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agendamentos")
@@ -100,10 +116,15 @@ const Agendamentos = () => {
           ag.liberacao?.cliente_id === currentCliente.id
         );
       }
+      if (userRole === "armazem" && currentArmazem?.id) {
+        filteredData = filteredData.filter((ag: any) =>
+          ag.liberacao?.armazem?.id === currentArmazem.id
+        );
+      }
       return filteredData;
     },
     refetchInterval: 30000,
-    enabled: userRole !== "cliente" || !!currentCliente?.id,
+    enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
   // CORRIGIDO: query de agendamentos hoje usando data_retirada
@@ -166,7 +187,7 @@ const Agendamentos = () => {
   });
   const [formError, setFormError] = useState("");
 
-  // Buscar liberações pendentes para o formulário
+  // Buscar liberações pendentes para o formulário (não precisa ajustar para armazem)
   const { data: liberacoesPendentes } = useQuery({
     queryKey: ["liberacoes-pendentes", currentCliente?.id],
     queryFn: async () => {
