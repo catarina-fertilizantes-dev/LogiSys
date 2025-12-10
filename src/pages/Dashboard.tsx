@@ -155,6 +155,7 @@ const Dashboard = () => {
     refetchInterval: 60_000,
   });
 
+  // CORRIGIDO: Usa data_retirada (e NÃO data_hora)
   const { data: agendamentosHoje } = useQuery({
     queryKey: ["agendamentos-hoje-count"],
     queryFn: async () => {
@@ -162,8 +163,8 @@ const Dashboard = () => {
         const { count, error } = await supabase
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
-          .gte("data_hora", startOfTodayISO())
-          .lte("data_hora", endOfTodayISO());
+          .gte("data_retirada", startOfTodayISO())
+          .lte("data_retirada", endOfTodayISO());
         if (error) {
           console.error("Error fetching agendamentos hoje:", error);
           return 0;
