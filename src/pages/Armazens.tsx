@@ -20,6 +20,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Helpers de máscara e formatação
+function maskPhoneInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length > 6)
+    return cleaned.replace(/^(\d{2})(\d{0,5})(\d{0,4})$/, "($1) $2-$3");
+  if (cleaned.length > 2)
+    return cleaned.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  if (cleaned.length > 0)
+    return cleaned.replace(/^(\d{0,2})/, "($1");
+  return "";
+}
+function formatPhone(phone: string): string {
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  return phone;
+}
+function maskCEPInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length > 5)
+    return cleaned.replace(/^(\d{5})(\d{0,3})$/, "$1-$2");
+  return cleaned;
+}
+function formatCEP(cep: string): string {
+  const cleaned = cep.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length === 8)
+    return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+  return cep;
+}
+
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
@@ -169,6 +205,10 @@ const Armazens = () => {
         }
       }
 
+      // Salva telefone e CEP sem formatação
+      const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : undefined;
+      const cleanCep = cep ? cep.replace(/\D/g, "") : undefined;
+
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -181,10 +221,10 @@ const Armazens = () => {
           email: email.trim(),
           cidade: cidade.trim(),
           estado: estado.trim(),
-          telefone: telefone?.trim() || undefined,
+          telefone: cleanTelefone,
           endereco: endereco?.trim() || undefined,
           capacidade_total: capacidadeTotalNumber,
-          cep: cep?.trim() || undefined,
+          cep: cleanCep,
         }),
       });
 
@@ -208,10 +248,9 @@ const Armazens = () => {
               .flat()
               .map(msg =>
                 msg === "Invalid email" ? "Email inválido"
-                : msg === "Required" ? "Campo obrigatório"
-                : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
-                : msg
-              )
+                  : msg === "Required" ? "Campo obrigatório"
+                    : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
+                      : msg)
               .join(" | ");
           } else if (typeof data.details === "string") {
             errorMessage = data.details;
@@ -393,8 +432,14 @@ const Armazens = () => {
                       <Input
                         id="telefone"
                         value={novoArmazem.telefone}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, telefone: e.target.value })}
+                        onChange={(e) =>
+                          setNovoArmazem({
+                            ...novoArmazem,
+                            telefone: maskPhoneInput(e.target.value),
+                          })
+                        }
                         placeholder="(00) 00000-0000"
+                        maxLength={15}
                       />
                     </div>
                     <div className="col-span-2">
@@ -411,8 +456,14 @@ const Armazens = () => {
                       <Input
                         id="cep"
                         value={novoArmazem.cep}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cep: e.target.value })}
+                        onChange={(e) =>
+                          setNovoArmazem({
+                            ...novoArmazem,
+                            cep: maskCEPInput(e.target.value),
+                          })
+                        }
                         placeholder="00000-000"
+                        maxLength={9}
                       />
                     </div>
                     <div className="col-span-2">
@@ -532,8 +583,8 @@ const Armazens = () => {
           </DialogHeader>
           <div className="space-y-2 py-4">
             <p><b>Email:</b> {detalhesArmazem?.email}</p>
-            <p><b>Telefone:</b> {detalhesArmazem?.telefone || "—"}</p>
-            <p><b>CEP:</b> {detalhesArmazem?.cep || "—"}</p>
+            <p><b>Telefone:</b> {detalhesArmazem?.telefone ? formatPhone(detahesArmazem.telefone) : "—"}</p>
+            <p><b>CEP:</b> {detalhesArmazem?.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
             <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
             <p><b>Cidade:</b> {detalhesArmazem?.cidade || "—"}</p>
             <p><b>Estado:</b> {detalhesArmazem?.estado || "—"}</p>
@@ -571,6 +622,16 @@ const Armazens = () => {
                 <p>
                   <span className="text-muted-foreground">Email:</span> {armazem.email}
                 </p>
+                {armazem.telefone && (
+                  <p>
+                    <span className="text-muted-foreground">Telefone:</span> {formatPhone(armazem.telefone)}
+                  </p>
+                )}
+                {armazem.cep && (
+                  <p>
+                    <span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}
+                  </p>
+                )}
               </div>
               {canCreate && (
                 <div className="flex items-center justify-between pt-3 border-t">
