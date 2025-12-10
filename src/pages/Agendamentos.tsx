@@ -13,7 +13,43 @@ import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDow
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-function validateAgendamento(ag) {
+// Funções de máscaras/formatadores
+function maskPlaca(value: string): string {
+  let up = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (up.length > 7) up = up.slice(0, 7);
+  if (up.length === 7)
+    return up.replace(/^([A-Z]{3})(\d{4})$/, "$1-$2");
+  if (up.length > 3)
+    return up.replace(/^([A-Z]{3})(\d{0,4})$/, "$1-$2");
+  return up;
+}
+function formatPlaca(placa) {
+  return maskPlaca(placa);
+}
+function maskCPF(value: string): string {
+  let cleaned = value.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length > 9)
+    return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, "$1.$2.$3-$4");
+  if (cleaned.length > 6)
+    return cleaned.replace(/^(\d{3})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+  if (cleaned.length > 3)
+    return cleaned.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
+  return cleaned;
+}
+function formatCPF(cpf) {
+  const cleaned = cpf.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length < 11) return maskCPF(cleaned);
+  return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+}
+
+const parseDate = (d) => {
+  const [dd, mm, yyyy] = d.split("/");
+  return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+};
+
+type AgendamentoStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
+
+const validateAgendamento = (ag) => {
   const errors = [];
   if (!ag.liberacao) errors.push("Liberação");
   if (!ag.quantidade || Number(ag.quantidade) <= 0) errors.push("Quantidade");
@@ -21,26 +57,9 @@ function validateAgendamento(ag) {
   if (!ag.horario || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(ag.horario)) errors.push("Horário");
   if (!ag.placa || ag.placa.replace(/[^A-Z0-9]/gi, "").length < 7) errors.push("Placa do veículo");
   if (!ag.motorista || ag.motorista.trim().length < 3) errors.push("Nome do motorista");
-  if (!ag.documento || !/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(ag.documento)) errors.push("Documento (CPF) do motorista");
+  if (!ag.documento || ag.documento.replace(/\D/g, "").length !== 11) errors.push("Documento (CPF) do motorista");
   return errors;
-}
-function formatPlaca(placa) {
-  return placa
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .replace(/^([A-Z]{3})([0-9]{4})$/, "$1-$2")
-    .slice(0, 8);
-}
-function formatCPF(cpf) {
-  let num = cpf.replace(/\D/g, "").padStart(11, "0").slice(0, 11);
-  return num.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-}
-const parseDate = (d) => {
-  const [dd, mm, yyyy] = d.split("/");
-  return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
 };
-
-type AgendamentoStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
 const Agendamentos = () => {
   const { toast } = useToast();
@@ -127,12 +146,12 @@ const Agendamentos = () => {
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
-  // CORRIGIDO: query de agendamentos hoje usando data_retirada
+  // Query de agendamentos hoje usando data_retirada
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const amanha = new Date(hoje);
   amanha.setDate(hoje.getDate() + 1);
-  const agQueryHoje = useQuery({
+  useQuery({
     queryKey: ["agendamentos-hoje", hoje.toISOString().split('T')[0]],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -250,10 +269,10 @@ const Agendamentos = () => {
       return;
     }
     try {
-      const formattedPlaca = formatPlaca(novoAgendamento.placa);
-      const formattedCPF = formatCPF(novoAgendamento.documento);
-      const { data: userData } = await supabase.auth.getUser();
+      const placaSemMascara = novoAgendamento.placa.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+      const cpfSemMascara = novoAgendamento.documento.replace(/\D/g, "");
 
+      const { data: userData } = await supabase.auth.getUser();
       const { data: agendData, error: errAgend } = await supabase
         .from("agendamentos")
         .insert({
@@ -261,9 +280,9 @@ const Agendamentos = () => {
           quantidade: qtdNum,
           data_retirada: novoAgendamento.data,
           horario: novoAgendamento.horario,
-          placa_caminhao: formattedPlaca,
+          placa_caminhao: placaSemMascara,
           motorista_nome: novoAgendamento.motorista.trim(),
-          motorista_documento: formattedCPF,
+          motorista_documento: cpfSemMascara,
           tipo_caminhao: novoAgendamento.tipoCaminhao || null,
           observacoes: novoAgendamento.observacoes || null,
           status: "confirmado",
@@ -471,7 +490,12 @@ const Agendamentos = () => {
                   <Input
                     id="placa"
                     value={novoAgendamento.placa}
-                    onChange={(e) => setNovoAgendamento((s) => ({ ...s, placa: formatPlaca(e.target.value) }))}
+                    onChange={(e) =>
+                      setNovoAgendamento((s) => ({
+                        ...s,
+                        placa: maskPlaca(e.target.value),
+                      }))
+                    }
                     placeholder="Ex: ABC-1234"
                     maxLength={8}
                   />
@@ -493,7 +517,12 @@ const Agendamentos = () => {
                     <Input
                       id="documento"
                       value={novoAgendamento.documento}
-                      onChange={(e) => setNovoAgendamento((s) => ({ ...s, documento: formatCPF(e.target.value) }))}
+                      onChange={(e) =>
+                        setNovoAgendamento((s) => ({
+                          ...s,
+                          documento: maskCPF(e.target.value),
+                        }))
+                      }
                       placeholder="Ex: 123.456.789-00"
                       maxLength={14}
                     />
@@ -610,9 +639,9 @@ const Agendamentos = () => {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-2">
                     <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data} às {ag.horario}</span></div>
-                    <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{ag.placa}</span></div>
+                    <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{formatPlaca(ag.placa)}</span></div>
                     <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{ag.motorista}</span></div>
-                    <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{ag.documento}</span></div>
+                    <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{formatCPF(ag.documento)}</span></div>
                   </div>
                 </div>
               </CardContent>
