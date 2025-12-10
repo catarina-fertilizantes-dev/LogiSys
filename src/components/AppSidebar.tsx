@@ -110,7 +110,7 @@ export function AppSidebar() {
       if (!item.resource) {
         return true;
       }
-      // 🚩 CORRIGIDO: admin e logistica SEMPRE podem ver o menu Clientes
+      // 🚩 admin e logistica SEMPRE podem ver o menu Clientes
       if (
         item.resource === "clientes" &&
         (userRole === "admin" || userRole === "logistica")
@@ -130,6 +130,10 @@ export function AppSidebar() {
   const visibleLowerMenuItems = permissionsLoading
     ? []
     : filterMenuItems(lowerMenuItems);
+
+  // 🚩 NOVO: Só mostra seção Cadastros para admin ou logistica
+  const showCadastros =
+    userRole === "admin" || userRole === "logistica";
 
   return (
     <Sidebar collapsible="icon">
@@ -172,31 +176,33 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleLowerMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-accent/50"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {showCadastros && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleLowerMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className={({ isActive }) =>
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
