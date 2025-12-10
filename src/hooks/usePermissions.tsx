@@ -88,7 +88,7 @@ export const usePermissions = () => {
   }, [userRole, user?.id, authLoading]);
 
   /**
-   * Permite visualizar ou manipular o recurso apenas para admin ou logistica.
+   * Permite visualizar ou manipular o recurso clientes apenas para admin ou logistica, sempre.
    */
   const canAccess = (resource: Resource, action: 'create' | 'read' | 'update' | 'delete' = 'read'): boolean => {
     // Permissão extra: admin ou logistica sempre podem ver "clientes"
