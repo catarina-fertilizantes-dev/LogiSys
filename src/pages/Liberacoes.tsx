@@ -35,14 +35,30 @@ const parseDate = (d: string) => {
 };
 
 const Liberacoes = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, userRole, user } = useAuth();
   const canCreate = hasRole("logistica") || hasRole("admin");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Query principal de liberações
+  // Buscar cliente atual vinculado ao usuário logado (igual Agendamentos)
+  const { data: currentCliente } = useQuery({
+    queryKey: ["current-cliente", user?.id],
+    queryFn: async () => {
+      if (!user || userRole !== "cliente") return null;
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && userRole === "cliente",
+  });
+
+  // Query principal de liberações (agora com filtro por cliente no front)
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes"],
+    queryKey: ["liberacoes", currentCliente?.id],
     queryFn: async () => {
       console.log("🔍 [DEBUG] Buscando liberações...");
       const { data, error } = await supabase
@@ -67,9 +83,16 @@ const Liberacoes = () => {
         throw error;
       }
       console.log("✅ [DEBUG] Liberações carregadas:", data?.length);
-      return data;
+
+      // AQUI: Se cliente, mostrar apenas as liberações do cliente logado
+      let filtered = data ?? [];
+      if (userRole === "cliente" && currentCliente?.id) {
+        filtered = filtered.filter((l: any) => l.cliente_id === currentCliente.id);
+      }
+      return filtered;
     },
     refetchInterval: 30000,
+    enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
 
   // Prepara array para grid/cards
@@ -241,7 +264,7 @@ const Liberacoes = () => {
 
       resetFormNovaLiberacao();
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["liberacoes"] });
+      queryClient.invalidateQueries({ queryKey: ["liberacoes", currentCliente?.id] }); // Invalida query correta
 
     } catch (err: unknown) {
       console.error("❌ [ERROR] Erro geral ao criar liberação:", err);
