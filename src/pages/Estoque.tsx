@@ -125,7 +125,6 @@ const Estoque = () => {
     refetchInterval: 30000,
   });
 
-  // Filtro avançado para os armazéns em badges
   const { data: armazensParaFiltro } = useQuery({
     queryKey: ["armazens-filtro"],
     queryFn: async () => {
@@ -143,13 +142,12 @@ const Estoque = () => {
     refetchInterval: 10000,
   });
 
-  // Agrupa o estoque por armazém (*apenas armazéns ativos e produtos ativos*)
   const estoquePorArmazem: ArmazemEstoque[] = useMemo(() => {
     if (!estoqueData) return [];
     const map: { [armazemId: string]: ArmazemEstoque } = {};
     for (const item of estoqueData as SupabaseEstoqueItem[]) {
       if (!item.armazem || !item.armazem.id || !item.armazem.ativo) continue;
-      if (!item.produto || !item.produto.ativo) continue; // Só produtos ativos!
+      if (!item.produto || !item.produto.ativo) continue;
       const armazemId = item.armazem.id;
       if (!map[armazemId]) {
         map[armazemId] = {
@@ -179,7 +177,6 @@ const Estoque = () => {
     });
   }, [estoqueData]);
 
-  // Produtos únicos para badges
   const produtosUnicos = useMemo(() => {
     const set = new Set<string>();
     estoquePorArmazem.forEach(armazem =>
@@ -187,8 +184,6 @@ const Estoque = () => {
     );
     return Array.from(set).sort();
   }, [estoquePorArmazem]);
-
-  // Armazéns únicos para badges
   const armazensUnicos = useMemo(() => {
     return estoquePorArmazem.map(a => ({
       id: a.id,
@@ -198,7 +193,6 @@ const Estoque = () => {
     }));
   }, [estoquePorArmazem]);
 
-  // Filtro dos cards
   const [openArmazemId, setOpenArmazemId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -571,7 +565,7 @@ const Estoque = () => {
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
             </div>
-            {/* Botão "Limpar Filtros" alinhado à direita no rodapé da caixa de filtros */}
+            {/* Botão limpar filtros alinhado à direita no rodapé */}
             <div className="flex justify-end mt-4 absolute right-4 bottom-4">
               <Button variant="ghost" size="sm" onClick={() => {
                 setSearch("");
@@ -592,15 +586,19 @@ const Estoque = () => {
         {filteredArmazens.map((armazem) => (
           <div key={armazem.id}>
             <Card
-              className={`w-full transition-all shadow hover:shadow-md cursor-pointer flex flex-col ${openArmazemId === armazem.id ? "border-primary" : ""}`}
+              className={`w-full transition-all hover:shadow-md cursor-pointer flex flex-col ${openArmazemId === armazem.id ? "border-primary" : ""}`}
               onClick={() =>
                 setOpenArmazemId(openArmazemId === armazem.id ? null : armazem.id)
               }
             >
-              <CardContent className="px-5 py-3 flex flex-row items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg">{armazem.nome}</h3>
-                  <p className="text-xs text-muted-foreground">
+              <CardContent className="px-5 py-3 flex flex-row items-center">
+                {/* Badge/ícone à ESQUERDA, mesmo padrão agendamentos */}
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary mr-4 shrink-0">
+                  <Package className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg truncate">{armazem.nome}</h3>
+                  <p className="text-xs text-muted-foreground truncate">
                     {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
                   </p>
                   <span className="text-xs text-muted-foreground">
@@ -610,15 +608,9 @@ const Estoque = () => {
                     <div className="text-xs text-muted-foreground">Capacidade: {armazem.capacidade_total}t</div>
                   )}
                 </div>
-                <div className="flex gap-3 items-center">
-                  {/* Badge/ícone à direita do card, igual ao card de agendamentos */}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
-                    <Package className="h-5 w-5 text-white" />
-                  </div>
-                  <Button variant="ghost" size="icon" tabIndex={-1} className="pointer-events-none">
-                    {openArmazemId === armazem.id ? <ChevronUp /> : <ChevronDown />}
-                  </Button>
-                </div>
+                <Button variant="ghost" size="icon" tabIndex={-1} className="pointer-events-none ml-4">
+                  {openArmazemId === armazem.id ? <ChevronUp /> : <ChevronDown />}
+                </Button>
               </CardContent>
               {openArmazemId === armazem.id && (
                 <div className="border-t py-3 px-5 bg-muted/50 flex flex-col gap-3">
@@ -636,7 +628,6 @@ const Estoque = () => {
                               </Badge>
                             </div>
                           </div>
-                          {/* Edição inline da quantidade */}
                           {editingId === produto.id ? (
                             <div className="flex gap-1 ml-auto">
                               <Input
