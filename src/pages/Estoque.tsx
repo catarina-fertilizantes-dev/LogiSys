@@ -10,22 +10,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, ChevronRight, ChevronLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type StockStatus = "normal" | "baixo";
 type Unidade = "t" | "kg";
 
-interface StockItem {
+interface ProdutoEstoque {
   id: string;
   produto: string;
-  armazem: string;
   quantidade: number;
   unidade: string;
   status: StockStatus;
   data: string;
   produto_id?: string;
-  armazem_id?: string;
+}
+
+interface ArmazemEstoque {
+  id: string;
+  nome: string;
+  cidade: string;
+  estado?: string;
+  produtos: ProdutoEstoque[];
+  capacidade_total?: number;
+  ativo?: boolean;
 }
 
 interface SupabaseEstoqueItem {
@@ -42,6 +50,8 @@ interface SupabaseEstoqueItem {
     nome: string;
     cidade: string;
     estado?: string;
+    capacidade_total?: number;
+    ativo?: boolean;
   } | null;
 }
 
@@ -66,12 +76,9 @@ const Estoque = () => {
           quantidade,
           updated_at,
           produto:produtos(id, nome, unidade),
-          armazem:armazens(id, nome, cidade, estado)
+          armazem:armazens(id, nome, cidade, estado, capacidade_total, ativo)
         `)
         .order("updated_at", { ascending: false });
-
-      console.log("[DEBUG] Dados do estoque lidos:", data);
-
       if (error) {
         toast({
           variant: "destructive",
@@ -112,7 +119,7 @@ const Estoque = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("armazens")
-        .select("id, nome, cidade, estado")
+        .select("id, nome, cidade, estado, capacidade_total, ativo")
         .eq("ativo", true)
         .order("cidade");
       if (error) {
@@ -149,20 +156,39 @@ const Estoque = () => {
     refetchInterval: 10000,
   });
 
-  // Transformação dos dados para renderização
-  const estoque = useMemo(() => {
+  // Agrupa o estoque por armazém
+  const estoquePorArmazem: ArmazemEstoque[] = useMemo(() => {
     if (!estoqueData) return [];
-    return estoqueData.map((item: SupabaseEstoqueItem) => ({
-      id: item.id,
-      produto: item.produto?.nome || "N/A",
-      armazem: item.armazem ? ((item.armazem.cidade ? item.armazem.cidade : "") + (item.armazem.estado ? `/${item.armazem.estado}` : "")) : "N/A",
-      quantidade: item.quantidade,
-      unidade: item.produto?.unidade || "t",
-      status: item.quantidade < 10 ? "baixo" : "normal",
-      data: new Date(item.updated_at).toLocaleDateString("pt-BR"),
-      produto_id: item.produto?.id,
-      armazem_id: item.armazem?.id,
-    }));
+    const map: { [armazemId: string]: ArmazemEstoque } = {};
+    for (const item of estoqueData as SupabaseEstoqueItem[]) {
+      if (!item.armazem || !item.armazem.id) continue;
+      const armazemId = item.armazem.id;
+      if (!map[armazemId]) {
+        map[armazemId] = {
+          id: armazemId,
+          nome: item.armazem.nome,
+          cidade: item.armazem.cidade,
+          estado: item.armazem.estado,
+          capacidade_total: item.armazem.capacidade_total,
+          ativo: item.armazem.ativo,
+          produtos: [],
+        };
+      }
+      map[armazemId].produtos.push({
+        id: item.id,
+        produto: item.produto?.nome || "N/A",
+        quantidade: item.quantidade,
+        unidade: item.produto?.unidade || "t",
+        status: item.quantidade < 10 ? "baixo" : "normal",
+        data: new Date(item.updated_at).toLocaleDateString("pt-BR"),
+        produto_id: item.produto?.id,
+      });
+    }
+    // Optionally sort armazéns by cidade/nome
+    return Object.values(map).sort((a, b) => {
+      if (a.cidade === b.cidade) return a.nome.localeCompare(b.nome);
+      return a.cidade.localeCompare(b.cidade);
+    });
   }, [estoqueData]);
 
   // Dialog "Entrada de Estoque"
@@ -174,7 +200,6 @@ const Estoque = () => {
     unidade: "t" as Unidade,
   });
 
-  // Estado para edição inline de quantidade dos cards
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editQuantity, setEditQuantity] = useState<string>("");
 
@@ -196,21 +221,18 @@ const Estoque = () => {
       return;
     }
 
-    // Produto Selecionado
     const produtoSelecionado = produtosCadastrados?.find(p => p.id === produtoId);
     if (!produtoSelecionado) {
       toast({ variant: "destructive", title: "Produto não encontrado", description: "Selecione um produto existente." });
       return;
     }
 
-    // Buscar armazém ativo
     const { data: armazemData, error: errArmazem } = await supabase
       .from("armazens")
-      .select("id, nome, cidade, estado")
+      .select("id, nome, cidade, estado, capacidade_total, ativo")
       .eq("id", armazem)
       .eq("ativo", true)
       .maybeSingle();
-
     if (errArmazem) {
       toast({ variant: "destructive", title: "Erro ao buscar armazém", description: errArmazem.message });
       return;
@@ -220,7 +242,6 @@ const Estoque = () => {
       return;
     }
 
-    // Buscar estoque atual
     const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
       .from("estoque")
       .select("quantidade")
@@ -276,7 +297,6 @@ const Estoque = () => {
     queryClient.invalidateQueries({ queryKey: ["estoque"] });
   };
 
-  // Filtros barra compacta/avançada
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<StockStatus[]>([]);
@@ -293,42 +313,47 @@ const Estoque = () => {
       .sort();
   }, [armazensParaFiltro]);
 
-  // Filtros para renderizar o grid
-  const filteredEstoque = useMemo(() => {
-    const filtro = estoque.filter((item) => {
-      const term = search.trim().toLowerCase();
-      if (term) {
-        const hay = `${item.produto} ${item.armazem}`.toLowerCase();
+  // Filtro para renderizar os armazéns e produtos
+  const filteredArmazens = useMemo(() => {
+    return estoquePorArmazem.filter((armazem) => {
+      if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(armazem.cidade)) return false;
+      if (search.trim()) {
+        const term = search.trim().toLowerCase();
+        const hay = `${armazem.nome} ${armazem.cidade}/${armazem.estado}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(item.status)) return false;
-      if (selectedWarehouses.length > 0 && !selectedWarehouses.includes(item.armazem)) return false;
+      return true;
+    }).map((armazem) => {
+      // Filtros sobre produtos de cada armazém
+      let produtos = armazem.produtos;
+      if (selectedStatuses.length > 0) {
+        produtos = produtos.filter((p) => selectedStatuses.includes(p.status));
+      }
       if (dateFrom) {
         const from = new Date(dateFrom);
-        if (parseDate(item.data) < from) return false;
+        produtos = produtos.filter((p) => parseDate(p.data) >= from);
       }
       if (dateTo) {
         const to = new Date(dateTo);
         to.setHours(23, 59, 59, 999);
-        if (parseDate(item.data) > to) return false;
+        produtos = produtos.filter((p) => parseDate(p.data) <= to);
       }
-      return true;
+      if (search.trim()) {
+        const term = search.trim().toLowerCase();
+        produtos = produtos.filter(
+          p => p.produto.toLowerCase().includes(term)
+        );
+      }
+      return { ...armazem, produtos };
     });
-    console.log("[DEBUG] Estoque para renderizar:", filtro);
-    return filtro;
-  }, [estoque, search, selectedStatuses, selectedWarehouses, dateFrom, dateTo]);
+  }, [estoquePorArmazem, search, selectedStatuses, selectedWarehouses, dateFrom, dateTo]);
 
-  const showingCount = filteredEstoque.length;
-  const totalCount = estoque.length;
-
-  const activeAdvancedCount =
-    (selectedStatuses.length ? 1 : 0) +
-    (selectedWarehouses.length ? 1 : 0) +
-    ((dateFrom || dateTo) ? 1 : 0);
+  // Card expansível: controla qual armazém está expandido
+  const [openArmazemId, setOpenArmazemId] = useState<string | null>(null);
 
   // Inline de edição
-  const handleUpdateQuantity = async (id: string) => {
-    const newQty = Number(editQuantity);
+  const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
+    const newQty = Number(newQtyStr);
     if (Number.isNaN(newQty) || newQty < 0) {
       toast({ variant: "destructive", title: "Quantidade inválida", description: "Digite um valor maior ou igual a zero." });
       return;
@@ -336,15 +361,14 @@ const Estoque = () => {
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("estoque")
         .update({ 
           quantidade: newQty,
           updated_at: new Date().toISOString(),
           updated_by: userData.user?.id,
         })
-        .eq("id", id)
-        .select();
+        .eq("id", produtoId);
 
       if (error) {
         toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: error.message });
@@ -387,6 +411,14 @@ const Estoque = () => {
       </div>
     );
   }
+
+  const showingCount = filteredArmazens.reduce((acc, armazem) => acc + armazem.produtos.length, 0);
+  const totalCount = estoquePorArmazem.reduce((acc, armazem) => acc + armazem.produtos.length, 0);
+
+  const activeAdvancedCount =
+    (selectedStatuses.length ? 1 : 0) +
+    (selectedWarehouses.length ? 1 : 0) +
+    ((dateFrom || dateTo) ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -481,7 +513,7 @@ const Estoque = () => {
         <div className="flex items-center gap-3">
           <Input
             className="h-9 flex-1"
-            placeholder="Buscar por produto ou armazém..."
+            placeholder="Buscar por armazém ou produto..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -558,73 +590,115 @@ const Estoque = () => {
         </div>
       )}
 
-      {/* Grid de cards de estoque */}
+      {/* Novo design: Cards de armazém expansíveis */}
       <div className="container mx-auto px-6 py-6">
-        <div className="grid gap-4">
-          {filteredEstoque.map((item) => (
-            <Card key={item.id} className="transition-all hover:shadow-md">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                      <Package className="h-5 w-5 text-white" />
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredArmazens.map((armazem) => (
+            <div key={armazem.id}>
+              <Card
+                className={`cursor-pointer transition-all ${openArmazemId === armazem.id ? "shadow-lg" : "hover:shadow-md"}`}
+                onClick={() =>
+                  setOpenArmazemId(openArmazemId === armazem.id ? null : armazem.id)
+                }
+              >
+                <CardContent className="p-4 space-y-2">
+                  {/* Cabeçalho do armazém */}
+                  <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-semibold text-foreground">{item.produto}</h3>
-                      <p className="text-xs text-muted-foreground">{item.armazem} • {item.data}</p>
+                      <h3 className="font-semibold text-lg">{armazem.nome}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {armazem.cidade}/{armazem.estado}
+                      </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-5">
-                    <div className="text-right">
-                      {editingId === item.id ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editQuantity}
-                          onChange={(e) => setEditQuantity(e.target.value)}
-                          className="w-24 h-8"
-                        />
-                      ) : (
-                        <>
-                          <p className="text-xl font-bold text-foreground">{item.quantidade} {item.unidade}</p>
-                          <p className="text-xs text-muted-foreground">Disponível</p>
-                        </>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant={armazem.ativo ? "default" : "secondary"}>
+                        {armazem.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                      {armazem.capacidade_total != null && (
+                        <span className="text-xs text-muted-foreground">
+                          Capacidade: {armazem.capacidade_total}t
+                        </span>
                       )}
-                    </div>
-                    <Badge variant={item.status === "baixo" ? "destructive" : "secondary"}>
-                      {item.status === "baixo" ? "Estoque Baixo" : "Normal"}
-                    </Badge>
-                    {editingId === item.id ? (
-                      <>
-                        <Button variant="default" size="sm" onClick={() => handleUpdateQuantity(item.id)}>
-                          Salvar
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                          Cancelar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setEditingId(item.id);
-                          setEditQuantity(item.quantidade.toString());
-                        }}
-                        disabled={!hasRole("logistica") && !hasRole("admin")}
-                      >
-                        Atualizar
+                      <Button variant="ghost" size="icon" className="mt-2 pointer-events-none" tabIndex={-1}>
+                        {openArmazemId === armazem.id ? <ChevronUp /> : <ChevronDown />}
                       </Button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="text-xs mt-2 text-muted-foreground">
+                    {armazem.produtos.length} produto{armazem.produtos.length !== 1 && 's'} atualmente
+                  </div>
+                  {/* Lista de produtos (expandido) */}
+                  {openArmazemId === armazem.id && (
+                    <div className="mt-4 border-t pt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {armazem.produtos.length > 0 ? (
+                          armazem.produtos.map((produto) => (
+                            <Card key={produto.id} className="bg-muted/30">
+                              <CardContent className="p-3 flex flex-col gap-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-medium">{produto.produto}</span>
+                                  <span className="font-mono text-xs">{produto.quantidade} {produto.unidade}</span>
+                                </div>
+                                <div className="flex gap-2 text-xs text-muted-foreground items-center">
+                                  <span>{produto.data}</span>
+                                  <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
+                                    {produto.status === "baixo" ? "Baixo" : "Normal"}
+                                  </Badge>
+                                </div>
+                                {/* Edição inline da quantidade */}
+                                {editingId === produto.id ? (
+                                  <div className="flex gap-1 mt-2">
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      size="sm"
+                                      value={editQuantity}
+                                      onChange={(e) => setEditQuantity(e.target.value)}
+                                      className="h-8 w-20"
+                                    />
+                                    <Button variant="default" size="sm" onClick={() => handleUpdateQuantity(produto.id, editQuantity)}>
+                                      Salvar
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingId(produto.id);
+                                      setEditQuantity(produto.quantidade.toString());
+                                    }}
+                                    disabled={!hasRole("logistica") && !hasRole("admin")}
+                                    className="mt-2"
+                                  >
+                                    Atualizar quantidade
+                                  </Button>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <div className="text-center text-xs text-muted-foreground py-6">
+                            Nenhum produto cadastrado neste armazém
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           ))}
-          {filteredEstoque.length === 0 && (
-            <div className="text-sm text-muted-foreground py-8 text-center">Nenhum resultado encontrado com os filtros atuais.</div>
-          )}
         </div>
+        {filteredArmazens.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum armazém encontrado com os filtros atuais.
+          </div>
+        )}
       </div>
     </div>
   );
