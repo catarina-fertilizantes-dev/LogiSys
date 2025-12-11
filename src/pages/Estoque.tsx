@@ -67,7 +67,6 @@ const Estoque = () => {
   const queryClient = useQueryClient();
   const { hasRole } = useAuth();
 
-  // Consulta do estoque
   const { data: estoqueData, isLoading, error } = useQuery({
     queryKey: ["estoque"],
     queryFn: async () => {
@@ -90,7 +89,6 @@ const Estoque = () => {
     refetchInterval: 30000,
   });
 
-  // Consulta dos produtos cadastrados para o combobox do modal
   const { data: produtosCadastrados } = useQuery({
     queryKey: ["produtos-cadastrados"],
     queryFn: async () => {
@@ -107,7 +105,6 @@ const Estoque = () => {
     refetchInterval: 30000,
   });
 
-  // Consulta dos armazéns ativos
   const { data: armazensAtivos } = useQuery({
     queryKey: ["armazens-ativos"],
     queryFn: async () => {
@@ -184,7 +181,6 @@ const Estoque = () => {
     );
     return Array.from(set).sort();
   }, [estoquePorArmazem]);
-
   const armazensUnicos = useMemo(() => {
     return estoquePorArmazem.map(a => ({
       id: a.id,
@@ -258,8 +254,8 @@ const Estoque = () => {
 
   const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
     const newQty = Number(newQtyStr);
-    if (Number.isNaN(newQty) || newQty < 0) {
-      toast({ variant: "destructive", title: "Quantidade inválida", description: "Digite um valor maior ou igual a zero." });
+    if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr)) {
+      toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior ou igual a zero." });
       return;
     }
     try {
@@ -313,13 +309,19 @@ const Estoque = () => {
 
   const handleCreateProduto = async () => {
     const { produtoId, armazem, quantidade, unidade } = novoProduto;
+    const qtdNum = Number(quantidade);
+
     if (!produtoId || !armazem.trim() || !quantidade) {
       toast({ variant: "destructive", title: "Preencha todos os campos obrigatórios" });
       return;
     }
-    const qtdNum = Number(quantidade);
-    if (Number.isNaN(qtdNum) || qtdNum <= 0) {
-      toast({ variant: "destructive", title: "Quantidade inválida", description: "Informe um valor maior que zero." });
+    if (
+      Number.isNaN(qtdNum) ||
+      qtdNum <= 0 ||
+      quantidade.trim() === "" ||
+      !/^\d+(\.\d+)?$/.test(quantidade)
+    ) {
+      toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior que zero." });
       return;
     }
     const produtoSelecionado = produtosCadastrados?.find(p => p.id === produtoId && p.ativo);
@@ -451,14 +453,16 @@ const Estoque = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
+                    {/* Aumentado o tamanho do campo para 80+px */}
                     <Input
                       id="quantidade"
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Ex: 20.5 (será somado ao estoque atual)"
+                      placeholder="Ex: 20500.50"
                       value={novoProduto.quantidade}
                       onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
+                      style={{ width: "120px", maxWidth: "100%" }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -481,7 +485,7 @@ const Estoque = () => {
           </Dialog>
         }
       />
-      {/* Barra de busca e filtros */}
+
       <div className="container mx-auto px-6 pt-3">
         <div className="flex items-center gap-3">
           <Input
@@ -504,7 +508,6 @@ const Estoque = () => {
       {filtersOpen && (
         <div className="container mx-auto px-6 pt-2">
           <div className="rounded-md border p-3 space-y-2 relative">
-            {/* Badges de produtos */}
             <div>
               <Label className="text-sm mb-1">Produtos</Label>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -521,7 +524,6 @@ const Estoque = () => {
                 ))}
               </div>
             </div>
-            {/* Badges de armazém */}
             <div className="mt-3">
               <Label className="text-sm mb-1">Armazéns</Label>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -538,7 +540,6 @@ const Estoque = () => {
                 ))}
               </div>
             </div>
-            {/* Status estoque baixo */}
             <div className="mt-3">
               <Label className="text-sm mb-1">Status de estoque</Label>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -560,13 +561,11 @@ const Estoque = () => {
                 })}
               </div>
             </div>
-            {/* Período */}
             <div className="mt-3 flex gap-4 items-center">
               <Label>Período</Label>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
             </div>
-            {/* Botão limpar filtros alinhado à direita no rodapé */}
             <div className="flex justify-end mt-4 absolute right-4 bottom-4">
               <Button variant="ghost" size="sm" onClick={() => {
                 setSearch("");
@@ -596,7 +595,6 @@ const Estoque = () => {
                 }
                 style={{ cursor: "pointer" }}
               >
-                {/* Ícone à esquerda, padrão agendamentos */}
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary mr-4 shrink-0">
                   <Package className="h-5 w-5 text-white" />
                 </div>
@@ -640,7 +638,8 @@ const Estoque = () => {
                                 size="sm"
                                 value={editQuantity}
                                 onChange={(e) => setEditQuantity(e.target.value)}
-                                className="h-8 w-20"
+                                style={{ width: "110px", minWidth: "100px" }}
+                                className="h-8"
                                 onClick={e => e.stopPropagation()}
                               />
                               <Button
