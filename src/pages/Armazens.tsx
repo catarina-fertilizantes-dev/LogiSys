@@ -55,6 +55,39 @@ function formatCEP(cep: string): string {
     return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
   return cep;
 }
+function maskCpfCnpjInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= 11) {
+    // CPF
+    let cpf = digits.slice(0, 11);
+    if (cpf.length > 9)
+      return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, "$1.$2.$3-$4");
+    if (cpf.length > 6)
+      return cpf.replace(/^(\d{3})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+    if (cpf.length > 3)
+      return cpf.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
+    return cpf;
+  } else {
+    // CNPJ
+    let cnpj = digits.slice(0, 14);
+    if (cnpj.length > 12)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, "$1.$2.$3/$4-$5");
+    if (cnpj.length > 8)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})$/, "$1.$2.$3/$4");
+    if (cnpj.length > 5)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+    if (cnpj.length > 2)
+      return cnpj.replace(/^(\d{2})(\d{0,3})$/, "$1.$2");
+    return cnpj;
+  }
+}
+function formatCpfCnpj(v: string): string {
+  const onlyDigits = v.replace(/\D/g, "");
+  if (onlyDigits.length <= 11) {
+    return onlyDigits.padStart(11, "0").replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
+  return onlyDigits.padStart(14, "0").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -75,6 +108,7 @@ type Armazem = {
   ativo: boolean;
   created_at: string;
   cep?: string;
+  cnpj_cpf?: string;
 };
 
 const Armazens = () => {
@@ -95,6 +129,7 @@ const Armazens = () => {
     endereco: "",
     capacidade_total: "",
     cep: "",
+    cnpj_cpf: "",
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -104,10 +139,8 @@ const Armazens = () => {
     nome: "",
   });
 
-  // Modal de detalhes do armazém
   const [detalhesArmazem, setDetalhesArmazem] = useState<Armazem | null>(null);
 
-  // Filtros
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -121,6 +154,7 @@ const Armazens = () => {
       endereco: "",
       capacidade_total: "",
       cep: "",
+      cnpj_cpf: "",
     });
   };
 
@@ -161,8 +195,8 @@ const Armazens = () => {
   }, []);
 
   const handleCreateArmazem = async () => {
-    const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep } = novoArmazem;
-    if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim()) {
+    const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep, cnpj_cpf } = novoArmazem;
+    if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim() || !cnpj_cpf.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
@@ -205,9 +239,9 @@ const Armazens = () => {
         }
       }
 
-      // Salva telefone e CEP sem formatação
       const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : undefined;
       const cleanCep = cep ? cep.replace(/\D/g, "") : undefined;
+      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
 
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
@@ -225,6 +259,7 @@ const Armazens = () => {
           endereco: endereco?.trim() || undefined,
           capacidade_total: capacidadeTotalNumber,
           cep: cleanCep,
+          cnpj_cpf: cleanCnpjCpf,
         }),
       });
 
@@ -330,7 +365,8 @@ const Armazens = () => {
           armazem.nome.toLowerCase().includes(term) ||
           armazem.cidade.toLowerCase().includes(term) ||
           armazem.estado.toLowerCase().includes(term) ||
-          armazem.email?.toLowerCase().includes(term);
+          armazem.email?.toLowerCase().includes(term) ||
+          (armazem.cnpj_cpf && armazem.cnpj_cpf.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
@@ -428,6 +464,18 @@ const Armazens = () => {
                       />
                     </div>
                     <div>
+                      <Label htmlFor="cnpj_cpf">CNPJ/CPF *</Label>
+                      <Input
+                        id="cnpj_cpf"
+                        value={novoArmazem.cnpj_cpf}
+                        onChange={(e) =>
+                          setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
+                        }
+                        placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                        maxLength={18}
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor="telefone">Telefone</Label>
                       <Input
                         id="telefone"
@@ -512,7 +560,7 @@ const Armazens = () => {
             </Select>
           </div>
           <Input
-            placeholder="Buscar por nome, cidade, estado ou email..."
+            placeholder="Buscar por nome, cidade, estado, email ou CNPJ/CPF..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -588,6 +636,7 @@ const Armazens = () => {
             <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
             <p><b>Cidade:</b> {detalhesArmazem?.cidade || "—"}</p>
             <p><b>Estado:</b> {detalhesArmazem?.estado || "—"}</p>
+            <p><b>CNPJ/CPF:</b> {detalhesArmazem?.cnpj_cpf ? formatCpfCnpj(detalhesArmazem.cnpj_cpf) : "—"}</p>
             <p><b>Capacidade Total:</b> {detalhesArmazem?.capacidade_total ?? "—"} t</p>
             <p><b>Disponível:</b> {detalhesArmazem?.capacidade_disponivel ?? "—"} t</p>
             <p><b>Status:</b> {detalhesArmazem?.ativo ? "Ativo" : "Inativo"}</p>
@@ -630,6 +679,11 @@ const Armazens = () => {
                 {armazem.cep && (
                   <p>
                     <span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}
+                  </p>
+                )}
+                {armazem.cnpj_cpf && (
+                  <p>
+                    <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(armazem.cnpj_cpf)}
                   </p>
                 )}
               </div>
