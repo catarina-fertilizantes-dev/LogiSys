@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud, CheckCircle, Loader2, FileText } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 const ETAPAS = [
   { id: 1, nome: "Chegada" },
