@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UploadCloud, CheckCircle, Loader2, FileText } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const ETAPAS = [
-  { id: 0, nome: "Aguardando início" },   // Agora começa do zero!
+  { id: 0, nome: "Aguardando início" },
   { id: 1, nome: "Chegada" },
   { id: 2, nome: "Início Carregamento" },
   { id: 3, nome: "Carregando" },
@@ -29,19 +29,56 @@ const formatarDataHora = (v?: string | null) => {
 const CarregamentoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Estados
   const [obs, setObs] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-
-  // Estados para NF/XML (etapa 5)
   const [nfFile, setNfFile] = useState<File | null>(null);
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [uploadingNF, setUploadingNF] = useState(false);
   const [uploadingXML, setUploadingXML] = useState(false);
 
-  // Buscar detalhes do carregamento + agendamento + etapas + fotos + documentos
+  // Estado de permissão
+  const [userId, setUserId] = useState<string | null>(null);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [armazemId, setArmazemId] = useState<string | null>(null);
+  const [clienteId, setClienteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+    const fetchRoles = async () => {
+      if (!userId) return;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (data) setRoles(data.map((r) => r.role));
+    };
+    const fetchVinculos = async () => {
+      if (!userId) return;
+      const { data: armazem } = await supabase
+        .from("armazens")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      setArmazemId(armazem?.id ?? null);
+      const { data: cliente } = await supabase
+        .from("clientes")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      setClienteId(cliente?.id ?? null);
+    };
+    fetchRoles();
+    fetchVinculos();
+    // eslint-disable-next-line
+  }, [userId]);
+
+  // Buscar detalhes do carregamento
   const { data: carregamento, isLoading, error, refetch } = useQuery({
     queryKey: ["carregamento-detalhe", id],
     enabled: !!id,
@@ -73,16 +110,27 @@ const CarregamentoDetalhe = () => {
     refetchOnWindowFocus: true,
   });
 
-  // Controlar etapa atual (agora começa em 0!)
+  // Controle de permisão lógica
+  const podeEditar = useMemo(() => {
+    if (!userId || !roles.length || !carregamento) return false;
+    if (roles.includes("admin") || roles.includes("logistica")) return true;
+    if (roles.includes("armazem") && armazemId && carregamento.armazem_id === armazemId) return true;
+    if (roles.includes("cliente") && clienteId && carregamento.cliente_id === clienteId) return true;
+    return false;
+  }, [userId, roles, carregamento, armazemId, clienteId]);
+
+  useEffect(() => {
+    // Se após carregar, NÃO tiver permissão, redireciona pro dashboard/listagem
+    if (!isLoading && carregamento && !podeEditar) {
+      navigate("/carregamentos");
+    }
+    // eslint-disable-next-line
+  }, [isLoading, carregamento, podeEditar]);
+
   const etapaAtual = carregamento?.etapa_atual ?? 0;
-
-  // Ajusta controles de etapas conforme novo modelo
-  const etapaFinalizada = etapaAtual > 5; // 5 = última etapa
-
-  // Helper para mostrar etapa corrente (após conclusão da etapa info, usuário está na próxima do array)
+  const etapaFinalizada = etapaAtual > 5;
   const etapaInfo = ETAPAS.find(e => e.id === etapaAtual);
 
-  // Filtrar infos de fotos/por etapa
   const fotosPorEtapa = useMemo(() => {
     if (!carregamento?.fotos) return {};
     const map: Record<number, any[]> = {};
@@ -93,8 +141,6 @@ const CarregamentoDetalhe = () => {
     }
     return map;
   }, [carregamento?.fotos]);
-
-  // Filtra documentos anexados
   const documentosPorTipo = useMemo(() => {
     if (!carregamento?.documentos) return {};
     const map: Record<string, any> = {};
@@ -103,20 +149,16 @@ const CarregamentoDetalhe = () => {
     }
     return map;
   }, [carregamento?.documentos]);
-
-  // Observação da etapa atual (etapa 0 não tem observação)
   const etapaObservacoes: Record<number, string> = {
-    0: "", // etapa 0 não define observação, a menos que deseje customizar
+    0: "",
     1: carregamento?.observacao_chegada ?? "",
     2: carregamento?.observacao_inicio ?? "",
     3: carregamento?.observacao_carregando ?? "",
     4: carregamento?.observacao_finalizacao ?? "",
     5: carregamento?.observacao_nf ?? "",
   };
-
-  // Datas de início de cada etapa
   const dataEtapas: Record<number, string | null | undefined> = {
-    0: carregamento?.created_at, // ou null, se quiser não exibir para etapa 0
+    0: carregamento?.created_at,
     1: carregamento?.data_chegada,
     2: carregamento?.data_inicio_carregamento,
     3: carregamento?.data_carregando,
@@ -124,7 +166,7 @@ const CarregamentoDetalhe = () => {
     5: carregamento?.data_nf,
   };
 
-  // Upload de foto (para etapas 1-4; etapa 0 não sobe foto)
+  // Upload de foto (para etapas 1-4)
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) setFoto(e.target.files[0]);
   };
@@ -139,7 +181,6 @@ const CarregamentoDetalhe = () => {
         .upload(filePath, foto);
       if (uploadError) throw uploadError;
 
-      // Insere registro em fotos_carregamento
       const { error: insertError } = await supabase
         .from("fotos_carregamento")
         .insert([{
@@ -159,7 +200,7 @@ const CarregamentoDetalhe = () => {
     onError: () => setUploading(false),
   });
 
-  // Funções para NF e XML (etapa 5)
+  // Upload de NF/PDF/XML
   const handleNfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) setNfFile(e.target.files[0]);
   };
@@ -167,7 +208,6 @@ const CarregamentoDetalhe = () => {
     if (e.target.files && e.target.files.length > 0) setXmlFile(e.target.files[0]);
   };
 
-  // Upload NF
   const uploadNfMutation = useMutation({
     mutationFn: async () => {
       if (!nfFile) throw new Error("Selecione a NF (PDF)");
@@ -177,8 +217,6 @@ const CarregamentoDetalhe = () => {
         .from("carregamento-documentos")
         .upload(filePath, nfFile);
       if (uploadError) throw uploadError;
-
-      // Insere registro
       const { error: insertError } = await supabase
         .from("documentos_carregamento")
         .insert([{
@@ -197,7 +235,6 @@ const CarregamentoDetalhe = () => {
     onError: () => setUploadingNF(false),
   });
 
-  // Upload XML
   const uploadXmlMutation = useMutation({
     mutationFn: async () => {
       if (!xmlFile) throw new Error("Selecione o arquivo XML");
@@ -207,8 +244,6 @@ const CarregamentoDetalhe = () => {
         .from("carregamento-documentos")
         .upload(filePath, xmlFile);
       if (uploadError) throw uploadError;
-
-      // Insere registro
       const { error: insertError } = await supabase
         .from("documentos_carregamento")
         .insert([{
@@ -227,7 +262,7 @@ const CarregamentoDetalhe = () => {
     onError: () => setUploadingXML(false),
   });
 
-  // Atualizar observação da etapa (não há para etapa 0)
+  // Observação
   const handleObsSave = async () => {
     let col: string | null = null;
     switch (etapaAtual) {
@@ -243,11 +278,10 @@ const CarregamentoDetalhe = () => {
       .from("carregamentos")
       .update({ [col]: obs })
       .eq("id", id);
-
     if (!error) refetch();
   };
 
-  // Avançar para próxima etapa — agora também aceita etapa 0 => 1
+  // Avançar etapa
   const avancarEtapa = async () => {
     const { error } = await supabase
       .from("carregamentos")
@@ -256,7 +290,6 @@ const CarregamentoDetalhe = () => {
     if (!error) refetch();
   };
 
-  // Calcular estatísticas de tempo
   const tempoEtapas = useMemo(() => {
     const result: Record<number, string> = {};
     for (let i = 1; i <= 5; i++) {
@@ -275,18 +308,12 @@ const CarregamentoDetalhe = () => {
     return result;
   }, [dataEtapas, carregamento?.updated_at]);
 
-  // Permissões
-  const bloqueado = uploading || uploadingNF || uploadingXML || etapaFinalizada || carregamento?.status === "finalizado";
-
-  // Se está na última etapa, arquivos obrigatórios são PDF (NF) e XML
+  const bloqueado = uploading || uploadingNF || uploadingXML || etapaFinalizada || carregamento?.status === "finalizado" || !podeEditar;
   const isUltimaEtapa = etapaAtual === 5;
-
-  // Checagem: NF e XML já anexados?
   const nfEnviada = Boolean(documentosPorTipo["nf"]);
   const xmlEnviado = Boolean(documentosPorTipo["xml"]);
 
-  // Renderização
-  if (isLoading || !carregamento) {
+  if (isLoading || !carregamento || userId == null || roles.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <PageHeader title="Detalhes do Carregamento" />
@@ -296,7 +323,6 @@ const CarregamentoDetalhe = () => {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="min-h-screen bg-background">
@@ -343,7 +369,7 @@ const CarregamentoDetalhe = () => {
                 </div>
 
                 {/* Upload obrigatório apenas se etapaAtual >=1 e <5 */}
-                {etapaAtual >= 1 && etapaAtual < 5 && (
+                {etapaAtual >= 1 && etapaAtual < 5 && podeEditar && (
                   <>
                     <Label className="font-medium">Subir foto da etapa (obrigatório)</Label>
                     <div className="flex gap-2 items-center">
@@ -364,8 +390,9 @@ const CarregamentoDetalhe = () => {
                     ))}
                   </>
                 )}
+
                 {/* Última etapa: NF (PDF) e XML */}
-                {isUltimaEtapa && (
+                {isUltimaEtapa && podeEditar && (
                   <>
                     <Label className="font-medium">Upload Nota Fiscal (PDF) *</Label>
                     {!nfEnviada ? (
@@ -426,7 +453,7 @@ const CarregamentoDetalhe = () => {
                 )}
 
                 {/* Observação da etapa, se for etapa válida (exceto etapa 0) */}
-                {etapaAtual >= 1 && etapaAtual <= 5 && (
+                {etapaAtual >= 1 && etapaAtual <= 5 && podeEditar && (
                   <div className="space-y-1">
                     <Label>Observação da etapa</Label>
                     <Input
@@ -438,23 +465,21 @@ const CarregamentoDetalhe = () => {
                   </div>
                 )}
 
-                {/* Botão para avançar etapa:
-                    - Etapas 1-4: liberado se já anexou foto
-                    - Etapa 5: liberado só se NF e XML anexados
-                    - Etapa 0: desbloqueado se preenchimento estiver ok (pode customizar restrições se quiser)
-                */}
-                <Button
-                  size="lg"
-                  className="mt-2"
-                  disabled={
-                    bloqueado ||
-                    (etapaAtual >= 1 && etapaAtual < 5 && !(fotosPorEtapa[etapaAtual]?.length > 0)) ||
-                    (isUltimaEtapa && !(nfEnviada && xmlEnviado))
-                  }
-                  onClick={avancarEtapa}
-                >
-                  Próxima etapa
-                </Button>
+                {/* Botão para avançar etapa */}
+                {podeEditar && (
+                  <Button
+                    size="lg"
+                    className="mt-2"
+                    disabled={
+                      bloqueado ||
+                      (etapaAtual >= 1 && etapaAtual < 5 && !(fotosPorEtapa[etapaAtual]?.length > 0)) ||
+                      (isUltimaEtapa && !(nfEnviada && xmlEnviado))
+                    }
+                    onClick={avancarEtapa}
+                  >
+                    Próxima etapa
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -529,7 +554,7 @@ const CarregamentoDetalhe = () => {
         </div>
       )}
 
-      {/* Resumo geral embaixo */}
+      {/* Resumo geral */}
       <div className="container mx-auto px-6 py-8">
         <Card>
           <CardContent className="p-5">
