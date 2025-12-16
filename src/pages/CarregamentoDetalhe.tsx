@@ -26,8 +26,7 @@ const formatarDataHora = (v?: string | null) => {
 };
 
 const CarregamentoDetalhe = () => {
-  const router = useRouter();
-  const { id } = router.query as { id?: string };
+  const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 
   // Estados
@@ -125,7 +124,6 @@ const CarregamentoDetalhe = () => {
     mutationFn: async () => {
       if (!foto) throw new Error("Selecione uma foto");
       setUploading(true);
-      // Exemplo: sobrescreva o nome/rota/bucket conforme seu projeto!
       const filePath = `carregamentos/${id}/etapa${etapaAtual}_${Date.now()}_${foto.name}`;
       const { error: uploadError } = await supabase.storage
         .from("carregamento-fotos")
