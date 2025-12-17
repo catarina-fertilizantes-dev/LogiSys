@@ -63,7 +63,6 @@ const ETAPAS = [
 ];
 
 const Carregamentos = () => {
-  // Usuário atual & roles
   const [userId, setUserId] = useState<string | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [armazemId, setArmazemId] = useState<string | null>(null);
@@ -73,16 +72,14 @@ const Carregamentos = () => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
     });
-    // Busca roles do usuário
     const fetchRoles = async () => {
       if (!userId) return;
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
       if (data) setRoles(data.map((r) => r.role));
     };
-    // Busca id(s) de armazém e cliente relacionado ao user (caso queira restringir apenas para estes)
     const fetchVinculos = async () => {
       if (!userId) return;
       const { data: armazem } = await supabase
@@ -103,10 +100,11 @@ const Carregamentos = () => {
     // eslint-disable-next-line
   }, [userId]);
 
+  // Query principal - filtro diretamente na supabase
   const { data: carregamentosData, isLoading, error } = useQuery({
-    queryKey: ["carregamentos"],
+    queryKey: ["carregamentos", clienteId, armazemId, roles],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("carregamentos")
         .select(`
           id,
@@ -134,6 +132,16 @@ const Carregamentos = () => {
           )
         `)
         .order("data_chegada", { ascending: false });
+
+      // Aplica filtro pelo perfil (para performance extra, embora a policy já garanta segurança)
+      if (roles.includes("cliente") && clienteId) {
+        query = query.eq("cliente_id", clienteId);
+      } else if (roles.includes("armazem") && armazemId) {
+        query = query.eq("armazem_id", armazemId);
+      }
+      // admin/logistica: vê tudo
+
+      const { data, error } = await query;
       if (error) {
         console.error("[ERROR] Erro ao buscar carregamentos:", error);
         throw error;
@@ -141,6 +149,7 @@ const Carregamentos = () => {
       return data;
     },
     refetchInterval: 30000,
+    enabled: userId != null && roles.length > 0,
   });
 
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
@@ -183,25 +192,8 @@ const Carregamentos = () => {
     setDateTo("");
   };
 
-  // Só "enxerga" carregamento se for admin/logistica OU do armazem OU do cliente relacionado
-  const permittedCarregamentos = useMemo(() => {
-    if (!userId || !roles.length) return [];
-    // Admin/logística enxergam tudo
-    if (roles.includes('admin') || roles.includes('logistica')) return carregamentos;
-    // Armazém responsável – só vê os seus
-    if (roles.includes('armazem') && armazemId) {
-      return carregamentos.filter(c => c.armazem_id === armazemId);
-    }
-    // Cliente responsável – só vê os seus
-    if (roles.includes('cliente') && clienteId) {
-      return carregamentos.filter(c => c.cliente_id === clienteId);
-    }
-    // Nenhum outro vínculo
-    return [];
-  }, [userId, roles, carregamentos, armazemId, clienteId]);
-
   const filteredCarregamentos = useMemo(() => {
-    return permittedCarregamentos.filter((c) => {
+    return carregamentos.filter((c) => {
       const term = search.trim().toLowerCase();
       if (term) {
         const hay = `${c.cliente} ${c.motorista} ${c.placa}`.toLowerCase();
@@ -219,10 +211,10 @@ const Carregamentos = () => {
       }
       return true;
     });
-  }, [permittedCarregamentos, search, selectedStatuses, dateFrom, dateTo]);
+  }, [carregamentos, search, selectedStatuses, dateFrom, dateTo]);
 
   const showingCount = filteredCarregamentos.length;
-  const totalCount = permittedCarregamentos.length;
+  const totalCount = carregamentos.length;
   const activeAdvancedCount =
     (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
 
@@ -251,7 +243,6 @@ const Carregamentos = () => {
     return found ? found.nome : `Etapa ${etapa_atual}`;
   };
 
-  // Loading
   if (isLoading || userId == null || roles.length === 0) {
     return (
       <div className="min-h-screen bg-background">
