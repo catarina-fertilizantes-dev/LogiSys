@@ -47,30 +47,47 @@ const CarregamentoDetalhe = () => {
   const [clienteId, setClienteId] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[DEBUG] Buscando usuário autenticado...");
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
+      console.log("[DEBUG] userId:", data.user?.id ?? null);
     });
+    // Buscar roles
     const fetchRoles = async () => {
-      if (!userId) return;
-      const { data } = await supabase
+      if (!userId) { 
+        console.log("[DEBUG] fetchRoles: userId não definido, abortando...");
+        return; 
+      }
+      console.log("[DEBUG] Buscando roles para userId:", userId);
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
+      console.log("[DEBUG] Resultado roles:", { data, error });
       if (data) setRoles(data.map((r) => r.role));
     };
+    // Buscar armazem/cliente vinculado ao usuário
     const fetchVinculos = async () => {
-      if (!userId) return;
-      const { data: armazem } = await supabase
+      if (!userId) { 
+        console.log("[DEBUG] fetchVinculos: userId não definido, abortando...");
+        return; 
+      }
+      console.log("[DEBUG] Buscando armazem vinculado ao userId:", userId);
+      const { data: armazem, error: armazemError } = await supabase
         .from("armazens")
         .select("id")
         .eq("user_id", userId)
         .single();
+      console.log("[DEBUG] Resultado armazem:", { armazem, armazemError });
       setArmazemId(armazem?.id ?? null);
-      const { data: cliente } = await supabase
+
+      console.log("[DEBUG] Buscando cliente vinculado ao userId:", userId);
+      const { data: cliente, error: clienteError } = await supabase
         .from("clientes")
         .select("id")
         .eq("user_id", userId)
         .single();
+      console.log("[DEBUG] Resultado cliente:", { cliente, clienteError });
       setClienteId(cliente?.id ?? null);
     };
     fetchRoles();
@@ -83,6 +100,7 @@ const CarregamentoDetalhe = () => {
     queryKey: ["carregamento-detalhe", id],
     enabled: !!id,
     queryFn: async () => {
+      console.log("[DEBUG] Buscando detalhes do carregamento id:", id);
       const { data, error } = await supabase
         .from("carregamentos")
         .select(`
@@ -104,6 +122,7 @@ const CarregamentoDetalhe = () => {
         `)
         .eq("id", id)
         .single();
+      console.log("[DEBUG] Resultado SUPABASE carregamento:", { data, error });
       if (error) throw error;
       return data;
     },
@@ -120,8 +139,10 @@ const CarregamentoDetalhe = () => {
   }, [userId, roles, carregamento, armazemId, clienteId]);
 
   useEffect(() => {
-    // Se após carregar, NÃO tiver permissão, redireciona pro dashboard/listagem
     if (!isLoading && carregamento && !podeEditar) {
+      console.warn("[PERMISSÃO] Usuário logado não tem permissão para visualizar este carregamento!", {
+        userId, roles, armazemId, clienteId, carregamento
+      });
       navigate("/carregamentos");
     }
     // eslint-disable-next-line
@@ -314,6 +335,9 @@ const CarregamentoDetalhe = () => {
   const xmlEnviado = Boolean(documentosPorTipo["xml"]);
 
   if (isLoading || !carregamento || userId == null || roles.length === 0) {
+    console.log("[DEBUG] Estado de loading ou dados insuficientes", {
+      isLoading, carregamento, userId, roles
+    });
     return (
       <div className="min-h-screen bg-background">
         <PageHeader title="Detalhes do Carregamento" />
@@ -324,6 +348,7 @@ const CarregamentoDetalhe = () => {
     );
   }
   if (error) {
+    console.error("[ERRO] Erro ao carregar detalhes do carregamento:", error);
     return (
       <div className="min-h-screen bg-background">
         <PageHeader title="Detalhes do Carregamento" />
