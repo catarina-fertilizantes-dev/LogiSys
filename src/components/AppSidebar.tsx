@@ -27,18 +27,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+// Reordene os menus conforme solicitado
 const upperMenuItems = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
     resource: null,
-  },
-  {
-    title: "Estoque",
-    url: "/estoque",
-    icon: Package,
-    resource: "estoque" as const,
   },
   {
     title: "Liberações",
@@ -62,10 +57,11 @@ const upperMenuItems = [
 
 const lowerMenuItems = [
   {
-    title: "Produtos",
-    url: "/produtos",
-    icon: Tag,
-    resource: "produtos" as const,
+    title: "Colaboradores",
+    url: "/colaboradores",
+    icon: BadgeCheck,
+    resource: "colaboradores" as const,
+    requiresRole: ["admin"] as const,
   },
   {
     title: "Clientes",
@@ -80,11 +76,16 @@ const lowerMenuItems = [
     resource: "armazens" as const,
   },
   {
-    title: "Colaboradores",
-    url: "/colaboradores",
-    icon: BadgeCheck,
-    resource: "colaboradores" as const,
-    requiresRole: ["admin"] as const,
+    title: "Produtos",
+    url: "/produtos",
+    icon: Tag,
+    resource: "produtos" as const,
+  },
+  {
+    title: "Estoque",
+    url: "/estoque",
+    icon: Package,
+    resource: "estoque" as const,
   },
 ];
 
