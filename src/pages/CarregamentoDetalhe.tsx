@@ -18,7 +18,6 @@ const ETAPAS = [
   { id: 6, nome: "Finalizado" },
 ];
 
-// Helper para formatar data/hora
 const formatarDataHora = (v?: string | null) => {
   if (!v) return "-";
   const d = new Date(v);
@@ -176,9 +175,9 @@ const CarregamentoDetalhe = () => {
 
   // ----------- COMPONENTES DE LAYOUT -----------
 
-  // Fluxo de etapas centralizado, sem linhas/setas, perfeitamente alinhados mesmo com nomes grandes
+  // Fluxo das etapas, menor, sem bordas, labels ajustados, data mais próxima do label, centralização visual corrigida
   const renderEtapasFluxo = () => (
-    <div className="w-full py-7 flex flex-col">
+    <div className="w-full pt-3 pb-5 flex flex-col">
       <div className="flex flex-row items-end justify-center gap-0 md:gap-2 px-2 overflow-x-auto">
         {ETAPAS.map((etapa, idx) => {
           const etapaIndex = etapa.id;
@@ -187,38 +186,39 @@ const CarregamentoDetalhe = () => {
           return (
             <div
               key={etapa.id}
-              className="flex flex-col items-center min-w-[120px] max-w-[120px] mx-1 cursor-pointer group transition h-[130px] justify-end"
+              className="flex flex-col items-center min-w-[96px] max-w-[96px] mx-1 cursor-pointer group transition h-[104px] justify-end"
               onClick={() => setSelectedEtapa(etapaIndex)}
               style={{ zIndex: 10 }}
             >
+              {/* Círculo reduzido, sem borda quando não-finalizado, cor fonte azul nome etapa corrente */}
               <div
                 className={`
-                  w-11 h-11 flex items-center justify-center rounded-full border-2
-                  font-bold text-lg shadow
+                  w-9 h-9 flex items-center justify-center rounded-full
+                  font-bold text-[1rem] shadow
                   transition
                   ${isFinalizada
-                    ? "bg-green-200 border-green-600 text-green-800"
+                    ? "bg-green-200 text-green-800"
                     : isAtual
-                      ? "bg-primary border-primary text-white scale-110 shadow-lg"
-                      : "bg-background border-muted-foreground text-muted-foreground group-hover:text-primary/80"
+                      ? "bg-primary text-white scale-110 shadow-lg"
+                      : "bg-gray-100 text-muted-foreground group-hover:text-primary/80"
                   }
                 `}
               >
                 {isFinalizada
-                  ? <CheckCircle className="w-7 h-7" />
+                  ? <CheckCircle className="w-6 h-6" />
                   : etapaIndex}
               </div>
-              <div className="flex flex-col items-center justify-start min-h-[44px] mt-2 w-full">
-                <span className="text-xs font-semibold text-center text-foreground leading-tight break-words">
+              <div className={`flex flex-col items-center justify-start min-h-[38px] mt-1 w-full`}>
+                <span className={`text-xs font-semibold text-center leading-tight break-words ${isAtual ? "text-primary" : "text-foreground"}`} style={{ fontWeight: 600 }}>
                   {etapa.nome}
                 </span>
+                <span className="text-[11px] text-muted-foreground font-medium leading-tight mt-1" style={{ minHeight: 0, marginTop: 2 }}>
+                  {/* Real apenas para Chegada por enquanto */}
+                  {etapaIndex === 1 && carregamento.data_chegada
+                    ? formatarDataHora(carregamento.data_chegada)
+                    : "-"}
+                </span>
               </div>
-              <span className="mt-1 text-[12px] text-muted-foreground font-medium min-h-[19px]">
-                {/* Exemplo: real apenas para Chegada no momento */}
-                {etapaIndex === 1 && carregamento.data_chegada
-                  ? formatarDataHora(carregamento.data_chegada)
-                  : "-"}
-              </span>
             </div>
           );
         })}
@@ -234,11 +234,11 @@ const CarregamentoDetalhe = () => {
 
     return (
       <Card className="mb-8 shadow-sm">
-        <CardContent className="p-7 space-y-7">
+        <CardContent className="p-5 space-y-6">
           {!isFinalizada ? (
             <>
-              <div className="space-y-3">
-                <label className="text-base font-semibold block mb-1">
+              <div className="space-y-2">
+                <label className="text-base font-semibold block mb-0.5">
                   {isEtapaDoc
                     ? "Anexar Nota Fiscal (PDF) *"
                     : "Anexar foto obrigatória *"}
@@ -263,7 +263,7 @@ const CarregamentoDetalhe = () => {
                 )}
               </div>
               <div>
-                <label className="text-base font-semibold block mb-1">Observações (opcional)</label>
+                <label className="text-base font-semibold block mb-0.5">Observações (opcional)</label>
                 <Textarea
                   disabled={isFinalizada}
                   placeholder="Digite observações sobre esta etapa..."
@@ -271,7 +271,7 @@ const CarregamentoDetalhe = () => {
                   onChange={e => setStageObs(e.target.value)}
                 />
               </div>
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end pt-1">
                 <Button
                   disabled={!stageFile}
                   variant="primary"
@@ -282,7 +282,7 @@ const CarregamentoDetalhe = () => {
               </div>
             </>
           ) : (
-            <div className="text-center text-muted-foreground py-8 text-base">
+            <div className="text-center text-muted-foreground py-6 text-base">
               <span className="inline-flex items-center gap-2">
                 <FilePlus className="w-6 h-6 mr-2" />
                 Etapa finalizada. Você pode apenas visualizar os anexos e dados desta etapa.
@@ -308,26 +308,47 @@ const CarregamentoDetalhe = () => {
         : "N/A";
 
     return (
-      <Card>
-        <CardContent className="p-7 grid gap-5 md:grid-cols-2">
-          <div>
-            <h3 className="font-semibold mb-2 text-lg text-foreground">Informações Gerais</h3>
-            <dl className="space-y-1 text-base">
-              <div><dt className="inline text-muted-foreground font-medium">Nome do cliente: </dt><dd className="inline">{agendamento?.cliente?.nome || "N/A"}</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Quantidade: </dt><dd className="inline">{agendamento?.quantidade ?? "N/A"} toneladas</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Placa caminhão: </dt><dd className="inline">{agendamento?.placa_caminhao || "N/A"}</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Motorista: </dt><dd className="inline">{agendamento?.motorista_nome || "N/A"}</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Doc. Motorista: </dt><dd className="inline">{agendamento?.motorista_documento || "N/A"}</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Número NF: </dt><dd className="inline">{carregamento.numero_nf || "N/A"}</dd></div>
-            </dl>
+      <Card className="shadow-sm">
+        <CardContent className="p-5 grid grid-cols-1 gap-7 md:grid-cols-2 md:gap-10">
+          <div className="space-y-4">
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Nome do cliente</span>
+              <span className="block text-lg font-semibold text-foreground break-all">{agendamento?.cliente?.nome || "N/A"}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Quantidade</span>
+              <span className="block text-lg font-semibold text-foreground">{agendamento?.quantidade ?? "N/A"} toneladas</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Placa caminhão</span>
+              <span className="block text-lg font-semibold text-foreground">{agendamento?.placa_caminhao || "N/A"}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Motorista</span>
+              <span className="block text-lg font-semibold text-foreground">{agendamento?.motorista_nome || "N/A"}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Doc. Motorista</span>
+              <span className="block text-lg font-semibold text-foreground">{agendamento?.motorista_documento || "N/A"}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Número NF</span>
+              <span className="block text-lg font-semibold text-foreground">{carregamento.numero_nf || "N/A"}</span>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold mb-2 text-lg text-foreground">Estatísticas do Carregamento</h3>
-            <dl className="space-y-1 text-base">
-              <div><dt className="inline text-muted-foreground font-medium">Tempo em cada etapa: </dt><dd className="inline text-muted-foreground">-- min (implementação futura)</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Tempo total decorrido: </dt><dd className="inline">{tempoTotalDecorrido}</dd></div>
-              <div><dt className="inline text-muted-foreground font-medium">Tempo até finalização: </dt><dd className="inline">{tempoTotalFinalizacao}</dd></div>
-            </dl>
+          <div className="space-y-4">
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Tempo em cada etapa</span>
+              <span className="block text-base font-medium text-muted-foreground">-- min (implementação futura)</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Tempo total decorrido</span>
+              <span className="block text-lg font-semibold text-foreground">{tempoTotalDecorrido}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold text-gray-400 uppercase mb-0.5 tracking-wider">Tempo até finalização</span>
+              <span className="block text-lg font-semibold text-foreground">{tempoTotalFinalizacao}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -371,7 +392,7 @@ const CarregamentoDetalhe = () => {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Detalhes do Carregamento" />
-      <div className="container mx-auto px-3 md:px-8 py-8 gap-10 flex flex-col">
+      <div className="container mx-auto px-3 md:px-8 pt-2 pb-10 gap-8 flex flex-col">
         {renderEtapasFluxo()}
         {renderCentralAtuacao()}
         {renderInformacoesProcesso()}
