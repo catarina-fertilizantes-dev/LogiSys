@@ -104,6 +104,17 @@ const CarregamentoDetalhe = () => {
         created_at,
         cliente_id,
         armazem_id,
+        observacao_chegada,
+        observacao_inicio,
+        observacao_carregando,
+        observacao_finalizacao,
+        observacao_nf,
+        data_inicio_carregamento,
+        data_carregando,
+        data_finalizacao,
+        data_nf,
+        url_nota_fiscal,
+        url_xml,
         agendamento:agendamentos!carregamentos_agendamento_id_fkey (
           id,
           data_retirada,
@@ -247,6 +258,40 @@ const CarregamentoDetalhe = () => {
         </div>
       </div>
     </div>
+  );
+
+  // Novo: Exibe campos reais das etapas do carregamento
+  const renderEtapasResumo = () => (
+    <Card className="mb-4 shadow-sm">
+      <CardContent className="p-4">
+        <h2 className="font-semibold text-lg mb-4">Etapas do Carregamento</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[
+            { nome: "Chegada", campoData: "data_chegada", campoObs: "observacao_chegada" },
+            { nome: "Início Carreg.", campoData: "data_inicio_carregamento", campoObs: "observacao_inicio" },
+            { nome: "Carregando", campoData: "data_carregando", campoObs: "observacao_carregando" },
+            { nome: "Finalizado", campoData: "data_finalizacao", campoObs: "observacao_finalizacao" },
+            { nome: "Documentação", campoData: "data_nf", campoObs: "observacao_nf" }
+          ].map((etapa, idx) => (
+            <div key={idx} className="space-y-2">
+              <div className="text-base font-medium">{etapa.nome}</div>
+              <div>
+                <span className="text-xs text-gray-400">Data:</span>{" "}
+                <span className="font-mono text-sm">
+                  {carregamento?.[etapa.campoData]
+                    ? formatarDataHora(carregamento?.[etapa.campoData])
+                    : "-"}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-400">Obs:</span>{" "}
+                <span className="text-sm break-all">{carregamento?.[etapa.campoObs] ?? "-"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 
   const renderCentralAtuacao = () => {
@@ -451,6 +496,7 @@ const CarregamentoDetalhe = () => {
       <PageHeader title="Detalhes do Carregamento" />
       <div className="container mx-auto px-1 md:px-4 pt-1 pb-8 gap-4 flex flex-col max-w-[1050px]">
         {renderEtapasFluxo()}
+        {renderEtapasResumo()}
         {renderCentralAtuacao()}
         {renderInformacoesProcesso()}
       </div>
