@@ -19,6 +19,17 @@ const ETAPAS = [
   { id: 6, nome: "Finalizado" },
 ];
 
+// Helper para formatar data/hora
+const formatarDataHora = (v?: string | null) => {
+  if (!v) return "-";
+  const d = new Date(v);
+  return (
+    d.toLocaleDateString("pt-BR") +
+    " " +
+    d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
 const getEtapaLabel = (etapa_id: number) => {
   const found = ETAPAS.find(e => e.id === etapa_id);
   return found ? found.nome : `Etapa ${etapa_id}`;
@@ -33,7 +44,6 @@ const getStatusLabel = (status: string | null) => {
     default: return status || "";
   }
 };
-
 const getStatusBadgeVariant = (status: string | null) => {
   switch (status) {
     case "aguardando": return "secondary";
@@ -52,8 +62,6 @@ const CarregamentoDetalhe = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [armazemId, setArmazemId] = useState<string | null>(null);
-
-  // Dummy local stage (for layout only)
   const [stageFile, setStageFile] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
@@ -65,10 +73,7 @@ const CarregamentoDetalhe = () => {
 
     const fetchRoles = async () => {
       if (!userId) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
       if (data) setRoles(data.map((r) => r.role));
     };
     fetchRoles();
@@ -78,21 +83,13 @@ const CarregamentoDetalhe = () => {
     const fetchVinculos = async () => {
       if (!userId || roles.length === 0) return;
       if (roles.includes("cliente")) {
-        const { data: cliente } = await supabase
-          .from("clientes")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
+        const { data: cliente } = await supabase.from("clientes").select("id").eq("user_id", userId).single();
         setClienteId(cliente?.id ?? null);
       } else {
         setClienteId(null);
       }
       if (roles.includes("armazem")) {
-        const { data: armazem } = await supabase
-          .from("armazens")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
+        const { data: armazem } = await supabase.from("armazens").select("id").eq("user_id", userId).single();
         setArmazemId(armazem?.id ?? null);
       } else {
         setArmazemId(null);
@@ -102,38 +99,31 @@ const CarregamentoDetalhe = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
-  // Query para buscar o carregamento
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, roles],
     queryFn: async () => {
-      let query = supabase
-        .from("carregamentos")
-        .select(
-          `
+      let query = supabase.from("carregamentos").select(`
+        id,
+        status,
+        etapa_atual,
+        numero_nf,
+        data_chegada,
+        created_at,
+        cliente_id,
+        armazem_id,
+        agendamento:agendamentos!carregamentos_agendamento_id_fkey (
           id,
-          status,
-          etapa_atual,
-          numero_nf,
-          data_chegada,
-          created_at,
-          cliente_id,
-          armazem_id,
-          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
-            id,
-            data_retirada,
-            horario,
-            quantidade,
-            cliente:clientes!agendamentos_cliente_id_fkey (
-              nome
-            ),
-            placa_caminhao,
-            motorista_nome,
-            motorista_documento
-          )
-        `
+          data_retirada,
+          horario,
+          quantidade,
+          cliente:clientes!agendamentos_cliente_id_fkey (
+            nome
+          ),
+          placa_caminhao,
+          motorista_nome,
+          motorista_documento
         )
-        .eq("id", id)
-        .single();
+      `).eq("id", id).single();
 
       const { data, error } = await query;
       if (error) throw error;
@@ -143,14 +133,17 @@ const CarregamentoDetalhe = () => {
       !!id &&
       userId != null &&
       roles.length > 0 &&
-      (
-        (!roles.includes("cliente") && !roles.includes("armazem"))
+      ((!roles.includes("cliente") && !roles.includes("armazem"))
         || (roles.includes("cliente") && clienteId !== null)
-        || (roles.includes("armazem") && armazemId !== null)
-      )
+        || (roles.includes("armazem") && armazemId !== null)),
   });
 
-  // Redireciona para lista caso não possa ver
+  useEffect(() => {
+    if (carregamento?.etapa_atual != null) {
+      setSelectedEtapa(carregamento.etapa_atual + 1);
+    }
+  }, [carregamento]);
+
   useEffect(() => {
     if (
       !isLoading &&
@@ -172,17 +165,179 @@ const CarregamentoDetalhe = () => {
     // eslint-disable-next-line
   }, [isLoading, carregamento, userId, roles, clienteId, armazemId, navigate]);
 
-  // Layout states
-  useEffect(() => {
-    if (carregamento?.etapa_atual != null) {
-      setSelectedEtapa(carregamento.etapa_atual + 1); // +1 pois etapas começam do 1 na nova lista
-    }
-  }, [carregamento]);
-
-  // Parâmetros do processo para exemplo das estatísticas
+  // Stats
   const processoInicio = carregamento?.data_chegada ? new Date(carregamento.data_chegada) : null;
   const processoCriacao = carregamento?.created_at ? new Date(carregamento.created_at) : null;
 
+  // ----------- COMPONENTES DE LAYOUT (NOVOS) -----------
+
+  // Fluxo de etapas (100%, setas entre etapas, datas exibidas, textos aprimorados)
+  const renderEtapasFluxo = () => (
+    <div className="w-full py-7 flex flex-col">
+      <div className="flex items-center w-full justify-center gap-0 md:gap-0 px-2 overflow-x-auto">
+        {ETAPAS.map((etapa, idx) => {
+          const etapaIndex = etapa.id;
+          const isFinalizada = (carregamento.etapa_atual ?? 0) + 1 > etapaIndex;
+          const isAtual = selectedEtapa === etapaIndex;
+          // Para o visual: checa se etapa selecionada/atual
+          return (
+            <div
+              key={etapa.id}
+              className="flex-1 flex flex-col items-center min-w-[120px] max-w-[130px] cursor-pointer group"
+              onClick={() => setSelectedEtapa(etapaIndex)}
+              style={{ zIndex: 10 }}
+            >
+              <div className="flex items-center w-full">
+                <div
+                  className={`
+                    z-10 w-11 h-11 flex items-center justify-center rounded-full border-2
+                    font-bold text-lg shadow
+                    transition
+                    ${isFinalizada
+                      ? "bg-green-200 border-green-600 text-green-800"
+                      : isAtual
+                        ? "bg-primary border-primary text-white scale-110 shadow-lg"
+                        : "bg-background border-muted-foreground text-muted-foreground group-hover:text-primary/80"
+                    }
+                  `}
+                >
+                  {isFinalizada
+                    ? <CheckCircle className="w-7 h-7" />
+                    : etapaIndex}
+                </div>
+                {/* Seta após exceto último */}
+                {idx < ETAPAS.length - 1 && (
+                  <div className="flex-1 h-0.5 bg-muted-foreground mx-2 relative min-w-[24px]">
+                    <ArrowRight className="absolute -right-2 top-[-11px] w-7 h-7 text-gray-300 dark:text-gray-700" />
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 text-xs font-semibold text-center max-w-[120px] text-foreground">
+                {etapa.nome}
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground font-medium min-h-[19px]">
+                {/* Exemplo fixo (substitua pelo timestamp real da etapa quando implementar) */}
+                {etapaIndex === 1 && carregamento.data_chegada
+                  ? formatarDataHora(carregamento.data_chegada)
+                  : "-"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderCentralAtuacao = () => {
+    const isEtapaDoc = selectedEtapa === 5;
+    const isFinalizada = carregamento.etapa_atual != null
+      ? selectedEtapa && selectedEtapa <= (carregamento.etapa_atual + 1)
+      : false;
+
+    return (
+      <Card className="mb-8 shadow-sm">
+        <CardContent className="p-7 space-y-7">
+          {!isFinalizada ? (
+            <>
+              <div className="space-y-3">
+                <label className="text-base font-semibold block mb-1">
+                  {isEtapaDoc
+                    ? "Anexar Nota Fiscal (PDF) *"
+                    : "Anexar foto obrigatória *"}
+                </label>
+                <Input
+                  disabled={isFinalizada}
+                  type="file"
+                  accept={isEtapaDoc ? ".pdf" : "image/*"}
+                  onChange={e => setStageFile(e.target.files?.[0] ?? null)}
+                  className="w-full"
+                />
+                {isEtapaDoc && (
+                  <>
+                    <label className="text-base font-semibold mt-2 block">Anexar Arquivo XML</label>
+                    <Input
+                      disabled={isFinalizada}
+                      type="file"
+                      accept=".xml"
+                      className="w-full"
+                    />
+                  </>
+                )}
+              </div>
+              <div>
+                <label className="text-base font-semibold block mb-1">Observações (opcional)</label>
+                <Textarea
+                  disabled={isFinalizada}
+                  placeholder="Digite observações sobre esta etapa..."
+                  value={stageObs}
+                  onChange={e => setStageObs(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button
+                  disabled={!stageFile}
+                  variant="primary"
+                  size="lg"
+                >
+                  Próxima Etapa
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-muted-foreground py-8 text-base">
+              <span className="inline-flex items-center gap-2">
+                <FilePlus className="w-6 h-6 mr-2" />
+                Etapa finalizada. Você pode apenas visualizar os anexos e dados desta etapa.
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderInformacoesProcesso = () => {
+    // Exemplo de tempos e estatísticas para layout  
+    const agendamento = carregamento?.agendamento;
+    const tempoTotalDecorrido =
+      processoInicio
+        ? `${Math.round((Date.now() - processoInicio.getTime()) / 1000 / 60)} min`
+        : "N/A";
+    const tempoTotalFinalizacao =
+      processoInicio
+        ? carregamento.status === "finalizado"
+          ? `${Math.round(((processoCriacao ? processoCriacao.getTime() : Date.now()) - processoInicio.getTime()) / 1000 / 60)} min`
+          : "-"
+        : "N/A";
+
+    return (
+      <Card>
+        <CardContent className="p-7 grid gap-5 md:grid-cols-2">
+          <div>
+            <h3 className="font-semibold mb-2 text-lg text-foreground">Informações Gerais</h3>
+            <dl className="space-y-1 text-base">
+              <div><dt className="inline text-muted-foreground font-medium">Nome do cliente: </dt><dd className="inline">{agendamento?.cliente?.nome || "N/A"}</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Quantidade: </dt><dd className="inline">{agendamento?.quantidade ?? "N/A"} toneladas</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Placa caminhão: </dt><dd className="inline">{agendamento?.placa_caminhao || "N/A"}</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Motorista: </dt><dd className="inline">{agendamento?.motorista_nome || "N/A"}</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Doc. Motorista: </dt><dd className="inline">{agendamento?.motorista_documento || "N/A"}</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Número NF: </dt><dd className="inline">{carregamento.numero_nf || "N/A"}</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h3 className="font-semibold mb-2 text-lg text-foreground">Estatísticas do Carregamento</h3>
+            <dl className="space-y-1 text-base">
+              <div><dt className="inline text-muted-foreground font-medium">Tempo em cada etapa: </dt><dd className="inline text-muted-foreground">-- min (implementação futura)</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Tempo total decorrido: </dt><dd className="inline">{tempoTotalDecorrido}</dd></div>
+              <div><dt className="inline text-muted-foreground font-medium">Tempo até finalização: </dt><dd className="inline">{tempoTotalFinalizacao}</dd></div>
+            </dl>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // ------- RENDER --------
   if (
     isLoading ||
     userId == null ||
@@ -199,7 +354,6 @@ const CarregamentoDetalhe = () => {
       </div>
     );
   }
-
   if (error || !carregamento) {
     return (
       <div className="min-h-screen bg-background">
@@ -218,161 +372,12 @@ const CarregamentoDetalhe = () => {
     );
   }
 
-  // Exibe detalhes básicos
-  const agendamento = carregamento.agendamento;
-
-  // Área superior: fluxo de etapas do processo
-  const renderEtapasFluxo = () => (
-    <div className="flex items-center justify-center gap-6 py-5">
-      {ETAPAS.map((etapa, idx) => {
-        const etapaIndex = etapa.id;
-        const isFinalizada = (carregamento.etapa_atual ?? 0) + 1 > etapaIndex;
-        const isAtual = selectedEtapa === etapaIndex;
-        return (
-          <div
-            key={etapa.id}
-            className={`flex flex-col items-center cursor-pointer transition-all ${
-              isFinalizada
-                ? "text-green-600"
-                : isAtual
-                ? "text-primary scale-105"
-                : "text-muted-foreground hover:text-primary/80"
-            }`}
-            onClick={() => setSelectedEtapa(etapaIndex)}
-          >
-            <div
-              className={`w-8 h-8 flex items-center justify-center rounded-full border-2
-                ${isFinalizada ? "bg-green-200 border-green-600" : isAtual ? "bg-primary border-primary text-white" : "bg-background border-muted-foreground"}`}
-            >
-              {isFinalizada ? <CheckCircle className="w-5 h-5" /> : etapaIndex}
-            </div>
-            <div className="text-xs mt-1 font-medium text-center" style={{ width: 80 }}>
-              {etapa.nome}
-            </div>
-            {idx < ETAPAS.length - 1 && (
-              <ArrowRight className="mt-3 text-muted-foreground w-6 h-6" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // Central: área de atuação (layout apenas)
-  const renderCentralAtuacao = () => {
-    // Se etapa selecionada for 5.Documentação, mostra dois uploads para nota fiscal e xml
-    const isEtapaDoc = selectedEtapa === 5;
-    const isFinalizada = carregamento.etapa_atual != null
-      ? selectedEtapa && selectedEtapa <= (carregamento.etapa_atual + 1)
-      : false;
-    return (
-      <Card className="mb-6">
-        <CardContent className="p-6 space-y-5">
-          {!isFinalizada ? (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {isEtapaDoc
-                    ? "Anexar Nota Fiscal (PDF) *"
-                    : "Anexar foto obrigatória *"}
-                </label>
-                <Input
-                  disabled={isFinalizada}
-                  type="file"
-                  accept={isEtapaDoc ? ".pdf" : "image/*"}
-                  onChange={e => setStageFile(e.target.files?.[0] ?? null)}
-                  className="w-full"
-                />
-                {isEtapaDoc && (
-                  <>
-                    <label className="text-sm font-medium mt-3">
-                      Anexar Arquivo XML
-                    </label>
-                    <Input
-                      disabled={isFinalizada}
-                      type="file"
-                      accept=".xml"
-                      className="w-full"
-                    />
-                  </>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Observações (opcional)</label>
-                <Textarea
-                  disabled={isFinalizada}
-                  placeholder="Digite observações sobre esta etapa..."
-                  value={stageObs}
-                  onChange={e => setStageObs(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end pt-3">
-                <Button
-                  disabled={!stageFile}
-                  variant="primary"
-                  size="lg"
-                >
-                  Próxima Etapa
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center text-muted-foreground py-6">
-              <FilePlus className="inline-block w-6 h-6 mr-2" />
-              <span>Etapa finalizada. Você pode apenas visualizar os anexos e dados desta etapa.</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Inferior: área de informações gerais + estatísticas
-  const renderInformacoesProcesso = () => {
-    // Exemplo de tempos e estatísticas para layout
-    const tempoTotalDecorrido = processoInicio
-      ? `${Math.round((Date.now() - processoInicio.getTime()) / 1000 / 60)} min`
-      : "N/A";
-    const tempoTotalFinalizacao = processoInicio
-      ? carregamento.status === "finalizado"
-        ? `${Math.round(((processoCriacao ? processoCriacao.getTime() : Date.now()) - processoInicio.getTime()) / 1000 / 60)} min`
-        : "-"
-      : "N/A";
-
-    return (
-      <Card>
-        <CardContent className="p-6 grid gap-3 md:grid-cols-2">
-          <div>
-            <h3 className="font-semibold mb-2">Informações Gerais</h3>
-            <p><b>Nome do cliente:</b> {agendamento?.cliente?.nome || "N/A"}</p>
-            <p><b>Quantidade:</b> {agendamento?.quantidade ?? "N/A"} toneladas</p>
-            <p><b>Placa caminhão:</b> {agendamento?.placa_caminhao || "N/A"}</p>
-            <p><b>Motorista:</b> {agendamento?.motorista_nome || "N/A"}</p>
-            <p><b>Doc. Motorista:</b> {agendamento?.motorista_documento || "N/A"}</p>
-            <p><b>Número NF:</b> {carregamento.numero_nf || "N/A"}</p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Estatísticas do Carregamento</h3>
-            <p><b>Tempo em cada etapa:</b> <span className="text-muted-foreground">-- min (implementação futura)</span></p>
-            <p><b>Tempo total decorrido:</b> {tempoTotalDecorrido}</p>
-            <p><b>Tempo até finalização:</b> {tempoTotalFinalizacao}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <PageHeader title="Detalhes do Carregamento" />
-      <div className="container mx-auto px-6 py-6 gap-8 flex flex-col">
-        {/* Fluxo do processo (topo) */}
+      <div className="container mx-auto px-3 md:px-8 py-8 gap-10 flex flex-col">
         {renderEtapasFluxo()}
-
-        {/* Área central de atuação */}
         {renderCentralAtuacao()}
-
-        {/* Informações gerais e estatísticas */}
         {renderInformacoesProcesso()}
       </div>
     </div>
