@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +18,7 @@ const ETAPAS = [
   { id: 6, nome: "Finalizado" },
 ];
 
+// Helper para formatar data/hora
 const formatarDataHora = (v?: string | null) => {
   if (!v) return "-";
   const d = new Date(v);
@@ -176,10 +176,10 @@ const CarregamentoDetalhe = () => {
 
   // ----------- COMPONENTES DE LAYOUT -----------
 
-  // Fluxo de etapas centralizado, sem linhas/setas, perfeitamente alinhados
+  // Fluxo de etapas centralizado, sem linhas/setas, perfeitamente alinhados mesmo com nomes grandes
   const renderEtapasFluxo = () => (
     <div className="w-full py-7 flex flex-col">
-      <div className="flex flex-row items-end justify-center gap-0 md:gap-0 px-2 overflow-x-auto">
+      <div className="flex flex-row items-end justify-center gap-0 md:gap-2 px-2 overflow-x-auto">
         {ETAPAS.map((etapa, idx) => {
           const etapaIndex = etapa.id;
           const isFinalizada = (carregamento.etapa_atual ?? 0) + 1 > etapaIndex;
@@ -187,7 +187,7 @@ const CarregamentoDetalhe = () => {
           return (
             <div
               key={etapa.id}
-              className="flex flex-col items-center min-w-[100px] mx-2 cursor-pointer group transition"
+              className="flex flex-col items-center min-w-[120px] max-w-[120px] mx-1 cursor-pointer group transition h-[130px] justify-end"
               onClick={() => setSelectedEtapa(etapaIndex)}
               style={{ zIndex: 10 }}
             >
@@ -208,15 +208,17 @@ const CarregamentoDetalhe = () => {
                   ? <CheckCircle className="w-7 h-7" />
                   : etapaIndex}
               </div>
-              <div className="mt-2 text-xs font-semibold text-center max-w-[97px] text-foreground">
-                {etapa.nome}
+              <div className="flex flex-col items-center justify-start min-h-[44px] mt-2 w-full">
+                <span className="text-xs font-semibold text-center text-foreground leading-tight break-words">
+                  {etapa.nome}
+                </span>
               </div>
-              <div className="mt-1 text-[12px] text-muted-foreground font-medium min-h-[19px]">
-                {/* Exemplo: só real para chegada por enquanto */}
+              <span className="mt-1 text-[12px] text-muted-foreground font-medium min-h-[19px]">
+                {/* Exemplo: real apenas para Chegada no momento */}
                 {etapaIndex === 1 && carregamento.data_chegada
                   ? formatarDataHora(carregamento.data_chegada)
                   : "-"}
-              </div>
+              </span>
             </div>
           );
         })}
