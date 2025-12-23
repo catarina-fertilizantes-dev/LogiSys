@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle, FilePlus } from "lucide-react";
+import { Loader2, CheckCircle, FilePlus, ArrowRight } from "lucide-react";
 
 const ETAPAS = [
   { id: 1, nome: "Chegada" },
@@ -28,40 +28,9 @@ const formatarDataHora = (v?: string | null) => {
   );
 };
 
-const getStatusLabel = (status: string | null) => {
-  switch (status) {
-    case "aguardando":
-      return "Aguardando início";
-    case "em_andamento":
-      return "Em andamento";
-    case "finalizado":
-      return "Finalizado";
-    case "cancelado":
-      return "Cancelado";
-    default:
-      return status || "";
-  }
-};
-
-const getStatusBadgeVariant = (status: string | null) => {
-  switch (status) {
-    case "aguardando":
-      return "secondary";
-    case "em_andamento":
-      return "default";
-    case "finalizado":
-      return "default";
-    case "cancelado":
-      return "outline";
-    default:
-      return "outline";
-  }
-};
-
-const LABEL_STYLE =
-  "block text-[0.78rem] text-gray-400 mb-1 tracking-wide font-normal select-none";
-const VALUE_STYLE =
-  "block text-[1.06rem] font-semibold text-foreground break-all";
+// Label/Value styles para Info geral
+const LABEL_STYLE = "block text-[0.75rem] text-gray-400 mb-1 tracking-wide font-normal select-none capitalize";
+const VALUE_STYLE = "block text-[0.98rem] font-semibold text-foreground break-all";
 
 const CarregamentoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
@@ -191,7 +160,7 @@ const CarregamentoDetalhe = () => {
     // eslint-disable-next-line
   }, [isLoading, carregamento, userId, roles, clienteId, armazemId, navigate]);
 
-  // Stats
+  // Stats para info geral
   const processoInicio = carregamento?.data_chegada
     ? new Date(carregamento.data_chegada)
     : null;
@@ -201,93 +170,51 @@ const CarregamentoDetalhe = () => {
 
   // ----------- COMPONENTES DE LAYOUT -----------
 
-  // Fluxo de etapas ajustado, ocupando toda largura, círculos centralizados e alinhados, sem deslocamento se o nome das etapas tiver 1 ou 2 linhas
+  // Componente de fluxo (idêntico ao da página antiga)
   const renderEtapasFluxo = () => (
-    <div className="w-full pt-1 pb-4 flex flex-col">
-      <div className="w-full flex flex-row justify-center px-0 overflow-x-auto">
-        <div className="flex flex-row gap-0 w-full justify-center items-end">
-          {ETAPAS.map((etapa, idx) => {
-            const etapaIndex = etapa.id;
-            const isFinalizada = (carregamento.etapa_atual ?? 0) + 1 > etapaIndex;
-            const isAtual = selectedEtapa === etapaIndex;
+    <div className="w-full pt-2 pb-6 flex flex-col">
+      <div className="flex items-center justify-between w-full max-w-4xl mx-auto">
+        {ETAPAS.map((etapa, idx) => {
+          const etapaIndex = etapa.id;
+          const isFinalizada = (carregamento.etapa_atual ?? 0) + 1 > etapaIndex;
+          const isAtual = selectedEtapa === etapaIndex;
 
-            // Para garantir alinhamento distribua pelo container do texto (posição absoluta trick)
-            return (
+          // Os círculos, setas, labels e datas são centralizados e igualados visualmente como no layout antigo
+          return (
+            <div key={etapa.id} className="flex flex-col items-center flex-1 min-w-[90px]">
               <div
-                key={etapa.id}
-                // min-w-[88px] força os círculos a terem espaçamento mais amplo + grow para distribuir
-                className="flex-1 flex flex-col items-center justify-end min-w-[92px] mx-0"
-                style={{ position: "relative", zIndex: 10, height: 90 }}
-                onClick={() => setSelectedEtapa(etapaIndex)}
+                className={`
+                  rounded-full flex items-center justify-center
+                  ${isFinalizada ? "bg-green-200 text-green-800" :
+                    isAtual ? "bg-primary text-white border-2 border-primary shadow-lg" :
+                      "bg-gray-200 text-gray-500"}
+                `}
+                style={{
+                  width: 36,
+                  height: 36,
+                  fontWeight: 700,
+                  fontSize: "1.1rem",
+                  marginBottom: 3,
+                  boxShadow: isAtual ? "0 2px 6px 0 rgba(80,80,80,.15)" : "none",
+                }}
               >
-                <div
-                  className={`
-                    w-7 h-7 flex items-center justify-center rounded-full mb-2
-                    font-bold text-[0.93rem]
-                    shadow transition select-none
-                    ${
-                      isFinalizada
-                        ? "bg-green-200 text-green-800"
-                        : isAtual
-                        ? "bg-primary text-white scale-110 shadow-lg"
-                        : "bg-gray-400 text-white"
-                    }
-                  `}
-                  style={{
-                    minWidth: 28,
-                    minHeight: 28,
-                    boxShadow:
-                      isAtual || isFinalizada
-                        ? "0 2px 6px 0 rgba(80,80,80,.07)"
-                        : "none",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {isFinalizada ? <CheckCircle className="w-5 h-5" /> : etapaIndex}
-                </div>
-                {/* STACKED label & data, usa min-height para alinhar base do texto */}
-                <div
-                  className={`flex flex-col items-center justify-end`}
-                  style={{ minHeight: 34, width: 94, position: "relative" }}
-                >
-                  <span
-                    /* Mantém label sempre mesmo topo */
-                    className={`inline-block font-medium text-center leading-tight break-words
-                      ${isAtual ? "text-primary" : "text-foreground"}
-                    `}
-                    style={{
-                      fontSize: "0.92rem",
-                      fontWeight: isAtual ? 700 : 500,
-                      minHeight: "18px",
-                      /* Garante q a linha de cima alinhe entre todos os labels */
-                      lineHeight: "1.05",
-                    }}
-                  >
-                    {etapa.nome.split(" ").length > 2
-                      ? (
-                          <>
-                            {etapa.nome.split(" ").slice(0, 2).join(" ")}
-                            <br />
-                            {etapa.nome.split(" ").slice(2).join(" ")}
-                          </>
-                        )
-                      : etapa.nome}
-                  </span>
-                  <span
-                    className="block text-[11px] text-muted-foreground font-medium mt-[2px]"
-                    style={{ minHeight: 0 }}
-                  >
-                    {/* Exemplo: real apenas para Chegada no momento */}
-                    {etapaIndex === 1 && carregamento.data_chegada
-                      ? formatarDataHora(carregamento.data_chegada)
-                      : "-"}
-                  </span>
-                </div>
+                {isFinalizada ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
               </div>
-            );
-          })}
-        </div>
+              {/* seta entre círculos, exceto o último */}
+              {idx < ETAPAS.length - 1 && (
+                <ArrowRight className="w-6 h-6 my-2 text-gray-400" />
+              )}
+              <div className="text-xs text-center text-foreground leading-tight" style={{ minHeight: 32, fontWeight: isAtual ? 700 : 500, marginTop: 2 }}>
+                {etapa.nome}
+              </div>
+              <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
+                {etapaIndex === 1 && carregamento.data_chegada
+                  ? formatarDataHora(carregamento.data_chegada)
+                  : "-"}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -420,7 +347,7 @@ const CarregamentoDetalhe = () => {
               </span>
             </div>
             <div>
-              <span className={LABEL_STYLE}>Número NF</span>
+              <span className={LABEL_STYLE}>Número nf</span>
               <span className={VALUE_STYLE}>
                 {carregamento.numero_nf || "N/A"}
               </span>
@@ -429,19 +356,19 @@ const CarregamentoDetalhe = () => {
           <div className="space-y-3">
             <div>
               <span className={LABEL_STYLE}>Tempo em cada etapa</span>
-              <span className="block text-[.89rem] font-medium text-muted-foreground">
+              <span className="block text-[.88rem] font-medium text-muted-foreground">
                 -- min (implementação futura)
               </span>
             </div>
             <div>
               <span className={LABEL_STYLE}>Tempo total decorrido</span>
-              <span className={`${VALUE_STYLE} text-[1.0rem]`}>
+              <span className={`${VALUE_STYLE} text-[0.97rem]`}>
                 {tempoTotalDecorrido}
               </span>
             </div>
             <div>
               <span className={LABEL_STYLE}>Tempo até finalização</span>
-              <span className={`${VALUE_STYLE} text-[1.0rem]`}>
+              <span className={`${VALUE_STYLE} text-[0.97rem]`}>
                 {tempoTotalFinalizacao}
               </span>
             </div>
