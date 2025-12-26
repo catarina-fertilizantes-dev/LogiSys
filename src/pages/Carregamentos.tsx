@@ -326,10 +326,10 @@ const Carregamentos = () => {
                     <Badge
                       key={etapa.id}
                       onClick={() => toggleEtapa(etapa.id)}
-                      className={`cursor-pointer text-xs px-2 py-1 ${
+                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
                         active 
-                          ? "bg-gradient-primary text-white"
-                          : "bg-muted text-muted-foreground"
+                          ? etapa.cor 
+                          : etapa.corFiltro
                       }`}>
                       {etapa.nome}
                     </Badge>
