@@ -20,7 +20,7 @@ interface CarregamentoItem {
   motorista: string;
   data_retirada: string; // yyyy-mm-dd
   horario: string;
-  status: StatusCarregamento;
+  status: StatusCarregamento; // Derivado da etapa_atual
   etapa_atual: number;
   fotosTotal: number;
   numero_nf: string | null;
@@ -30,7 +30,6 @@ interface CarregamentoItem {
 
 interface SupabaseCarregamentoItem {
   id: string;
-  status: StatusCarregamento | null;
   etapa_atual: number | null;
   numero_nf: string | null;
   data_chegada: string | null;
@@ -58,13 +57,29 @@ interface SupabaseCarregamentoItem {
 
 // Array de etapas
 const ETAPAS = [
-  { id: 0, nome: "Aguardando início" },
   { id: 1, nome: "Chegada" },
   { id: 2, nome: "Início Carregamento" },
   { id: 3, nome: "Carregando" },
-  { id: 4, nome: "Finalização Processual" },
-  { id: 5, nome: "Finalização Fiscal" }
+  { id: 4, nome: "Carreg. Finalizado" },
+  { id: 5, nome: "Documentação" },
+  { id: 6, nome: "Finalizado" },
 ];
+
+// Função para derivar status da etapa
+const getStatusFromEtapa = (etapa: number): StatusCarregamento => {
+  switch (etapa) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      return "em_andamento";
+    case 6:
+      return "finalizado";
+    default:
+      return "aguardando";
+  }
+};
 
 const Carregamentos = () => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -119,7 +134,7 @@ const Carregamentos = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
-  // Query principal - filtro diretamente na supabase
+  // Query principal - removido campo status
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, roles],
     queryFn: async () => {
@@ -127,7 +142,6 @@ const Carregamentos = () => {
         .from("carregamentos")
         .select(`
           id,
-          status,
           etapa_atual,
           numero_nf,
           data_chegada,
@@ -195,6 +209,10 @@ const Carregamentos = () => {
         item.url_foto_finalizacao
       ].filter(url => url && url.trim() !== '').length;
 
+      // Derivar status da etapa
+      const etapaAtual = item.etapa_atual ?? 1;
+      const statusDerivado = getStatusFromEtapa(etapaAtual);
+
       return {
         id: item.id,
         cliente: agendamento?.cliente?.nome || "N/A",
@@ -203,8 +221,8 @@ const Carregamentos = () => {
         motorista: agendamento?.motorista_nome || "N/A",
         data_retirada: agendamento?.data_retirada || "N/A",
         horario: agendamento?.horario || "00:00",
-        status: (item.status as StatusCarregamento) || "aguardando",
-        etapa_atual: item.etapa_atual ?? 0,
+        status: statusDerivado, // Status derivado da etapa
+        etapa_atual: etapaAtual,
         fotosTotal: fotosCount,
         numero_nf: item.numero_nf || null,
         cliente_id: item.cliente_id ?? null,
@@ -217,16 +235,22 @@ const Carregamentos = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<StatusCarregamento[]>([]);
+  const [selectedEtapas, setSelectedEtapas] = useState<number[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const allStatuses: StatusCarregamento[] = ["aguardando", "em_andamento", "finalizado", "cancelado"];
+  const allStatuses: StatusCarregamento[] = ["aguardando", "em_andamento", "finalizado"];
 
   const toggleStatus = (st: StatusCarregamento) =>
     setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
+  
+  const toggleEtapa = (etapa: number) =>
+    setSelectedEtapas((prev) => (prev.includes(etapa) ? prev.filter((e) => e !== etapa) : [...prev, etapa]));
+  
   const clearFilters = () => {
     setSearch("");
     setSelectedStatuses([]);
+    setSelectedEtapas([]);
     setDateFrom("");
     setDateTo("");
   };
@@ -239,6 +263,7 @@ const Carregamentos = () => {
         if (!hay.includes(term)) return false;
       }
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(c.status)) return false;
+      if (selectedEtapas.length > 0 && !selectedEtapas.includes(c.etapa_atual)) return false;
       if (dateFrom) {
         const from = new Date(dateFrom);
         if (new Date(c.data_retirada) < from) return false;
@@ -250,12 +275,14 @@ const Carregamentos = () => {
       }
       return true;
     });
-  }, [carregamentos, search, selectedStatuses, dateFrom, dateTo]);
+  }, [carregamentos, search, selectedStatuses, selectedEtapas, dateFrom, dateTo]);
 
   const showingCount = filteredCarregamentos.length;
   const totalCount = carregamentos.length;
   const activeAdvancedCount =
-    (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
+    (selectedStatuses.length ? 1 : 0) + 
+    (selectedEtapas.length ? 1 : 0) + 
+    ((dateFrom || dateTo) ? 1 : 0);
 
   const getStatusBadgeVariant = (status: StatusCarregamento) => {
     switch (status) {
@@ -269,8 +296,8 @@ const Carregamentos = () => {
 
   const getStatusLabel = (status: StatusCarregamento) => {
     switch (status) {
-      case "aguardando": return "Aguardando início";
-      case "em_andamento": return "Em andamento";
+      case "aguardando": return "Aguardando";
+      case "em_andamento": return "Em Andamento";
       case "finalizado": return "Finalizado";
       case "cancelado": return "Cancelado";
       default: return status;
@@ -280,6 +307,16 @@ const Carregamentos = () => {
   const getEtapaLabel = (etapa_atual: number) => {
     const found = ETAPAS.find(e => e.id === etapa_atual);
     return found ? found.nome : `Etapa ${etapa_atual}`;
+  };
+
+  const getStatusColor = (status: StatusCarregamento) => {
+    switch (status) {
+      case "aguardando": return "text-gray-600";
+      case "em_andamento": return "text-blue-600";
+      case "finalizado": return "text-green-600";
+      case "cancelado": return "text-red-600";
+      default: return "text-gray-600";
+    }
   };
 
   if (isLoading || userId == null || roles.length === 0 ||
@@ -367,6 +404,22 @@ const Carregamentos = () => {
                 </div>
               </div>
               <div className="space-y-1">
+                <Label>Etapas</Label>
+                <div className="flex flex-wrap gap-2">
+                  {ETAPAS.map((etapa) => {
+                    const active = selectedEtapas.includes(etapa.id);
+                    return (
+                      <Badge
+                        key={etapa.id}
+                        onClick={() => toggleEtapa(etapa.id)}
+                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900"}`}>
+                        {etapa.nome}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1">
                 <Label>Período</Label>
                 <div className="flex gap-2">
                   <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" />
@@ -408,7 +461,7 @@ const Carregamentos = () => {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge variant={getStatusBadgeVariant(carr.status)}>
+                        <Badge variant={getStatusBadgeVariant(carr.status)} className={getStatusColor(carr.status)}>
                           {getStatusLabel(carr.status)}
                         </Badge>
                         <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
