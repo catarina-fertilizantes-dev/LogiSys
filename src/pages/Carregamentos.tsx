@@ -316,40 +316,38 @@ const Carregamentos = () => {
 
       {filtersOpen && (
         <div className="container mx-auto px-6 pt-2">
-          <div className="rounded-md border p-3 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Etapas</Label>
-                <div className="flex flex-wrap gap-2">
-                  {ETAPAS.map((etapa) => {
-                    const active = selectedEtapas.includes(etapa.id);
-                    return (
-                      <Badge
-                        key={etapa.id}
-                        onClick={() => toggleEtapa(etapa.id)}
-                        className={`cursor-pointer text-xs px-2 py-1 border-0 ${
-                          active 
-                            ? etapa.cor 
-                            : etapa.corFiltro
-                        }`}>
-                        {etapa.nome}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>Período</Label>
-                <div className="flex gap-2">
-                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" />
-                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" />
-                </div>
+          <div className="rounded-md border p-3 space-y-6 relative">
+            <div>
+              <Label className="text-sm font-semibold mb-1">Etapas</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {ETAPAS.map((etapa) => {
+                  const active = selectedEtapas.includes(etapa.id);
+                  return (
+                    <Badge
+                      key={etapa.id}
+                      onClick={() => toggleEtapa(etapa.id)}
+                      className={`cursor-pointer text-xs px-2 py-1 ${
+                        active 
+                          ? "bg-gradient-primary text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                      {etapa.nome}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-                <X className="h-4 w-4" /> Limpar Filtros
-              </Button>
+            <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
+              <div className="flex items-center gap-3 flex-1">
+                <Label className="text-sm font-semibold">Período</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+              </div>
+              <div className="flex flex-1 justify-end">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+                  <X className="h-4 w-4" /> Limpar Filtros
+                </Button>
+              </div>
             </div>
           </div>
         </div>
