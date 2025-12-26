@@ -217,8 +217,8 @@ const CarregamentoDetalhe = () => {
         let fileName = '';
         
         if (etapaAtual === 5) {
-          // Etapa 5: Documentação (PDF)
-          bucket = 'carregamentos-documentos';
+          // Etapa 5: Documentação (PDF) - NOME CORRIGIDO
+          bucket = 'carregamento-documentos';
           fileName = `${carregamento.id}_nota_fiscal_${Date.now()}.${fileExt}`;
           console.log("🔍 [DEBUG] CarregamentoDetalhe - Upload para bucket documentos:", fileName);
         } else {
@@ -258,8 +258,9 @@ const CarregamentoDetalhe = () => {
         
         const fileName = `${carregamento.id}_xml_${Date.now()}.xml`;
         
+        // NOME CORRIGIDO AQUI TAMBÉM
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('carregamentos-documentos')
+          .from('carregamento-documentos')
           .upload(fileName, stageFileXml);
 
         if (uploadError) {
@@ -270,7 +271,7 @@ const CarregamentoDetalhe = () => {
         console.log("✅ [SUCCESS] CarregamentoDetalhe - Upload XML realizado:", uploadData);
 
         const { data: urlData } = supabase.storage
-          .from('carregamentos-documentos')
+          .from('carregamento-documentos')
           .getPublicUrl(fileName);
         updateData.url_xml = urlData.publicUrl;
         console.log("🔍 [DEBUG] CarregamentoDetalhe - URL XML definida:", urlData.publicUrl);
