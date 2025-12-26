@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle, ArrowRight, Download, FileText, Image, User, Truck, Calendar, Hash } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, CheckCircle, ArrowRight, Download, FileText, Image, User, Truck, Calendar, Hash, Clock } from "lucide-react";
 
 const ETAPAS = [
-  { id: 1, nome: "Chegada", titulo: "Chegada do Caminhão" },
-  { id: 2, nome: "Início Carregamento", titulo: "Início do Carregamento" },
-  { id: 3, nome: "Carregando", titulo: "Carregando" },
-  { id: 4, nome: "Carreg. Finalizado", titulo: "Carregamento Finalizado" },
-  { id: 5, nome: "Documentação", titulo: "Anexar Documentação" },
-  { id: 6, nome: "Finalizado", titulo: "Finalizado" },
+  { id: 1, nome: "Chegada", titulo: "Chegada do Caminhão", campo_data: "data_chegada", campo_obs: "observacao_chegada" },
+  { id: 2, nome: "Início Carregamento", titulo: "Início do Carregamento", campo_data: "data_inicio", campo_obs: "observacao_inicio" },
+  { id: 3, nome: "Carregando", titulo: "Carregando", campo_data: "data_carregando", campo_obs: "observacao_carregando" },
+  { id: 4, nome: "Carreg. Finalizado", titulo: "Carregamento Finalizado", campo_data: "data_finalizacao", campo_obs: "observacao_finalizacao" },
+  { id: 5, nome: "Documentação", titulo: "Anexar Documentação", campo_data: "data_documentacao", campo_obs: "observacao_documentacao" },
+  { id: 6, nome: "Finalizado", titulo: "Finalizado", campo_data: null, campo_obs: null },
 ];
 
 const formatarDataHora = (v?: string | null) => {
@@ -28,14 +29,20 @@ const formatarDataHora = (v?: string | null) => {
   );
 };
 
-const LABEL_STYLE = "block text-[0.75rem] text-gray-400 mb-1 tracking-wide font-normal select-none capitalize";
-const VALUE_STYLE = "block text-[0.98rem] font-semibold text-foreground break-all";
+const formatarTempo = (minutos: number) => {
+  if (minutos < 60) return `${minutos}min`;
+  const horas = Math.floor(minutos / 60);
+  const mins = minutos % 60;
+  return `${horas}h${mins > 0 ? ` ${mins}min` : ''}`;
+};
 
 const ARROW_HEIGHT = 26;
 
 const CarregamentoDetalhe = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
@@ -144,9 +151,108 @@ const CarregamentoDetalhe = () => {
         (roles.includes("armazem") && armazemId !== null)),
   });
 
+  // Mutation para avançar etapa
+  const proximaEtapaMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedEtapa || !carregamento) throw new Error("Dados inválidos");
+      
+      const etapaAtual = carregamento.etapa_atual;
+      const proximaEtapa = etapaAtual + 1;
+      const agora = new Date().toISOString();
+      
+      // Preparar dados para atualização
+      const updateData: any = {
+        etapa_atual: proximaEtapa,
+      };
+
+      // Definir campo de data baseado na etapa atual
+      const etapaConfig = ETAPAS.find(e => e.id === etapaAtual);
+      if (etapaConfig?.campo_data) {
+        updateData[etapaConfig.campo_data] = agora;
+      }
+      if (etapaConfig?.campo_obs && stageObs.trim()) {
+        updateData[etapaConfig.campo_obs] = stageObs.trim();
+      }
+
+      // Se chegou na etapa 6, marcar como finalizado
+      if (proximaEtapa === 6) {
+        updateData.status = "finalizado";
+      }
+
+      // Upload de arquivos se necessário
+      if (stageFile) {
+        const fileExt = stageFile.name.split('.').pop();
+        const fileName = `${carregamento.id}_etapa_${etapaAtual}_${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('carregamentos')
+          .upload(fileName, stageFile);
+
+        if (uploadError) throw uploadError;
+
+        // Para etapa 5 (documentação), salvar URL da nota fiscal
+        if (etapaAtual === 5) {
+          const { data: urlData } = supabase.storage
+            .from('carregamentos')
+            .getPublicUrl(fileName);
+          updateData.url_nota_fiscal = urlData.publicUrl;
+        }
+      }
+
+      // Upload de XML se for etapa 5
+      if (stageFileXml && etapaAtual === 5) {
+        const fileName = `${carregamento.id}_xml_${Date.now()}.xml`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('carregamentos')
+          .upload(fileName, stageFileXml);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('carregamentos')
+          .getPublicUrl(fileName);
+        updateData.url_xml = urlData.publicUrl;
+      }
+
+      // Atualizar carregamento
+      const { error: updateError } = await supabase
+        .from('carregamentos')
+        .update(updateData)
+        .eq('id', carregamento.id);
+
+      if (updateError) throw updateError;
+
+      return { proximaEtapa };
+    },
+    onSuccess: ({ proximaEtapa }) => {
+      toast({
+        title: "Etapa avançada com sucesso!",
+        description: `Carregamento avançou para: ${ETAPAS.find(e => e.id === proximaEtapa)?.nome}`,
+      });
+      
+      // Limpar formulário
+      setStageFile(null);
+      setStageFileXml(null);
+      setStageObs("");
+      
+      // Atualizar dados
+      queryClient.invalidateQueries({ queryKey: ["carregamento-detalhe", id] });
+      
+      // Selecionar próxima etapa
+      setSelectedEtapa(proximaEtapa);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao avançar etapa",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (carregamento?.etapa_atual != null) {
-      // Sempre iniciar na etapa atual
       setSelectedEtapa(carregamento.etapa_atual);
     }
   }, [carregamento]);
@@ -172,13 +278,53 @@ const CarregamentoDetalhe = () => {
     // eslint-disable-next-line
   }, [isLoading, carregamento, userId, roles, clienteId, armazemId, navigate]);
 
-  // Stats para info geral
-  const processoInicio = carregamento?.data_chegada
-    ? new Date(carregamento.data_chegada)
-    : null;
-  const processoCriacao = carregamento?.created_at
-    ? new Date(carregamento.created_at)
-    : null;
+  // Calcular estatísticas de tempo
+  const calcularEstatisticas = () => {
+    if (!carregamento) return null;
+
+    const agora = new Date();
+    const inicio = carregamento.data_chegada ? new Date(carregamento.data_chegada) : null;
+    const fim = carregamento.status === 'finalizado' && carregamento.data_documentacao 
+      ? new Date(carregamento.data_documentacao) : null;
+
+    const tempoTotalDecorrido = inicio 
+      ? Math.round((agora.getTime() - inicio.getTime()) / 1000 / 60)
+      : 0;
+
+    const tempoTotalProcesso = inicio && fim
+      ? Math.round((fim.getTime() - inicio.getTime()) / 1000 / 60)
+      : null;
+
+    // Calcular tempo por etapa
+    const temposPorEtapa = [];
+    const datas = [
+      carregamento.data_chegada,
+      carregamento.data_inicio,
+      carregamento.data_carregando,
+      carregamento.data_finalizacao,
+      carregamento.data_documentacao
+    ];
+
+    for (let i = 0; i < datas.length - 1; i++) {
+      if (datas[i] && datas[i + 1]) {
+        const tempo = Math.round((new Date(datas[i + 1]!).getTime() - new Date(datas[i]!).getTime()) / 1000 / 60);
+        temposPorEtapa.push(tempo);
+      }
+    }
+
+    const tempoMedioPorEtapa = temposPorEtapa.length > 0
+      ? Math.round(temposPorEtapa.reduce((a, b) => a + b, 0) / temposPorEtapa.length)
+      : 0;
+
+    return {
+      tempoTotalDecorrido,
+      tempoTotalProcesso,
+      tempoMedioPorEtapa,
+      temposPorEtapa
+    };
+  };
+
+  const stats = calcularEstatisticas();
 
   // ----------- COMPONENTES DE LAYOUT -----------
 
@@ -196,30 +342,38 @@ const CarregamentoDetalhe = () => {
             const isFinalizada = etapaIndex < etapaAtual;
             const isAtual = etapaIndex === etapaAtual;
             const isSelected = selectedEtapa === etapaIndex;
-            const podeClicar = true; // Todas as etapas são clicáveis para visualização
+            const podeClicar = true;
             
             // Lógica visual melhorada - prioriza seleção sobre estado atual
             let circleClasses = "rounded-full flex items-center justify-center transition-all";
             let shadowStyle = "none";
             
             if (isSelected) {
-              // Etapa selecionada: sempre borda azul grossa + fundo branco
               circleClasses += " bg-white text-primary border-4 border-primary font-bold";
               shadowStyle = "0 2px 8px 0 rgba(59, 130, 246, 0.3)";
             } else if (isAtual) {
-              // Etapa atual (não selecionada): azul
               circleClasses += " bg-blue-500 text-white";
             } else if (isFinalizada) {
-              // Etapa finalizada: verde
               circleClasses += " bg-green-500 text-white";
             } else {
-              // Etapa futura: cinza
               circleClasses += " bg-gray-200 text-gray-600";
             }
             
             if (podeClicar) {
               circleClasses += " cursor-pointer hover:scale-105";
             }
+
+            // Obter data da etapa
+            const getDataEtapa = () => {
+              switch (etapaIndex) {
+                case 1: return carregamento?.data_chegada;
+                case 2: return carregamento?.data_inicio;
+                case 3: return carregamento?.data_carregando;
+                case 4: return carregamento?.data_finalizacao;
+                case 5: return carregamento?.data_documentacao;
+                default: return null;
+              }
+            };
             
             return (
               <div
@@ -278,17 +432,7 @@ const CarregamentoDetalhe = () => {
                   {etapa.nome}
                 </div>
                 <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
-                  {etapaIndex === 1 && carregamento?.data_chegada
-                    ? formatarDataHora(carregamento.data_chegada)
-                    : etapaIndex === 2 && carregamento?.data_inicio
-                    ? formatarDataHora(carregamento.data_inicio)
-                    : etapaIndex === 3 && carregamento?.data_carregando
-                    ? formatarDataHora(carregamento.data_carregando)
-                    : etapaIndex === 4 && carregamento?.data_finalizacao
-                    ? formatarDataHora(carregamento.data_finalizacao)
-                    : etapaIndex === 5 && carregamento?.data_documentacao
-                    ? formatarDataHora(carregamento.data_documentacao)
-                    : "-"}
+                  {formatarDataHora(getDataEtapa())}
                 </div>
               </div>
             );
@@ -367,10 +511,14 @@ const CarregamentoDetalhe = () => {
             </div>
             {podeEditar && (
               <Button
-                disabled={!stageFile}
+                disabled={!stageFile || proximaEtapaMutation.isPending}
                 size="sm"
                 className="px-6"
+                onClick={() => proximaEtapaMutation.mutate()}
               >
+                {proximaEtapaMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
                 {selectedEtapa === 5 ? "Finalizar" : "Próxima"}
               </Button>
             )}
@@ -460,6 +608,7 @@ const CarregamentoDetalhe = () => {
                   accept={isEtapaDoc ? ".pdf" : "image/*"}
                   onChange={e => setStageFile(e.target.files?.[0] ?? null)}
                   className="w-full text-sm"
+                  disabled={proximaEtapaMutation.isPending}
                 />
               </div>
 
@@ -473,6 +622,7 @@ const CarregamentoDetalhe = () => {
                     accept=".xml"
                     onChange={e => setStageFileXml(e.target.files?.[0] ?? null)}
                     className="w-full text-sm"
+                    disabled={proximaEtapaMutation.isPending}
                   />
                 </div>
               )}
@@ -487,6 +637,7 @@ const CarregamentoDetalhe = () => {
                   onChange={e => setStageObs(e.target.value)}
                   rows={2}
                   className="text-sm"
+                  disabled={proximaEtapaMutation.isPending}
                 />
               </div>
             </div>
@@ -508,11 +659,6 @@ const CarregamentoDetalhe = () => {
 
   const renderInformacoesProcesso = () => {
     const agendamento = carregamento?.agendamento;
-    const tempoTotalDecorrido = processoInicio
-      ? `${Math.round(
-          (Date.now() - processoInicio.getTime()) / 1000 / 60
-        )} min`
-      : "N/A";
 
     return (
       <Card className="shadow-sm">
@@ -575,21 +721,43 @@ const CarregamentoDetalhe = () => {
               </div>
             </div>
 
-            {/* Linha 4: Tempo */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-muted-foreground block">Tempo decorrido</span>
-                  <span className="text-sm font-medium">{tempoTotalDecorrido}</span>
+            {/* Estatísticas de Tempo */}
+            {stats && (
+              <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Estatísticas de Tempo</span>
                 </div>
-                {carregamento.numero_nf && (
-                  <div className="text-right">
-                    <span className="text-xs text-muted-foreground block">Nota Fiscal</span>
-                    <span className="text-sm font-medium">{carregamento.numero_nf}</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block">Tempo decorrido</span>
+                    <span className="font-medium">{formatarTempo(stats.tempoTotalDecorrido)}</span>
                   </div>
-                )}
+                  
+                  {stats.tempoTotalProcesso && (
+                    <div>
+                      <span className="text-muted-foreground block">Tempo total do processo</span>
+                      <span className="font-medium">{formatarTempo(stats.tempoTotalProcesso)}</span>
+                    </div>
+                  )}
+                  
+                  {stats.tempoMedioPorEtapa > 0 && (
+                    <div>
+                      <span className="text-muted-foreground block">Tempo médio por etapa</span>
+                      <span className="font-medium">{formatarTempo(stats.tempoMedioPorEtapa)}</span>
+                    </div>
+                  )}
+
+                  {carregamento.numero_nf && (
+                    <div>
+                      <span className="text-muted-foreground block">Nota Fiscal</span>
+                      <span className="font-medium">{carregamento.numero_nf}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
