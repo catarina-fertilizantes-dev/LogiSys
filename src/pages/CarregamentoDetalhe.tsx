@@ -94,41 +94,39 @@ const CarregamentoDetalhe = () => {
     queryFn: async () => {
       let query = supabase
         .from("carregamentos")
-        .select(
-          `
-        id,
-        status,
-        etapa_atual,
-        numero_nf,
-        data_chegada,
-        created_at,
-        cliente_id,
-        armazem_id,
-        observacao_chegada,
-        observacao_inicio,
-        observacao_carregando,
-        observacao_finalizacao,
-        observacao_nf,
-        data_inicio_carregamento,
-        data_carregando,
-        data_finalizacao,
-        data_nf,
-        url_nota_fiscal,
-        url_xml,
-        agendamento:agendamentos!carregamentos_agendamento_id_fkey (
+        .select(`
           id,
-          data_retirada,
-          horario,
-          quantidade,
-          cliente:clientes!agendamentos_cliente_id_fkey (
-            nome
-          ),
-          placa_caminhao,
-          motorista_nome,
-          motorista_documento
-        )
-      `
-        )
+          status,
+          etapa_atual,
+          numero_nf,
+          data_chegada,
+          created_at,
+          cliente_id,
+          armazem_id,
+          observacao_chegada,
+          observacao_inicio,
+          observacao_carregando,
+          observacao_finalizacao,
+          observacao_documentacao,
+          data_inicio,
+          data_carregando,
+          data_finalizacao,
+          data_documentacao,
+          url_nota_fiscal,
+          url_xml,
+          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
+            id,
+            data_retirada,
+            horario,
+            quantidade,
+            cliente:clientes!agendamentos_cliente_id_fkey (
+              nome
+            ),
+            placa_caminhao,
+            motorista_nome,
+            motorista_documento
+          )
+        `)
         .eq("id", id)
         .single();
 
@@ -268,10 +266,10 @@ const CarregamentoDetalhe = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             { nome: "Chegada", campoData: "data_chegada", campoObs: "observacao_chegada" },
-            { nome: "Início Carreg.", campoData: "data_inicio_carregamento", campoObs: "observacao_inicio" },
+            { nome: "Início Carreg.", campoData: "data_inicio", campoObs: "observacao_inicio" },
             { nome: "Carregando", campoData: "data_carregando", campoObs: "observacao_carregando" },
             { nome: "Finalizado", campoData: "data_finalizacao", campoObs: "observacao_finalizacao" },
-            { nome: "Documentação", campoData: "data_nf", campoObs: "observacao_nf" }
+            { nome: "Documentação", campoData: "data_documentacao", campoObs: "observacao_documentacao" }
           ].map((etapa, idx) => (
             <div key={idx} className="space-y-2">
               <div className="text-base font-medium">{etapa.nome}</div>
