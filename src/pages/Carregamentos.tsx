@@ -37,6 +37,11 @@ interface SupabaseCarregamentoItem {
   created_at: string | null;
   cliente_id: string | null;
   armazem_id: string | null;
+  // URLs das fotos por etapa
+  url_foto_chegada: string | null;
+  url_foto_inicio: string | null;
+  url_foto_carregando: string | null;
+  url_foto_finalizacao: string | null;
   agendamento: {
     id: string;
     data_retirada: string;
@@ -49,7 +54,6 @@ interface SupabaseCarregamentoItem {
     motorista_nome: string | null;
     motorista_documento: string | null;
   } | null;
-  fotos: { id: string }[];
 }
 
 // Array de etapas
@@ -130,6 +134,10 @@ const Carregamentos = () => {
           created_at,
           cliente_id,
           armazem_id,
+          url_foto_chegada,
+          url_foto_inicio,
+          url_foto_carregando,
+          url_foto_finalizacao,
           agendamento:agendamentos!carregamentos_agendamento_id_fkey (
             id,
             data_retirada,
@@ -141,9 +149,6 @@ const Carregamentos = () => {
             placa_caminhao,
             motorista_nome,
             motorista_documento
-          ),
-          fotos:fotos_carregamento (
-            id
           )
         `)
         .order("data_chegada", { ascending: false });
@@ -181,6 +186,15 @@ const Carregamentos = () => {
     if (!carregamentosData) return [];
     return carregamentosData.map((item: SupabaseCarregamentoItem) => {
       const agendamento = item.agendamento;
+      
+      // Conta quantas fotos existem baseado nas URLs preenchidas
+      const fotosCount = [
+        item.url_foto_chegada,
+        item.url_foto_inicio,
+        item.url_foto_carregando,
+        item.url_foto_finalizacao
+      ].filter(url => url && url.trim() !== '').length;
+
       return {
         id: item.id,
         cliente: agendamento?.cliente?.nome || "N/A",
@@ -191,7 +205,7 @@ const Carregamentos = () => {
         horario: agendamento?.horario || "00:00",
         status: (item.status as StatusCarregamento) || "aguardando",
         etapa_atual: item.etapa_atual ?? 0,
-        fotosTotal: item.fotos ? item.fotos.length : 0,
+        fotosTotal: fotosCount,
         numero_nf: item.numero_nf || null,
         cliente_id: item.cliente_id ?? null,
         armazem_id: item.armazem_id ?? null,
