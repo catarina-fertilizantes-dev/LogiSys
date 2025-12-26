@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle, FilePlus, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight } from "lucide-react";
 
 const ETAPAS = [
   { id: 1, nome: "Chegada" },
@@ -42,6 +42,7 @@ const CarregamentoDetalhe = () => {
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [armazemId, setArmazemId] = useState<string | null>(null);
   const [stageFile, setStageFile] = useState<File | null>(null);
+  const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
 
@@ -148,9 +149,9 @@ const CarregamentoDetalhe = () => {
       // Se for usuário armazém, mostrar a próxima etapa a ser executada
       // Se for cliente/admin, mostrar a etapa atual
       if (roles.includes("armazem")) {
-        setSelectedEtapa(carregamento.etapa_atual + 1);
+        setSelectedEtapa(carregamento.etapa_atual < 6 ? carregamento.etapa_atual + 1 : 6);
       } else {
-        setSelectedEtapa(carregamento.etapa_atual);
+        setSelectedEtapa(carregamento.etapa_atual > 0 ? carregamento.etapa_atual : 1);
       }
     }
   }, [carregamento, roles]);
@@ -186,7 +187,7 @@ const CarregamentoDetalhe = () => {
 
   // ----------- COMPONENTES DE LAYOUT -----------
 
-  // Componente de fluxo (setas acima dos círculos), todo o grupo deslocado para baixo para não sobrepor com margem negativa no wrapper
+  // Componente de fluxo (setas acima dos círculos)
   const renderEtapasFluxo = () => (
     <div
       className="w-full flex flex-col"
@@ -197,16 +198,15 @@ const CarregamentoDetalhe = () => {
           {ETAPAS.map((etapa, idx) => {
             const etapaIndex = etapa.id;
             const isFinalizada = (carregamento?.etapa_atual ?? 0) >= etapaIndex;
-            const isAtual = selectedEtapa === etapaIndex;
-            const podeClicar = isFinalizada || (roles.includes("admin") || roles.includes("logistica"));
+            const isSelected = selectedEtapa === etapaIndex;
+            const podeClicar = true; // Todas as etapas são clicáveis para visualização
             
             return (
               <div
                 key={etapa.id}
                 className="flex flex-col items-center flex-1 min-w-[90px] relative"
-                style={{}}
               >
-                {/* seta entre círculos, exceto o último, posicionada ABSOLUTA acima do círculo */}
+                {/* seta entre círculos, exceto o último */}
                 {idx < ETAPAS.length - 1 && (
                   <div
                     style={{
@@ -225,9 +225,9 @@ const CarregamentoDetalhe = () => {
                 <div
                   className={`
                     rounded-full flex items-center justify-center transition-all
-                    ${isFinalizada ? "bg-green-200 text-green-800" :
-                      isAtual ? "bg-primary text-white border-2 border-primary shadow-lg" :
-                        "bg-gray-200 text-gray-500"}
+                    ${isSelected ? "bg-primary text-white border-2 border-primary shadow-lg" :
+                      isFinalizada ? "bg-green-500 text-white" :
+                        "bg-gray-200 text-gray-600"}
                     ${podeClicar ? "cursor-pointer hover:scale-105" : "cursor-default"}
                   `}
                   style={{
@@ -236,7 +236,7 @@ const CarregamentoDetalhe = () => {
                     fontWeight: 700,
                     fontSize: "1.1rem",
                     marginBottom: 3,
-                    boxShadow: isAtual ? "0 2px 6px 0 rgba(80,80,80,.15)" : "none",
+                    boxShadow: isSelected ? "0 2px 6px 0 rgba(80,80,80,.15)" : "none",
                   }}
                   onClick={() => {
                     if (podeClicar) {
@@ -244,17 +244,17 @@ const CarregamentoDetalhe = () => {
                     }
                   }}
                 >
-                  {isFinalizada ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
+                  {isFinalizada && !isSelected ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
                 </div>
                 <div
                   className={
                     "text-xs text-center leading-tight " +
-                    (isAtual ? "text-primary" : "text-foreground") +
+                    (isSelected ? "text-primary font-medium" : "text-foreground") +
                     (podeClicar ? " cursor-pointer" : "")
                   }
                   style={{
                     minHeight: 32,
-                    fontWeight: 400,
+                    fontWeight: isSelected ? 500 : 400,
                     marginTop: 2,
                   }}
                   onClick={() => {
@@ -286,107 +286,151 @@ const CarregamentoDetalhe = () => {
     </div>
   );
 
-  // Novo: Exibe campos reais das etapas do carregamento
-  const renderEtapasResumo = () => (
-    <Card className="mb-4 shadow-sm">
-      <CardContent className="p-4">
-        <h2 className="font-semibold text-lg mb-4">Etapas do Carregamento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { nome: "Chegada", campoData: "data_chegada", campoObs: "observacao_chegada" },
-            { nome: "Início Carreg.", campoData: "data_inicio", campoObs: "observacao_inicio" },
-            { nome: "Carregando", campoData: "data_carregando", campoObs: "observacao_carregando" },
-            { nome: "Finalizado", campoData: "data_finalizacao", campoObs: "observacao_finalizacao" },
-            { nome: "Documentação", campoData: "data_documentacao", campoObs: "observacao_documentacao" }
-          ].map((etapa, idx) => (
-            <div key={idx} className="space-y-2">
-              <div className="text-base font-medium">{etapa.nome}</div>
-              <div>
-                <span className="text-xs text-gray-400">Data:</span>{" "}
-                <span className="font-mono text-sm">
-                  {carregamento?.[etapa.campoData]
-                    ? formatarDataHora(carregamento?.[etapa.campoData])
-                    : "-"}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-400">Obs:</span>{" "}
-                <span className="text-sm break-all">{carregamento?.[etapa.campoObs] ?? "-"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  // Área de etapas - interativa baseada na etapa selecionada
+  const renderAreaEtapas = () => {
+    if (!selectedEtapa) return null;
 
-  const renderCentralAtuacao = () => {
+    const etapaNome = ETAPAS.find(e => e.id === selectedEtapa)?.nome || "Etapa";
     const isEtapaDoc = selectedEtapa === 5;
-    const isFinalizada =
-      carregamento.etapa_atual != null
-        ? selectedEtapa && selectedEtapa <= carregamento.etapa_atual + 1
-        : false;
+    const isEtapaFinalizada = selectedEtapa === 6;
+    const isEtapaJaConcluida = (carregamento?.etapa_atual ?? 0) >= selectedEtapa;
+    const podeEditar = roles.includes("armazem") && !isEtapaJaConcluida && !isEtapaFinalizada;
+
+    // Obter dados da etapa atual
+    const getEtapaData = () => {
+      switch (selectedEtapa) {
+        case 1:
+          return {
+            data: carregamento?.data_chegada,
+            observacao: carregamento?.observacao_chegada
+          };
+        case 2:
+          return {
+            data: carregamento?.data_inicio,
+            observacao: carregamento?.observacao_inicio
+          };
+        case 3:
+          return {
+            data: carregamento?.data_carregando,
+            observacao: carregamento?.observacao_carregando
+          };
+        case 4:
+          return {
+            data: carregamento?.data_finalizacao,
+            observacao: carregamento?.observacao_finalizacao
+          };
+        case 5:
+          return {
+            data: carregamento?.data_documentacao,
+            observacao: carregamento?.observacao_documentacao
+          };
+        default:
+          return { data: null, observacao: null };
+      }
+    };
+
+    const etapaData = getEtapaData();
 
     return (
       <Card className="mb-8 shadow-sm">
-        <CardContent className="p-4 space-y-6">
-          {!isFinalizada ? (
-            <>
-              <div className="space-y-2">
-                <label className="text-base font-semibold block mb-0.5">
-                  {isEtapaDoc
-                    ? "Anexar Nota Fiscal (PDF) *"
-                    : "Anexar foto obrigatória *"}
-                </label>
-                <Input
-                  disabled={isFinalizada}
-                  type="file"
-                  accept={isEtapaDoc ? ".pdf" : "image/*"}
-                  onChange={e => setStageFile(e.target.files?.[0] ?? null)}
-                  className="w-full"
-                />
-                {isEtapaDoc && (
-                  <>
-                    <label className="text-base font-semibold mt-2 block">
-                      Anexar Arquivo XML
-                    </label>
-                    <Input
-                      disabled={isFinalizada}
-                      type="file"
-                      accept=".xml"
-                      className="w-full"
-                    />
-                  </>
-                )}
-              </div>
-              <div>
-                <label className="text-base font-semibold block mb-0.5">
-                  Observações (opcional)
-                </label>
-                <Textarea
-                  disabled={isFinalizada}
-                  placeholder="Digite observações sobre esta etapa..."
-                  value={stageObs}
-                  onChange={e => setStageObs(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end pt-0">
-                <Button
-                  disabled={!stageFile}
-                  variant="primary"
-                  size="lg"
-                >
-                  Próxima Etapa
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center text-muted-foreground py-6 text-base">
-              <span className="inline-flex items-center gap-2">
-                <FilePlus className="w-6 h-6 mr-2" />
-                Etapa finalizada. Você pode apenas visualizar os anexos e dados desta etapa.
-              </span>
+        <CardContent className="p-6 space-y-6">
+          <div className="border-b pb-4">
+            <h2 className="text-xl font-semibold text-foreground">{etapaNome}</h2>
+            {etapaData.data && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Concluída em: {formatarDataHora(etapaData.data)}
+              </p>
+            )}
+          </div>
+
+          {isEtapaFinalizada ? (
+            <div className="text-center py-8">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Processo Finalizado</h3>
+              <p className="text-muted-foreground">
+                O carregamento foi concluído com sucesso.
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Mostrar dados existentes se a etapa já foi concluída */}
+              {isEtapaJaConcluida && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-medium text-green-800">Etapa Concluída</span>
+                  </div>
+                  {etapaData.observacao && (
+                    <div>
+                      <span className="text-sm font-medium text-green-700">Observações:</span>
+                      <p className="text-sm text-green-600 mt-1">{etapaData.observacao}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Formulário para edição (apenas se pode editar) */}
+              {podeEditar && (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-base font-semibold block mb-2">
+                        {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
+                      </label>
+                      <Input
+                        type="file"
+                        accept={isEtapaDoc ? ".pdf" : "image/*"}
+                        onChange={e => setStageFile(e.target.files?.[0] ?? null)}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {isEtapaDoc && (
+                      <div>
+                        <label className="text-base font-semibold block mb-2">
+                          Anexar Arquivo XML
+                        </label>
+                        <Input
+                          type="file"
+                          accept=".xml"
+                          onChange={e => setStageFileXml(e.target.files?.[0] ?? null)}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-base font-semibold block mb-2">
+                        Observações (opcional)
+                      </label>
+                      <Textarea
+                        placeholder={`Digite observações sobre ${etapaNome.toLowerCase()}...`}
+                        value={stageObs}
+                        onChange={e => setStageObs(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      disabled={!stageFile}
+                      size="lg"
+                      className="px-8"
+                    >
+                      {selectedEtapa === 5 ? "Finalizar Carregamento" : "Próxima Etapa"}
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Visualização apenas (se não pode editar mas etapa não está concluída) */}
+              {!podeEditar && !isEtapaJaConcluida && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Aguardando execução desta etapa pelo armazém.</p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -415,63 +459,72 @@ const CarregamentoDetalhe = () => {
 
     return (
       <Card className="shadow-sm">
-        <CardContent className="p-4 grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-          <div className="space-y-3">
-            <div>
-              <span className={LABEL_STYLE}>Nome do cliente</span>
-              <span className={VALUE_STYLE}>
-                {agendamento?.cliente?.nome || "N/A"}
-              </span>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-6">Informações do Carregamento</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+            <div className="space-y-4">
+              <div>
+                <span className={LABEL_STYLE}>Nome do cliente</span>
+                <span className={VALUE_STYLE}>
+                  {agendamento?.cliente?.nome || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Quantidade</span>
+                <span className={VALUE_STYLE}>
+                  {agendamento?.quantidade ?? "N/A"} toneladas
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Placa caminhão</span>
+                <span className={VALUE_STYLE}>
+                  {agendamento?.placa_caminhao || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Motorista</span>
+                <span className={VALUE_STYLE}>
+                  {agendamento?.motorista_nome || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Doc. Motorista</span>
+                <span className={VALUE_STYLE}>
+                  {agendamento?.motorista_documento || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Número nf</span>
+                <span className={VALUE_STYLE}>
+                  {carregamento.numero_nf || "N/A"}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className={LABEL_STYLE}>Quantidade</span>
-              <span className={VALUE_STYLE}>
-                {agendamento?.quantidade ?? "N/A"} toneladas
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Placa caminhão</span>
-              <span className={VALUE_STYLE}>
-                {agendamento?.placa_caminhao || "N/A"}
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Motorista</span>
-              <span className={VALUE_STYLE}>
-                {agendamento?.motorista_nome || "N/A"}
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Doc. Motorista</span>
-              <span className={VALUE_STYLE}>
-                {agendamento?.motorista_documento || "N/A"}
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Número nf</span>
-              <span className={VALUE_STYLE}>
-                {carregamento.numero_nf || "N/A"}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <span className={LABEL_STYLE}>Tempo em cada etapa</span>
-              <span className="block text-[.88rem] font-medium text-muted-foreground">
-                -- min (implementação futura)
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Tempo total decorrido</span>
-              <span className={`${VALUE_STYLE} text-[0.97rem]`}>
-                {tempoTotalDecorrido}
-              </span>
-            </div>
-            <div>
-              <span className={LABEL_STYLE}>Tempo até finalização</span>
-              <span className={`${VALUE_STYLE} text-[0.97rem]`}>
-                {tempoTotalFinalizacao}
-              </span>
+            <div className="space-y-4">
+              <div>
+                <span className={LABEL_STYLE}>Status</span>
+                <span className={`${VALUE_STYLE} capitalize`}>
+                  {carregamento.status}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Etapa atual</span>
+                <span className={VALUE_STYLE}>
+                  {ETAPAS.find(e => e.id === carregamento.etapa_atual)?.nome || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Tempo total decorrido</span>
+                <span className={`${VALUE_STYLE} text-[0.97rem]`}>
+                  {tempoTotalDecorrido}
+                </span>
+              </div>
+              <div>
+                <span className={LABEL_STYLE}>Tempo até finalização</span>
+                <span className={`${VALUE_STYLE} text-[0.97rem]`}>
+                  {tempoTotalFinalizacao}
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -522,8 +575,7 @@ const CarregamentoDetalhe = () => {
       <PageHeader title="Detalhes do Carregamento" />
       <div className="container mx-auto px-1 md:px-4 pt-1 pb-8 gap-4 flex flex-col max-w-[1050px]">
         {renderEtapasFluxo()}
-        {renderEtapasResumo()}
-        {renderCentralAtuacao()}
+        {renderAreaEtapas()}
         {renderInformacoesProcesso()}
       </div>
     </div>
