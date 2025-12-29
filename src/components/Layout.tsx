@@ -34,7 +34,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
         {/* Barra Superior Fixa Global */}
-        <header className="h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-50">
+        <header className="h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-[60]">
           <div className="flex items-center gap-3">
             {/* Hambúrguer Global - Controla tudo */}
             <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
