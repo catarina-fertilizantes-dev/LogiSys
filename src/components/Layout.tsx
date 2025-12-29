@@ -40,13 +40,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             
             {/* Logo/Brand */}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <img 
-                  src="/nexor-logo.png" 
-                  alt="NEXOR" 
-                  className="h-5 w-5 object-contain" 
-                />
-              </div>
+              <img 
+                src="/nexor-logo.png" 
+                alt="NEXOR" 
+                className="h-8 w-8 object-contain" 
+              />
               <span className="font-bold text-sidebar-foreground">NEXOR</span>
             </div>
           </div>
