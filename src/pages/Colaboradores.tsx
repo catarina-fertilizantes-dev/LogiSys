@@ -78,7 +78,7 @@ const Colaboradores = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: usersData, error: rpcError } = await supabase. rpc(USERS_FUNCTION) as { data: RpcUserData[] | null; error: Error | null };
+      const { data: usersData, error: rpcError } = await supabase.rpc(USERS_FUNCTION) as { data: RpcUserData[] | null; error: Error | null };
       if (rpcError) {
         setError(rpcError.message);
         toast({ 
@@ -340,7 +340,8 @@ const handleCreateUser = async () => {
     <div className="min-h-screen bg-background">
       <PageHeader
         title="Colaboradores"
-        description="Gerencie colaboradores do sistema (Admin e Logística).  Roles exibidas são provenientes de user_roles."
+        subtitle="Gerencie colaboradores do sistema (Admin e Logística)" // Alterado de 'description' para 'subtitle' e texto ajustado
+        icon={Users} // Adicionado o ícone Users
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -362,7 +363,7 @@ const handleCreateUser = async () => {
                   <Input
                     id="nome"
                     value={newUserNome}
-                    onChange={(e) => setNewUserNome(e.target. value)}
+                    onChange={(e) => setNewUserNome(e.target.value)}
                     placeholder="Nome do usuário"
                   />
                 </div>
@@ -372,7 +373,7 @@ const handleCreateUser = async () => {
                     id="email"
                     type="email"
                     value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e. target.value)}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
                     placeholder="email@exemplo.com"
                   />
                 </div>
