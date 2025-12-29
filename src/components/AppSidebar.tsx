@@ -8,7 +8,6 @@ import {
   Warehouse,
   Users,
   LogOut,
-  Settings,
   BadgeCheck,
   Tag,
 } from "lucide-react";
@@ -98,7 +97,6 @@ export function AppSidebar() {
     await signOut();
   };
 
-  // Fechar sidebar mobile ao clicar em um item
   const handleItemClick = () => {
     setOpenMobile(false);
   };
@@ -137,16 +135,9 @@ export function AppSidebar() {
     userRole === "admin" || userRole === "logistica";
 
   return (
-    <Sidebar collapsible="icon">
-      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-sidebar-foreground">LogisticPro</span>
-          </div>
-        )}
+    <Sidebar collapsible="icon" className="mt-14"> {/* Adiciona margem top para não sobrepor a barra */}
+      {/* Header do sidebar - agora sem logo, só com trigger para desktop */}
+      <div className="flex h-16 items-center justify-end px-4 border-b border-sidebar-border">
         {/* SidebarTrigger apenas para desktop (colapsar/expandir) */}
         <SidebarTrigger className="hidden md:flex" />
       </div>
