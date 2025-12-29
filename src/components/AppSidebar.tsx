@@ -141,7 +141,7 @@ export function AppSidebar() {
       collapsible="icon"
       className="top-14" // Posiciona abaixo da barra fixa
     >
-      <SidebarContent className="pt-2">
+      <SidebarContent className="pt-2 px-1">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
