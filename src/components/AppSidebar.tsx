@@ -22,7 +22,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -88,7 +87,7 @@ const lowerMenuItems = [
 ];
 
 export function AppSidebar() {
-  const { state, setOpenMobile } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut, userRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
   const isCollapsed = state === "collapsed";
@@ -97,8 +96,11 @@ export function AppSidebar() {
     await signOut();
   };
 
+  // Fechar sidebar mobile ao clicar em um item
   const handleItemClick = () => {
-    setOpenMobile(false);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
@@ -135,14 +137,11 @@ export function AppSidebar() {
     userRole === "admin" || userRole === "logistica";
 
   return (
-    <Sidebar collapsible="icon" className="mt-14"> {/* Adiciona margem top para não sobrepor a barra */}
-      {/* Header do sidebar - agora sem logo, só com trigger para desktop */}
-      <div className="flex h-16 items-center justify-end px-4 border-b border-sidebar-border">
-        {/* SidebarTrigger apenas para desktop (colapsar/expandir) */}
-        <SidebarTrigger className="hidden md:flex" />
-      </div>
-
-      <SidebarContent>
+    <Sidebar 
+      collapsible="icon"
+      className="top-14" // Posiciona abaixo da barra fixa
+    >
+      <SidebarContent className="pt-2">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
