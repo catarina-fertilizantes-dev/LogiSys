@@ -160,15 +160,15 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden top-14 h-[calc(100vh-3.5rem)]"
+          className="w-fit bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden top-14 h-[calc(100vh-3.5rem)] min-w-[240px] max-w-[280px]"
           style={
             {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              "--sidebar-width": "fit-content",
             } as React.CSSProperties
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col px-2">{children}</div>
         </SheetContent>
       </Sheet>
     );
