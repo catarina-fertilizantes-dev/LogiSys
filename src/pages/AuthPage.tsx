@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,11 +48,13 @@ const AuthPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Package className="h-10 w-10 text-white" />
-            </div>
+            <img 
+              src="/nexor-auth-logo.png" 
+              alt="NEXOR" 
+              className="h-20 w-20 object-contain" 
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">LogisticPro</CardTitle>
+          <CardTitle className="text-2xl font-bold">NEXOR</CardTitle>
           <CardDescription>Sistema de Gestão Logística</CardDescription>
         </CardHeader>
         <CardContent>
