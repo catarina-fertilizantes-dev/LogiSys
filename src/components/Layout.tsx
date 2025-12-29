@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,10 +28,15 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return null;
   }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
+        
+        {/* Botão hambúrguer fixo para mobile */}
+        <SidebarTrigger className="fixed top-4 left-4 z-50 md:hidden" />
+        
         <main className="flex-1 overflow-auto">
           {children}
         </main>
