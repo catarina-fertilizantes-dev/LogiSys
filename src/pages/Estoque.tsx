@@ -395,11 +395,11 @@ const Estoque = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6"> {/* Aplicado padding e espaçamento */}
+    <div className="min-h-screen bg-background p-6 space-y-6">
       <PageHeader
         title="Controle de Estoque"
-        subtitle="Gerencie o estoque de produtos por armazém" {/* Alterado de 'description' para 'subtitle' */}
-        icon={Package} {/* Adicionado o ícone Package */}
+        subtitle="Gerencie o estoque de produtos por armazém"
+        icon={Package}
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -487,7 +487,6 @@ const Estoque = () => {
         }
       />
 
-      {/* Removido `container mx-auto px-6 pt-3` - padding e espaçamento agora no div principal */}
       <div className="flex items-center gap-3">
         <Input
           className="h-9 flex-1"
@@ -506,7 +505,6 @@ const Estoque = () => {
       </div>
 
       {filtersOpen && (
-        {/* Removido `container mx-auto px-6 pt-2` - padding e espaçamento agora no div principal */}
         <div className="rounded-md border p-3 space-y-2 relative">
           <div>
             <Label className="text-sm mb-1">Produtos</Label>
@@ -581,7 +579,6 @@ const Estoque = () => {
         </div>
       )}
 
-      {/* Removido `container mx-auto px-6 py-6` - padding e espaçamento agora no div principal */}
       <div className="flex flex-col gap-4">
         {filteredArmazens.map((armazem) => (
           <div key={armazem.id}>
