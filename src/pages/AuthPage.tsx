@@ -51,7 +51,7 @@ const AuthPage = () => {
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
-              className="h-20 w-20 object-contain" 
+              className="h-32 w-32 object-contain" 
             />
           </div>
           <CardTitle className="text-2xl font-bold">NEXOR</CardTitle>
