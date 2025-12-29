@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { Package } from "lucide-react";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -42,7 +41,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             {/* Logo/Brand */}
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Package className="h-5 w-5 text-white" />
+                <img 
+                  src="/nexor-logo.png" 
+                  alt="NEXOR" 
+                  className="h-5 w-5 object-contain" 
+                />
               </div>
               <span className="font-bold text-sidebar-foreground">NEXOR</span>
             </div>
