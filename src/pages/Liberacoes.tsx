@@ -288,9 +288,9 @@ const Liberacoes = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Liberações de Produtos" description="Carregando..." actions={<></>} />
-        <div className="container mx-auto px-6 py-8 text-center">
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Liberações de Produtos" subtitle="Carregando..." icon={ClipboardList} actions={<></>} />
+        <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Carregando liberações...</p>
         </div>
@@ -300,9 +300,9 @@ const Liberacoes = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Liberações de Produtos" description="Erro ao carregar dados" actions={<></>} />
-        <div className="container mx-auto px-6 py-8 text-center">
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Liberações de Produtos" subtitle="Erro ao carregar dados" icon={ClipboardList} actions={<></>} />
+        <div className="text-center">
           <p className="text-destructive">Erro: {(error as Error).message}</p>
         </div>
       </div>
@@ -310,10 +310,11 @@ const Liberacoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-6 space-y-6">
       <PageHeader
         title="Liberações de Produtos"
-        description="Gerencie as liberações de produtos para clientes"
+        subtitle="Gerencie as liberações de produtos para clientes"
+        icon={ClipboardList}
         actions={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -400,95 +401,92 @@ const Liberacoes = () => {
           </Dialog>
         }
       />
-      <div className="container mx-auto px-6 pt-3">
-        <div className="flex items-center gap-3">
-          <Input className="h-9 flex-1" placeholder="Buscar por produto, cliente ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
-          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
-            <FilterIcon className="h-4 w-4 mr-1" />
-            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-        </div>
+      
+      <div className="flex items-center gap-3">
+        <Input className="h-9 flex-1" placeholder="Buscar por produto, cliente ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
+        <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
+          <FilterIcon className="h-4 w-4 mr-1" />
+          Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+          {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+        </Button>
       </div>
+
       {filtersOpen && (
-        <div className="container mx-auto px-6 pt-2">
-          <div className="rounded-md border p-3 space-y-6 relative">
+        <div className="rounded-md border p-3 space-y-6 relative">
+          <div>
+            <Label className="text-sm font-semibold mb-1">Status</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {allStatuses.map((st) => {
+                const active = selectedStatuses.includes(st);
+                const label = st === "pendente" ? "Pendente" : st === "parcial" ? "Parcial" : "Concluído";
+                return (
+                  <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                    {label}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+          {allArmazens.length > 0 && (
             <div>
-              <Label className="text-sm font-semibold mb-1">Status</Label>
+              <Label className="text-sm font-semibold mb-1">Armazém</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {allStatuses.map((st) => {
-                  const active = selectedStatuses.includes(st);
-                  const label = st === "pendente" ? "Pendente" : st === "parcial" ? "Parcial" : "Concluído";
+                {allArmazens.map((a) => {
+                  const active = selectedArmazens.includes(a);
                   return (
-                    <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                      {label}
+                    <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                      {a}
                     </Badge>
                   );
                 })}
               </div>
             </div>
-            {allArmazens.length > 0 && (
-              <div>
-                <Label className="text-sm font-semibold mb-1">Armazém</Label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {allArmazens.map((a) => {
-                    const active = selectedArmazens.includes(a);
-                    return (
-                      <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                        {a}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-semibold mb-1">Período</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              <div className="flex-1"></div>
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
-            </div>
+          )}
+          <div className="flex items-center gap-4">
+            <Label className="text-sm font-semibold mb-1">Período</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+            <div className="flex-1"></div>
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
           </div>
         </div>
       )}
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid gap-4">
-          {filteredLiberacoes.map((lib) => (
-            <Card key={lib.id} className="transition-all hover:shadow-md">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    {/* badge ícone à esquerda com cor do Estoque */}
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                      <ClipboardList className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{lib.produto}</h3>
-                      <p className="text-sm text-muted-foreground">{lib.cliente}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
-                      <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Liberada: {lib.quantidade} • Retirada: {lib.quantidadeRetirada}</p>
-                    </div>
+
+      <div className="grid gap-4">
+        {filteredLiberacoes.map((lib) => (
+          <Card key={lib.id} className="transition-all hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  {/* badge ícone à esquerda com cor do Estoque */}
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                    <ClipboardList className="h-5 w-5 text-white" />
                   </div>
-                  <Badge
-                    variant={
-                      lib.status === "concluido" ? "default" :
-                        lib.status === "parcial" ? "secondary" :
-                          "outline"
-                    }
-                  >
-                    {lib.status === "concluido" ? "Concluído" : lib.status === "parcial" ? "Parcial" : "Pendente"}
-                  </Badge>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{lib.produto}</h3>
+                    <p className="text-sm text-muted-foreground">{lib.cliente}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
+                    <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Liberada: {lib.quantidade} • Retirada: {lib.quantidadeRetirada}</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredLiberacoes.length === 0 && (
-            <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma liberação encontrada.</div>
-          )}
-        </div>
+                <Badge
+                  variant={
+                    lib.status === "concluido" ? "default" :
+                      lib.status === "parcial" ? "secondary" :
+                        "outline"
+                  }
+                >
+                  {lib.status === "concluido" ? "Concluído" : lib.status === "parcial" ? "Parcial" : "Pendente"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {filteredLiberacoes.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma liberação encontrada.</div>
+        )}
       </div>
     </div>
   );
