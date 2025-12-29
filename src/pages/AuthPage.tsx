@@ -46,8 +46,8 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center mb-2">
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
@@ -57,7 +57,7 @@ const AuthPage = () => {
           <CardTitle className="text-2xl font-bold">NEXOR</CardTitle>
           <CardDescription>Sistema de Gestão Logística</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email-login">Email</Label>
