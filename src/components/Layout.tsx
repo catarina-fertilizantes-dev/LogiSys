@@ -44,7 +44,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
                 <Package className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-sidebar-foreground">LogisticPro</span>
+              <span className="font-bold text-sidebar-foreground">NEXOR</span>
             </div>
           </div>
           
