@@ -27,7 +27,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Reordene os menus conforme solicitado
 const upperMenuItems = [
   {
     title: "Dashboard",
@@ -90,7 +89,7 @@ const lowerMenuItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const { signOut, userRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
   const isCollapsed = state === "collapsed";
@@ -99,9 +98,13 @@ export function AppSidebar() {
     await signOut();
   };
 
+  // Fechar sidebar mobile ao clicar em um item
+  const handleItemClick = () => {
+    setOpenMobile(false);
+  };
+
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
     return items.filter(item => {
-      // Check role-based requirements (Colaboradores only for admin)
       if ('requiresRole' in item && item.requiresRole) {
         const hasRequiredRole = userRole ? item.requiresRole.includes(userRole) : false;
         if (!hasRequiredRole) {
@@ -111,7 +114,6 @@ export function AppSidebar() {
       if (!item.resource) {
         return true;
       }
-      // 🚩 admin e logistica SEMPRE podem ver o menu Clientes
       if (
         item.resource === "clientes" &&
         (userRole === "admin" || userRole === "logistica")
@@ -123,7 +125,6 @@ export function AppSidebar() {
     });
   };
 
-  // Wait for permissions to load before filtering menu
   const visibleUpperMenuItems = permissionsLoading
     ? [upperMenuItems[0]]
     : filterMenuItems(upperMenuItems);
@@ -132,7 +133,6 @@ export function AppSidebar() {
     ? []
     : filterMenuItems(lowerMenuItems);
 
-  // 🚩 NOVO: Só mostra seção Cadastros para admin ou logistica
   const showCadastros =
     userRole === "admin" || userRole === "logistica";
 
@@ -147,7 +147,8 @@ export function AppSidebar() {
             <span className="font-bold text-sidebar-foreground">LogisticPro</span>
           </div>
         )}
-        <SidebarTrigger />
+        {/* SidebarTrigger apenas para desktop (colapsar/expandir) */}
+        <SidebarTrigger className="hidden md:flex" />
       </div>
 
       <SidebarContent>
@@ -166,6 +167,7 @@ export function AppSidebar() {
                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                           : "hover:bg-sidebar-accent/50"
                       }
+                      onClick={handleItemClick}
                     >
                       <item.icon className="h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
@@ -193,6 +195,7 @@ export function AppSidebar() {
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             : "hover:bg-sidebar-accent/50"
                         }
+                        onClick={handleItemClick}
                       >
                         <item.icon className="h-4 w-4" />
                         {!isCollapsed && <span>{item.title}</span>}
