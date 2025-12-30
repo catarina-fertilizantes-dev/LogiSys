@@ -256,12 +256,13 @@ const Carregamentos = () => {
     (roles.includes("armazem") && armazemId === null)
   ) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background p-6 space-y-6">
         <PageHeader
           title="Carregamentos"
-          description="Acompanhe o progresso dos carregamentos"
+          subtitle="Acompanhe o progresso dos carregamentos"
+          icon={Truck}
         />
-        <div className="container mx-auto px-6 py-12 text-center">
+        <div className="text-center py-12">
           <div className="flex justify-center items-center gap-2">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <span className="text-muted-foreground">Carregando carregamentos...</span>
@@ -273,132 +274,126 @@ const Carregamentos = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background p-6 space-y-6">
         <PageHeader
           title="Carregamentos"
-          description="Acompanhe o progresso dos carregamentos"
+          subtitle="Acompanhe o progresso dos carregamentos"
+          icon={Truck}
         />
-        <div className="container mx-auto px-6 py-12">
-          <Card className="border-destructive">
-            <CardContent className="p-6">
-              <div className="text-center text-destructive">
-                <p className="font-semibold">Erro ao carregar carregamentos</p>
-                <p className="text-sm mt-2">{error instanceof Error ? error.message : "Erro desconhecido"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="border-destructive">
+          <CardContent className="p-6">
+            <div className="text-center text-destructive">
+              <p className="font-semibold">Erro ao carregar carregamentos</p>
+              <p className="text-sm mt-2">{error instanceof Error ? error.message : "Erro desconhecido"}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-6 space-y-6">
       <PageHeader
         title="Carregamentos"
-        description="Acompanhe o progresso dos carregamentos"
+        subtitle="Acompanhe o progresso dos carregamentos"
+        icon={Truck}
       />
 
       {/* Barra de busca/filtro */}
-      <div className="container mx-auto px-6 pt-3">
-        <div className="flex items-center gap-3">
-          <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa ou motorista..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
-          </span>
-          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
-            <FilterIcon className="h-4 w-4 mr-1" />
-            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-        </div>
+      <div className="flex items-center gap-3">
+        <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa ou motorista..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
+        </span>
+        <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
+          <FilterIcon className="h-4 w-4 mr-1" />
+          Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+          {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+        </Button>
       </div>
 
       {filtersOpen && (
-        <div className="container mx-auto px-6 pt-2">
-          <div className="rounded-md border p-3 space-y-6 relative">
-            <div>
-              <Label className="text-sm font-semibold mb-1">Etapas</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {ETAPAS.map((etapa) => {
-                  const active = selectedEtapas.includes(etapa.id);
-                  return (
-                    <Badge
-                      key={etapa.id}
-                      onClick={() => toggleEtapa(etapa.id)}
-                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
-                        active 
-                          ? etapa.cor 
-                          : etapa.corFiltro
-                      }`}>
-                      {etapa.nome}
-                    </Badge>
-                  );
-                })}
-              </div>
+        <div className="rounded-md border p-3 space-y-6 relative">
+          <div>
+            <Label className="text-sm font-semibold mb-1">Etapas</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {ETAPAS.map((etapa) => {
+                const active = selectedEtapas.includes(etapa.id);
+                return (
+                  <Badge
+                    key={etapa.id}
+                    onClick={() => toggleEtapa(etapa.id)}
+                    className={`cursor-pointer text-xs px-2 py-1 border-0 ${
+                      active 
+                        ? etapa.cor 
+                        : etapa.corFiltro
+                    }`}>
+                    {etapa.nome}
+                  </Badge>
+                );
+              })}
             </div>
-            <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
-              <div className="flex items-center gap-3 flex-1">
-                <Label className="text-sm font-semibold">Período</Label>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              </div>
-              <div className="flex flex-1 justify-end">
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-                  <X className="h-4 w-4" /> Limpar Filtros
-                </Button>
-              </div>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
+            <div className="flex items-center gap-3 flex-1">
+              <Label className="text-sm font-semibold">Período</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+            </div>
+            <div className="flex flex-1 justify-end">
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+                <X className="h-4 w-4" /> Limpar Filtros
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid gap-4">
-          {filteredCarregamentos.map((carr) => {
-            const etapaInfo = getEtapaInfo(carr.etapa_atual);
-            
-            return (
-              <Link key={carr.id} to={`/carregamentos/${carr.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <Card className="transition-all hover:shadow-md cursor-pointer">
-                  <CardContent className="p-5">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning">
-                            <Truck className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground">{carr.cliente}</h3>
-                            <p className="text-sm text-muted-foreground">{carr.quantidade} toneladas</p>
-                            <p className="text-xs text-muted-foreground">{carr.data_retirada} • {carr.horario}</p>
-                            <p className="text-xs text-muted-foreground">Placa: <span className="font-medium">{carr.placa}</span></p>
-                            <p className="text-xs text-muted-foreground">Motorista: <span className="font-medium">{carr.motorista}</span></p>
-                            {carr.numero_nf && (
-                              <p className="text-xs text-muted-foreground">Nº NF: <span className="font-medium">{carr.numero_nf}</span></p>
-                            )}
-                          </div>
+      <div className="grid gap-4">
+        {filteredCarregamentos.map((carr) => {
+          const etapaInfo = getEtapaInfo(carr.etapa_atual);
+          
+          return (
+            <Link key={carr.id} to={`/carregamentos/${carr.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+              <Card className="transition-all hover:shadow-md cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning">
+                          <Truck className="h-5 w-5 text-white" />
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {/* Badge da etapa (onde estava o status) */}
-                          <Badge className={`${etapaInfo.cor} border-0 font-medium`}>
-                            {etapaInfo.nome}
-                          </Badge>
-                          <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">{carr.cliente}</h3>
+                          <p className="text-sm text-muted-foreground">{carr.quantidade} toneladas</p>
+                          <p className="text-xs text-muted-foreground">{carr.data_retirada} • {carr.horario}</p>
+                          <p className="text-xs text-muted-foreground">Placa: <span className="font-medium">{carr.placa}</span></p>
+                          <p className="text-xs text-muted-foreground">Motorista: <span className="font-medium">{carr.motorista}</span></p>
+                          {carr.numero_nf && (
+                            <p className="text-xs text-muted-foreground">Nº NF: <span className="font-medium">{carr.numero_nf}</span></p>
+                          )}
                         </div>
                       </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {/* Badge da etapa (onde estava o status) */}
+                        <Badge className={`${etapaInfo.cor} border-0 font-medium`}>
+                          {etapaInfo.nome}
+                        </Badge>
+                        <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-          {filteredCarregamentos.length === 0 && (
-            <div className="text-sm text-muted-foreground py-8 text-center">
-              Nenhum carregamento encontrado.
-            </div>
-          )}
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+        {filteredCarregamentos.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum carregamento encontrado.
+          </div>
+        )}
       </div>
     </div>
   );
