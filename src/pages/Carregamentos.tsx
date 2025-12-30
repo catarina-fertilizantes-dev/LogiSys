@@ -361,7 +361,7 @@ const Carregamentos = () => {
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-warning">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                           <Truck className="h-5 w-5 text-white" />
                         </div>
                         <div>
