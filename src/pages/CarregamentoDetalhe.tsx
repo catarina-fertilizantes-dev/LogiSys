@@ -654,7 +654,7 @@ const CarregamentoDetalhe = () => {
     const etapaData = getEtapaData();
 
     return (
-      <Card className="mb-6 shadow-sm">
+      <Card className="shadow-sm">
         <CardContent className="p-4 space-y-4">
           {/* Header com título e botão */}
           <div className="flex items-center justify-between border-b pb-3">
@@ -946,8 +946,8 @@ const CarregamentoDetalhe = () => {
     (roles.includes("armazem") && armazemId === null)
   ) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Detalhes do Carregamento" />
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
         <div className="flex justify-center items-center h-40">
           <Loader2 className="animate-spin h-8 w-8 text-primary" />
         </div>
@@ -956,30 +956,28 @@ const CarregamentoDetalhe = () => {
   }
   if (error || !carregamento) {
     return (
-      <div className="min-h-screen bg-background">
-        <PageHeader title="Detalhes do Carregamento" />
-        <div className="container mx-auto py-12">
-          <Card className="border-destructive">
-            <CardContent className="p-6">
-              <div className="text-center text-destructive">
-                <p className="font-semibold">Erro ao carregar carregamento</p>
-                <p className="text-sm mt-2">
-                  {error instanceof Error
-                    ? error.message
-                    : "Erro desconhecido ou sem permissão"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
+        <Card className="border-destructive">
+          <CardContent className="p-6">
+            <div className="text-center text-destructive">
+              <p className="font-semibold">Erro ao carregar carregamento</p>
+              <p className="text-sm mt-2">
+                {error instanceof Error
+                  ? error.message
+                  : "Erro desconhecido ou sem permissão"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PageHeader title="Detalhes do Carregamento" />
-      <div className="container mx-auto px-2 md:px-4 pt-1 pb-8 gap-4 flex flex-col max-w-[1050px]">
+    <div className="min-h-screen bg-background p-6 space-y-6">
+      <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
+      <div className="max-w-[1050px] mx-auto space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
         {renderInformacoesProcesso()}
