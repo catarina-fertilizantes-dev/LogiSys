@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, ArrowRight, Download, FileText, Image, User, Truck, Calendar, Hash, Clock } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, Download, FileText, Image, User, Truck, Calendar, Hash, Clock, ArrowLeft } from "lucide-react";
 
 const ETAPAS = [
   { 
@@ -101,6 +101,11 @@ const CarregamentoDetalhe = () => {
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
+
+  // Função para voltar à página pai
+  const handleGoBack = () => {
+    navigate("/carregamentos");
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -947,7 +952,11 @@ const CarregamentoDetalhe = () => {
   ) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
-        <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
+        <PageHeader 
+          title="Detalhes do Carregamento" 
+          icon={ArrowLeft}
+          onIconClick={handleGoBack}
+        />
         <div className="flex justify-center items-center h-40">
           <Loader2 className="animate-spin h-8 w-8 text-primary" />
         </div>
@@ -957,7 +966,11 @@ const CarregamentoDetalhe = () => {
   if (error || !carregamento) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
-        <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
+        <PageHeader 
+          title="Detalhes do Carregamento" 
+          icon={ArrowLeft}
+          onIconClick={handleGoBack}
+        />
         <Card className="border-destructive">
           <CardContent className="p-6">
             <div className="text-center text-destructive">
@@ -976,7 +989,11 @@ const CarregamentoDetalhe = () => {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      <PageHeader title="Detalhes do Carregamento" subtitle="Acompanhe o progresso detalhado do carregamento" icon={Truck} />
+      <PageHeader 
+        title="Detalhes do Carregamento" 
+        icon={ArrowLeft}
+        onIconClick={handleGoBack}
+      />
       <div className="max-w-[1050px] mx-auto space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
