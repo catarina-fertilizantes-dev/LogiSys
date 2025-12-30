@@ -255,7 +255,7 @@ const Agendamentos = () => {
     setFormError("");
   };
 
-  // >>> FUNÇÃO AJUSTADA: PREENCHE cliente_id E armazem_id <<<
+  // >>> FUNÇÃO CORRIGIDA: REMOVIDO status <<<
   const handleCreateAgendamento = async () => {
     setFormError("");
     const erros = validateAgendamento(novoAgendamento);
@@ -296,7 +296,7 @@ const Agendamentos = () => {
           motorista_documento: cpfSemMascara,
           tipo_caminhao: novoAgendamento.tipoCaminhao || null,
           observacoes: novoAgendamento.observacoes || null,
-          status: "confirmado",
+          // REMOVIDO: status: "confirmado",
           created_by: userData.user?.id,
           cliente_id: clienteIdDaLiberacao,
           armazem_id: armazemIdDaLiberacao,
