@@ -81,7 +81,7 @@ const EmptyStateCard = ({
       variant="outline" 
       size="sm" 
       className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
-      onClick={() => window.open(actionUrl, '_blank')}
+      onClick={() => window.location.href = actionUrl}
     >
       <ExternalLink className="h-4 w-4 mr-2" />
       {actionText}
