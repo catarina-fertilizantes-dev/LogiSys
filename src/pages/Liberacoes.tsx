@@ -329,6 +329,15 @@ const Liberacoes = () => {
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
+                  <Label htmlFor="pedido">Número do Pedido *</Label>
+                  <Input
+                    id="pedido"
+                    value={novaLiberacao.pedido}
+                    onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
+                    placeholder="Ex: PED-2024-001"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="produto">Produto *</Label>
                   <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
                     <SelectTrigger id="produto">
@@ -370,15 +379,6 @@ const Liberacoes = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pedido">Número do Pedido *</Label>
-                  <Input
-                    id="pedido"
-                    value={novaLiberacao.pedido}
-                    onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
-                    placeholder="Ex: PED-2024-001"
-                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="quantidade">Quantidade (t) *</Label>
