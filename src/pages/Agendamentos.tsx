@@ -57,7 +57,6 @@ const validateAgendamento = (ag: any) => {
   if (!ag.liberacao) errors.push("Liberação");
   if (!ag.quantidade || Number(ag.quantidade) <= 0) errors.push("Quantidade");
   if (!ag.data || isNaN(Date.parse(ag.data))) errors.push("Data");
-  if (!ag.horario || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(ag.horario)) errors.push("Horário");
   const placaSemMascara = (ag.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
   if (placaSemMascara.length < 7) errors.push("Placa do veículo");
   if (!validatePlaca(placaSemMascara)) errors.push("Formato da placa inválido");
@@ -203,7 +202,6 @@ const Agendamentos = () => {
     liberacao: "",
     quantidade: "",
     data: "",
-    horario: "",
     placa: "",
     motorista: "",
     documento: "",
@@ -245,7 +243,6 @@ const Agendamentos = () => {
       liberacao: "",
       quantidade: "",
       data: "",
-      horario: "",
       placa: "",
       motorista: "",
       documento: "",
@@ -290,7 +287,6 @@ const Agendamentos = () => {
           liberacao_id: novoAgendamento.liberacao,
           quantidade: qtdNum,
           data_retirada: novoAgendamento.data,
-          horario: novoAgendamento.horario,
           placa_caminhao: placaSemMascara,
           motorista_nome: novoAgendamento.motorista.trim(),
           motorista_documento: cpfSemMascara,
@@ -464,20 +460,20 @@ const Agendamentos = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="quantidade">Quantidade (t) *</Label>
-                  <Input
-                    id="quantidade"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={novoAgendamento.quantidade}
-                    onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                    <Input
+                      id="quantidade"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={novoAgendamento.quantidade}
+                      onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="data">Data *</Label>
                     <Input
@@ -485,16 +481,6 @@ const Agendamentos = () => {
                       type="date"
                       value={novoAgendamento.data}
                       onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="horario">Horário *</Label>
-                    <Input
-                      id="horario"
-                      type="time"
-                      value={novoAgendamento.horario}
-                      onChange={(e) => setNovoAgendamento((s) => ({ ...s, horario: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -519,7 +505,7 @@ const Agendamentos = () => {
                   <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="motorista">Nome do Motorista *</Label>
                     <Input
@@ -666,8 +652,8 @@ const Agendamentos = () => {
         ))}
         {filteredAgendamentos.length === 0 && (
           <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
