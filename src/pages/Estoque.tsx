@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,6 +56,38 @@ interface SupabaseEstoqueItem {
     ativo?: boolean;
   } | null;
 }
+
+// Componente para exibir quando não há dados disponíveis
+const EmptyStateCard = ({ 
+  title, 
+  description, 
+  actionText, 
+  actionUrl 
+}: { 
+  title: string; 
+  description: string; 
+  actionText: string; 
+  actionUrl: string; 
+}) => (
+  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-3">
+    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+      <AlertCircle className="h-5 w-5" />
+      <span className="font-medium">{title}</span>
+    </div>
+    <p className="text-sm text-amber-700 dark:text-amber-300">
+      {description}
+    </p>
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
+      onClick={() => window.open(actionUrl, '_blank')}
+    >
+      <ExternalLink className="h-4 w-4 mr-2" />
+      {actionText}
+    </Button>
+  </div>
+);
 
 const parseDate = (d: string) => {
   const [dd, mm, yyyy] = d.split("/");
@@ -181,6 +213,7 @@ const Estoque = () => {
     );
     return Array.from(set).sort();
   }, [estoquePorArmazem]);
+  
   const armazensUnicos = useMemo(() => {
     return estoquePorArmazem.map(a => ({
       id: a.id,
@@ -394,6 +427,13 @@ const Estoque = () => {
     queryClient.invalidateQueries({ queryKey: ["estoque"] });
   };
 
+  // Verificar se há produtos e armazéns ativos disponíveis
+  const produtosAtivos = produtosCadastrados?.filter(p => p.ativo) || [];
+  const armazensDisponiveis = armazensAtivos || [];
+  
+  const temProdutosDisponiveis = produtosAtivos.length > 0;
+  const temArmazensDisponiveis = armazensDisponiveis.length > 0;
+
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
       <PageHeader
@@ -418,69 +458,94 @@ const Estoque = () => {
               <div className="space-y-3 py-1">
                 <div className="space-y-2">
                   <Label htmlFor="produto">Produto *</Label>
-                  <Select
-                    value={novoProduto.produtoId}
-                    onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
-                  >
-                    <SelectTrigger id="produto">
-                      <SelectValue placeholder="Selecione o produto ativo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {produtosCadastrados
-                        ?.filter((p) => p.ativo)
-                        .map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nome} ({p.unidade})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="armazem">Armazém *</Label>
-                  <Select value={novoProduto.armazem} onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}>
-                    <SelectTrigger id="armazem">
-                      <SelectValue placeholder="Selecione o armazém ativo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {armazensAtivos?.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
-                    {/* Aumentado o tamanho do campo para 80+px */}
-                    <Input
-                      id="quantidade"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Ex: 20500.50"
-                      value={novoProduto.quantidade}
-                      onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
-                      style={{ width: "120px", maxWidth: "100%" }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="unidade">Unidade</Label>
-                    <Select value={novoProduto.unidade} onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}>
-                      <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                  {temProdutosDisponiveis ? (
+                    <Select
+                      value={novoProduto.produtoId}
+                      onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
+                    >
+                      <SelectTrigger id="produto">
+                        <SelectValue placeholder="Selecione o produto" />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="t">Toneladas (t)</SelectItem>
-                        <SelectItem value="kg">Quilos (kg)</SelectItem>
+                        {produtosAtivos.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome} ({p.unidade})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  ) : (
+                    <EmptyStateCard
+                      title="Nenhum produto cadastrado"
+                      description="Para registrar estoque, você precisa cadastrar produtos primeiro."
+                      actionText="Cadastrar Produto"
+                      actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
+                    />
+                  )}
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="armazem">Armazém *</Label>
+                  {temArmazensDisponiveis ? (
+                    <Select value={novoProduto.armazem} onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}>
+                      <SelectTrigger id="armazem">
+                        <SelectValue placeholder="Selecione o armazém" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {armazensDisponiveis.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <EmptyStateCard
+                      title="Nenhum armazém cadastrado"
+                      description="Para registrar estoque, você precisa cadastrar armazéns primeiro."
+                      actionText="Cadastrar Armazém"
+                      actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
+                    />
+                  )}
+                </div>
+                
+                {temProdutosDisponiveis && temArmazensDisponiveis && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
+                      <Input
+                        id="quantidade"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Ex: 20500.50"
+                        value={novoProduto.quantidade}
+                        onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
+                        style={{ width: "120px", maxWidth: "100%" }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="unidade">Unidade</Label>
+                      <Select value={novoProduto.unidade} onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}>
+                        <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="t">Toneladas (t)</SelectItem>
+                          <SelectItem value="kg">Quilos (kg)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button className="bg-gradient-primary" onClick={handleCreateProduto}>Salvar</Button>
+                <Button 
+                  className="bg-gradient-primary" 
+                  onClick={handleCreateProduto}
+                  disabled={!temProdutosDisponiveis || !temArmazensDisponiveis}
+                >
+                  Salvar
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
