@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,38 @@ interface LiberacaoItem {
   produto_id?: string;
   armazem_id?: string;
 }
+
+// Componente para exibir quando não há dados disponíveis
+const EmptyStateCard = ({ 
+  title, 
+  description, 
+  actionText, 
+  actionUrl 
+}: { 
+  title: string; 
+  description: string; 
+  actionText: string; 
+  actionUrl: string; 
+}) => (
+  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-3">
+    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+      <AlertCircle className="h-5 w-5" />
+      <span className="font-medium">{title}</span>
+    </div>
+    <p className="text-sm text-amber-700 dark:text-amber-300">
+      {description}
+    </p>
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
+      onClick={() => window.location.href = actionUrl}
+    >
+      <ExternalLink className="h-4 w-4 mr-2" />
+      {actionText}
+    </Button>
+  </div>
+);
 
 const parseDate = (d: string) => {
   const [dd, mm, yyyy] = d.split("/");
@@ -286,6 +318,11 @@ const Liberacoes = () => {
     }
   };
 
+  // Verificar se há dados disponíveis
+  const temProdutosDisponiveis = produtos && produtos.length > 0;
+  const temArmazensDisponiveis = armazens && armazens.length > 0;
+  const temClientesDisponiveis = clientesData && clientesData.length > 0;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -337,65 +374,104 @@ const Liberacoes = () => {
                     placeholder="Ex: PED-2024-001"
                   />
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="produto">Produto *</Label>
-                  <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
-                    <SelectTrigger id="produto">
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {produtos?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {temProdutosDisponiveis ? (
+                    <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
+                      <SelectTrigger id="produto">
+                        <SelectValue placeholder="Selecione o produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {produtos?.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <EmptyStateCard
+                      title="Nenhum produto cadastrado"
+                      description="Para criar liberações, você precisa cadastrar produtos primeiro."
+                      actionText="Cadastrar Produto"
+                      actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
+                    />
+                  )}
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="armazem">Armazém *</Label>
-                  <Select value={novaLiberacao.armazem} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v }))}>
-                    <SelectTrigger id="armazem">
-                      <SelectValue placeholder="Selecione o armazém" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {armazens?.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {temArmazensDisponiveis ? (
+                    <Select value={novaLiberacao.armazem} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v }))}>
+                      <SelectTrigger id="armazem">
+                        <SelectValue placeholder="Selecione o armazém" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {armazens?.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <EmptyStateCard
+                      title="Nenhum armazém cadastrado"
+                      description="Para criar liberações, você precisa cadastrar armazéns primeiro."
+                      actionText="Cadastrar Armazém"
+                      actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
+                    />
+                  )}
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="cliente">Cliente *</Label>
-                  <Select value={novaLiberacao.cliente_id} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}>
-                    <SelectTrigger id="cliente">
-                      <SelectValue placeholder="Selecione o cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientesData?.map((cliente) => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.nome} - {cliente.cnpj_cpf}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {temClientesDisponiveis ? (
+                    <Select value={novaLiberacao.cliente_id} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}>
+                      <SelectTrigger id="cliente">
+                        <SelectValue placeholder="Selecione o cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientesData?.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id}>
+                            {cliente.nome} - {cliente.cnpj_cpf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <EmptyStateCard
+                      title="Nenhum cliente cadastrado"
+                      description="Para criar liberações, você precisa cadastrar clientes primeiro."
+                      actionText="Cadastrar Cliente"
+                      actionUrl="https://logi-sys-shiy.vercel.app/clientes?modal=novo"
+                    />
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quantidade">Quantidade (t) *</Label>
-                  <Input
-                    id="quantidade"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={novaLiberacao.quantidade}
-                    onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
+                
+                {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                    <Input
+                      id="quantidade"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={novaLiberacao.quantidade}
+                      onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button className="bg-gradient-primary" onClick={handleCreateLiberacao}>Criar Liberação</Button>
+                <Button 
+                  className="bg-gradient-primary" 
+                  onClick={handleCreateLiberacao}
+                  disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || !temClientesDisponiveis}
+                >
+                  Criar Liberação
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
