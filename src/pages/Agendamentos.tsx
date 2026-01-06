@@ -13,8 +13,8 @@ import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDow
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// Componente para exibir quando não há dados disponíveis
-const EmptyStateCard = ({ 
+// Componente para exibir quando não há dados disponíveis - COM LINK
+const EmptyStateCardWithAction = ({ 
   title, 
   description, 
   actionText, 
@@ -42,6 +42,25 @@ const EmptyStateCard = ({
       <ExternalLink className="h-4 w-4 mr-2" />
       {actionText}
     </Button>
+  </div>
+);
+
+// Componente para exibir quando não há dados disponíveis - SEM LINK (para clientes)
+const EmptyStateCardWithoutAction = ({ 
+  title, 
+  description 
+}: { 
+  title: string; 
+  description: string; 
+}) => (
+  <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
+    <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+      <AlertCircle className="h-5 w-5" />
+      <span className="font-medium">{title}</span>
+    </div>
+    <p className="text-sm text-blue-700 dark:text-blue-300">
+      {description}
+    </p>
   </div>
 );
 
@@ -439,6 +458,29 @@ const Agendamentos = () => {
   // Verificar se há liberações disponíveis
   const temLiberacoesDisponiveis = liberacoesPendentes && liberacoesPendentes.length > 0;
 
+  // 🎯 LÓGICA PARA RENDERIZAR CARD PERSONALIZADO BASEADO NO PERFIL
+  const renderEmptyLiberacoesCard = () => {
+    if (userRole === "cliente") {
+      // Cliente: apenas mensagem informativa, sem link
+      return (
+        <EmptyStateCardWithoutAction
+          title="Nenhuma liberação disponível"
+          description="Você não possui liberações pendentes no momento. Se acredita que isso é um erro, entre em contato com a equipe de operações para verificar o status dos seus pedidos."
+        />
+      );
+    } else {
+      // Admin ou Logística: mensagem com link para criar liberação
+      return (
+        <EmptyStateCardWithAction
+          title="Nenhuma liberação disponível"
+          description="Para criar agendamentos, você precisa ter liberações pendentes ou parciais primeiro."
+          actionText="Criar Liberação"
+          actionUrl="https://logi-sys-shiy.vercel.app/liberacoes?modal=novo"
+        />
+      );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -511,12 +553,7 @@ const Agendamentos = () => {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <EmptyStateCard
-                        title="Nenhuma liberação disponível"
-                        description="Para criar agendamentos, você precisa ter liberações pendentes ou parciais primeiro."
-                        actionText="Criar Liberação"
-                        actionUrl="https://logi-sys-shiy.vercel.app/liberacoes?modal=novo"
-                      />
+                      renderEmptyLiberacoesCard()
                     )}
                   </div>
 
