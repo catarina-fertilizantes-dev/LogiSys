@@ -96,6 +96,25 @@ function formatCPF(cpf: string) {
   return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
 }
 
+// Função para buscar quantidade disponível de uma liberação
+const getQuantidadeDisponivel = async (liberacaoId: string): Promise<number> => {
+  try {
+    const { data, error } = await supabase.rpc('get_quantidade_disponivel_liberacao', {
+      liberacao_uuid: liberacaoId
+    });
+    
+    if (error) {
+      console.error('Erro ao buscar quantidade disponível:', error);
+      return 0;
+    }
+    
+    return data || 0;
+  } catch (error) {
+    console.error('Erro ao buscar quantidade disponível:', error);
+    return 0;
+  }
+};
+
 const parseDate = (d: string) => {
   const [dd, mm, yyyy] = d.split("/");
   return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
@@ -103,13 +122,19 @@ const parseDate = (d: string) => {
 
 type AgendamentoStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
-// 🔥 VALIDAÇÃO CORRIGIDA - REMOVIDO HORÁRIO
-const validateAgendamento = (ag: any) => {
+// 🔥 VALIDAÇÃO CORRIGIDA - REMOVIDO HORÁRIO + VALIDAÇÃO DE QUANTIDADE
+const validateAgendamento = (ag: any, quantidadeDisponivel: number) => {
   const errors = [];
   if (!ag.liberacao) errors.push("Liberação");
   if (!ag.quantidade || Number(ag.quantidade) <= 0) errors.push("Quantidade");
+  
+  // Validação de quantidade disponível
+  const qtdSolicitada = Number(ag.quantidade);
+  if (qtdSolicitada > quantidadeDisponivel) {
+    errors.push(`Quantidade excede o disponível (${quantidadeDisponivel}t)`);
+  }
+  
   if (!ag.data || isNaN(Date.parse(ag.data))) errors.push("Data");
-  // REMOVIDO: validação de horário
   const placaSemMascara = (ag.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
   if (placaSemMascara.length < 7) errors.push("Placa do veículo");
   if (!validatePlaca(placaSemMascara)) errors.push("Formato da placa inválido");
@@ -235,7 +260,6 @@ const Agendamentos = () => {
       data: item.data_retirada
         ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
         : "",
-      // REMOVIDO: horario: item.horario || "00:00",
       placa: item.placa_caminhao || "N/A",
       motorista: item.motorista_nome || "N/A",
       documento: item.motorista_documento || "N/A",
@@ -250,13 +274,12 @@ const Agendamentos = () => {
     }));
   }, [agendamentosData]);
 
-  // 🔥 ESTADO DO FORM CORRIGIDO - REMOVIDO HORÁRIO
+  // 🔥 ESTADO DO FORM CORRIGIDO - REMOVIDO HORÁRIO + ADICIONADO ESTADOS DE VALIDAÇÃO
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     liberacao: "",
     quantidade: "",
     data: "",
-    // REMOVIDO: horario: "",
     placa: "",
     motorista: "",
     documento: "",
@@ -264,6 +287,10 @@ const Agendamentos = () => {
     observacoes: "",
   });
   const [formError, setFormError] = useState("");
+  
+  // 🆕 NOVOS ESTADOS PARA VALIDAÇÃO DE QUANTIDADE
+  const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
+  const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
   const { data: liberacoesPendentes } = useQuery({
     queryKey: ["liberacoes-pendentes", currentCliente?.id],
@@ -303,13 +330,12 @@ const Agendamentos = () => {
     }
   }, [canCreate]);
 
-  // 🔥 RESET FORM CORRIGIDO - REMOVIDO HORÁRIO
+  // 🔥 RESET FORM CORRIGIDO - REMOVIDO HORÁRIO + RESET ESTADOS DE VALIDAÇÃO
   const resetFormNovoAgendamento = () => {
     setNovoAgendamento({
       liberacao: "",
       quantidade: "",
       data: "",
-      // REMOVIDO: horario: "",
       placa: "",
       motorista: "",
       documento: "",
@@ -317,12 +343,33 @@ const Agendamentos = () => {
       observacoes: "",
     });
     setFormError("");
+    setQuantidadeDisponivel(0);
+    setValidandoQuantidade(false);
   };
 
-  // 🔥 FUNÇÃO CREATE CORRIGIDA - REMOVIDO HORÁRIO
+  // 🆕 FUNÇÃO PARA ATUALIZAR QUANTIDADE DISPONÍVEL
+  const atualizarQuantidadeDisponivel = async (liberacaoId: string) => {
+    if (!liberacaoId) {
+      setQuantidadeDisponivel(0);
+      return;
+    }
+    
+    setValidandoQuantidade(true);
+    try {
+      const disponivel = await getQuantidadeDisponivel(liberacaoId);
+      setQuantidadeDisponivel(disponivel);
+    } catch (error) {
+      console.error('Erro ao buscar quantidade disponível:', error);
+      setQuantidadeDisponivel(0);
+    } finally {
+      setValidandoQuantidade(false);
+    }
+  };
+
+  // 🔥 FUNÇÃO CREATE CORRIGIDA - REMOVIDO HORÁRIO + VALIDAÇÃO DE QUANTIDADE
   const handleCreateAgendamento = async () => {
     setFormError("");
-    const erros = validateAgendamento(novoAgendamento);
+    const erros = validateAgendamento(novoAgendamento, quantidadeDisponivel);
     if (erros.length > 0) {
       setFormError("Preencha: " + erros.join(", "));
       toast({
@@ -353,7 +400,6 @@ const Agendamentos = () => {
           liberacao_id: novoAgendamento.liberacao,
           quantidade: qtdNum,
           data_retirada: novoAgendamento.data,
-          // REMOVIDO: horario: novoAgendamento.horario,
           placa_caminhao: placaSemMascara,
           motorista_nome: novoAgendamento.motorista.trim(),
           motorista_documento: cpfSemMascara,
@@ -384,6 +430,13 @@ const Agendamentos = () => {
             variant: "destructive",
             title: "Erro ao criar agendamento",
             description: "Erro do banco: campo obrigatório não enviado (verifique todos os campos).",
+          });
+        } else if (errAgend.message?.includes("Quantidade solicitada") && errAgend.message?.includes("excede o disponível")) {
+          setFormError("Quantidade solicitada excede o disponível para esta liberação.");
+          toast({
+            variant: "destructive",
+            title: "Quantidade inválida",
+            description: "A quantidade solicitada excede o disponível para esta liberação.",
           });
         } else {
           setFormError(errAgend.message || "Erro desconhecido");
@@ -461,7 +514,6 @@ const Agendamentos = () => {
   // 🎯 LÓGICA PARA RENDERIZAR CARD PERSONALIZADO BASEADO NO PERFIL
   const renderEmptyLiberacoesCard = () => {
     if (userRole === "cliente") {
-      // Cliente: apenas mensagem informativa, sem link
       return (
         <EmptyStateCardWithoutAction
           title="Nenhuma liberação disponível"
@@ -469,7 +521,6 @@ const Agendamentos = () => {
         />
       );
     } else {
-      // Admin ou Logística: mensagem com link para criar liberação
       return (
         <EmptyStateCardWithAction
           title="Nenhuma liberação disponível"
@@ -480,6 +531,12 @@ const Agendamentos = () => {
       );
     }
   };
+
+  // 🆕 VALIDAÇÃO EM TEMPO REAL DA QUANTIDADE
+  const quantidadeValida = useMemo(() => {
+    const qtd = Number(novoAgendamento.quantidade);
+    return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeDisponivel;
+  }, [novoAgendamento.quantidade, quantidadeDisponivel]);
 
   if (isLoading) {
     return (
@@ -529,13 +586,9 @@ const Agendamentos = () => {
                     {temLiberacoesDisponiveis ? (
                       <Select
                         value={novoAgendamento.liberacao}
-                        onValueChange={(v) => {
-                          setNovoAgendamento((s) => ({ ...s, liberacao: v }));
-                          const lib = liberacoesPendentes?.find((l) => l.id === v);
-                          if (lib) {
-                            const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
-                            setNovoAgendamento((s) => ({ ...s, quantidade: disponivel.toString() }));
-                          }
+                        onValueChange={async (v) => {
+                          setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
+                          await atualizarQuantidadeDisponivel(v);
                         }}
                       >
                         <SelectTrigger id="liberacao">
@@ -563,15 +616,47 @@ const Agendamentos = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                          {/* 🆕 INDICADOR DE QUANTIDADE DISPONÍVEL */}
+                          {novoAgendamento.liberacao && (
+                            <div className="text-sm text-muted-foreground mb-1">
+                              {validandoQuantidade ? (
+                                <span className="flex items-center gap-1">
+                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                  Verificando disponibilidade...
+                                </span>
+                              ) : (
+                                <span className={quantidadeDisponivel > 0 ? "text-green-600" : "text-red-600"}>
+                                  Disponível: {quantidadeDisponivel.toLocaleString('pt-BR')}t
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <Input
                             id="quantidade"
                             type="number"
                             step="0.01"
                             min="0"
+                            max={quantidadeDisponivel || undefined}
                             value={novoAgendamento.quantidade}
                             onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
                             placeholder="0.00"
+                            className={
+                              novoAgendamento.quantidade && !quantidadeValida 
+                                ? "border-red-500 focus:border-red-500" 
+                                : novoAgendamento.quantidade && quantidadeValida
+                                ? "border-green-500 focus:border-green-500"
+                                : ""
+                            }
                           />
+                          {/* 🆕 MENSAGEM DE VALIDAÇÃO EM TEMPO REAL */}
+                          {novoAgendamento.quantidade && !quantidadeValida && (
+                            <p className="text-xs text-red-600">
+                              {Number(novoAgendamento.quantidade) > quantidadeDisponivel 
+                                ? `Quantidade excede o disponível (${quantidadeDisponivel}t)`
+                                : "Quantidade deve ser maior que zero"
+                              }
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -666,7 +751,7 @@ const Agendamentos = () => {
                   <Button 
                     className="bg-gradient-primary" 
                     onClick={handleCreateAgendamento}
-                    disabled={!temLiberacoesDisponiveis}
+                    disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade}
                   >
                     Criar Agendamento
                   </Button>
@@ -737,7 +822,6 @@ const Agendamentos = () => {
                       <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
                       <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade}t • {ag.armazem}</p>
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
-                      {/* 🔥 EXIBIÇÃO CORRIGIDA - REMOVIDO HORÁRIO */}
                       <p className="text-xs text-muted-foreground">Data: {ag.data}</p>
                     </div>
                   </div>
@@ -751,7 +835,6 @@ const Agendamentos = () => {
                     {ag.status === "confirmado" ? "Confirmado" : ag.status === "pendente" ? "Pendente" : ag.status === "concluido" ? "Concluído" : "Cancelado"}
                   </Badge>
                 </div>
-                {/* 🔥 GRID DE INFORMAÇÕES CORRIGIDO - REMOVIDO HORÁRIO */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pt-2">
                   <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data}</span></div>
                   <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{formatPlaca(ag.placa)}</span></div>
