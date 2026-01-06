@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -274,6 +274,16 @@ const Agendamentos = () => {
     enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
 
+  useEffect(() => {
+    // Detectar se deve abrir o modal automaticamente
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('modal') === 'novo' && canCreate) {
+      setDialogOpen(true);
+      // Limpar o parâmetro da URL sem recarregar a página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [canCreate]);
+
   // 🔥 RESET FORM CORRIGIDO - REMOVIDO HORÁRIO
   const resetFormNovoAgendamento = () => {
     setNovoAgendamento({
@@ -459,172 +469,174 @@ const Agendamentos = () => {
         subtitle="Gerencie os agendamentos de retirada de produtos"
         icon={Calendar}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-primary" disabled={!canCreate} title={!canCreate ? "Sem permissão" : "Novo Agendamento"}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Agendamento
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo Agendamento</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="liberacao">Liberação *</Label>
-                  {temLiberacoesDisponiveis ? (
-                    <Select
-                      value={novoAgendamento.liberacao}
-                      onValueChange={(v) => {
-                        setNovoAgendamento((s) => ({ ...s, liberacao: v }));
-                        const lib = liberacoesPendentes?.find((l) => l.id === v);
-                        if (lib) {
-                          const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
-                          setNovoAgendamento((s) => ({ ...s, quantidade: disponivel.toString() }));
-                        }
-                      }}
-                    >
-                      <SelectTrigger id="liberacao">
-                        <SelectValue placeholder="Selecione a liberação" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {liberacoesPendentes?.map((lib: any) => {
-                          const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
-                          return (
-                            <SelectItem key={lib.id} value={lib.id}>
-                              {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <EmptyStateCard
-                      title="Nenhuma liberação disponível"
-                      description="Para criar agendamentos, você precisa ter liberações pendentes ou parciais primeiro."
-                      actionText="Criar Liberação"
-                      actionUrl="https://logi-sys-shiy.vercel.app/liberacoes?modal=novo"
-                    />
-                  )}
-                </div>
-
-                {temLiberacoesDisponiveis && (
-                  <>
-                    {/* 🔥 GRID CORRIGIDO - REMOVIDO CAMPO HORÁRIO */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="quantidade">Quantidade (t) *</Label>
-                        <Input
-                          id="quantidade"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={novoAgendamento.quantidade}
-                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
-                          placeholder="0.00"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="data">Data *</Label>
-                        <Input
-                          id="data"
-                          type="date"
-                          value={novoAgendamento.data}
-                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="placa">Placa do Veículo *</Label>
-                      <Input
-                        id="placa"
-                        value={novoAgendamento.placa}
-                        onChange={(e) =>
-                          setNovoAgendamento((s) => ({
-                            ...s,
-                            placa: maskPlaca(e.target.value),
-                          }))
-                        }
-                        placeholder="Ex: ABC-1234 ou ABC-1D23"
-                        maxLength={9}
-                        autoCapitalize="characters"
-                        spellCheck={false}
-                        inputMode="text"
+          canCreate ? (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Agendamento
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Novo Agendamento</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="liberacao">Liberação *</Label>
+                    {temLiberacoesDisponiveis ? (
+                      <Select
+                        value={novoAgendamento.liberacao}
+                        onValueChange={(v) => {
+                          setNovoAgendamento((s) => ({ ...s, liberacao: v }));
+                          const lib = liberacoesPendentes?.find((l) => l.id === v);
+                          if (lib) {
+                            const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
+                            setNovoAgendamento((s) => ({ ...s, quantidade: disponivel.toString() }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="liberacao">
+                          <SelectValue placeholder="Selecione a liberação" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {liberacoesPendentes?.map((lib: any) => {
+                            const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
+                            return (
+                              <SelectItem key={lib.id} value={lib.id}>
+                                {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <EmptyStateCard
+                        title="Nenhuma liberação disponível"
+                        description="Para criar agendamentos, você precisa ter liberações pendentes ou parciais primeiro."
+                        actionText="Criar Liberação"
+                        actionUrl="https://logi-sys-shiy.vercel.app/liberacoes?modal=novo"
                       />
-                      <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="motorista">Nome do Motorista *</Label>
-                        <Input
-                          id="motorista"
-                          value={novoAgendamento.motorista}
-                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
-                          placeholder="Ex: João Silva"
-                        />
+                  {temLiberacoesDisponiveis && (
+                    <>
+                      {/* 🔥 GRID CORRIGIDO - REMOVIDO CAMPO HORÁRIO */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                          <Input
+                            id="quantidade"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={novoAgendamento.quantidade}
+                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="data">Data *</Label>
+                          <Input
+                            id="data"
+                            type="date"
+                            value={novoAgendamento.data}
+                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="documento">Documento (CPF) *</Label>
+                        <Label htmlFor="placa">Placa do Veículo *</Label>
                         <Input
-                          id="documento"
-                          value={novoAgendamento.documento}
+                          id="placa"
+                          value={novoAgendamento.placa}
                           onChange={(e) =>
                             setNovoAgendamento((s) => ({
                               ...s,
-                              documento: maskCPF(e.target.value),
+                              placa: maskPlaca(e.target.value),
                             }))
                           }
-                          placeholder="Ex: 123.456.789-00"
-                          maxLength={14}
+                          placeholder="Ex: ABC-1234 ou ABC-1D23"
+                          maxLength={9}
+                          autoCapitalize="characters"
+                          spellCheck={false}
+                          inputMode="text"
+                        />
+                        <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="motorista">Nome do Motorista *</Label>
+                          <Input
+                            id="motorista"
+                            value={novoAgendamento.motorista}
+                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
+                            placeholder="Ex: João Silva"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="documento">Documento (CPF) *</Label>
+                          <Input
+                            id="documento"
+                            value={novoAgendamento.documento}
+                            onChange={(e) =>
+                              setNovoAgendamento((s) => ({
+                                ...s,
+                                documento: maskCPF(e.target.value),
+                              }))
+                            }
+                            placeholder="Ex: 123.456.789-00"
+                            maxLength={14}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tipoCaminhao">Tipo de Caminhão</Label>
+                        <Input
+                          id="tipoCaminhao"
+                          value={novoAgendamento.tipoCaminhao}
+                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
+                          placeholder="Ex: Bitrem, Carreta, Truck"
                         />
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="tipoCaminhao">Tipo de Caminhão</Label>
-                      <Input
-                        id="tipoCaminhao"
-                        value={novoAgendamento.tipoCaminhao}
-                        onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
-                        placeholder="Ex: Bitrem, Carreta, Truck"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="observacoes">Observações</Label>
-                      <Input
-                        id="observacoes"
-                        value={novoAgendamento.observacoes}
-                        onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
-                        placeholder="Informações adicionais sobre o agendamento"
-                      />
-                    </div>
-                    
-                    {formError && (
-                      <div className="pt-3 text-destructive text-sm font-semibold border-t">
-                        {formError}
+                      <div className="space-y-2">
+                        <Label htmlFor="observacoes">Observações</Label>
+                        <Input
+                          id="observacoes"
+                          value={novoAgendamento.observacoes}
+                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
+                          placeholder="Informações adicionais sobre o agendamento"
+                        />
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button 
-                  className="bg-gradient-primary" 
-                  onClick={handleCreateAgendamento}
-                  disabled={!temLiberacoesDisponiveis}
-                >
-                  Criar Agendamento
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                      
+                      {formError && (
+                        <div className="pt-3 text-destructive text-sm font-semibold border-t">
+                          {formError}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                  <Button 
+                    className="bg-gradient-primary" 
+                    onClick={handleCreateAgendamento}
+                    disabled={!temLiberacoesDisponiveis}
+                  >
+                    Criar Agendamento
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null
         }
       />
 
