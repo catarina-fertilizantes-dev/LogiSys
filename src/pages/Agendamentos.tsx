@@ -52,11 +52,13 @@ const parseDate = (d: string) => {
 
 type AgendamentoStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
+// 🔥 VALIDAÇÃO CORRIGIDA - REMOVIDO HORÁRIO
 const validateAgendamento = (ag: any) => {
   const errors = [];
   if (!ag.liberacao) errors.push("Liberação");
   if (!ag.quantidade || Number(ag.quantidade) <= 0) errors.push("Quantidade");
   if (!ag.data || isNaN(Date.parse(ag.data))) errors.push("Data");
+  // REMOVIDO: validação de horário
   const placaSemMascara = (ag.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
   if (placaSemMascara.length < 7) errors.push("Placa do veículo");
   if (!validatePlaca(placaSemMascara)) errors.push("Formato da placa inválido");
@@ -64,6 +66,7 @@ const validateAgendamento = (ag: any) => {
   if (!ag.documento || ag.documento.replace(/\D/g, "").length !== 11) errors.push("Documento (CPF) do motorista");
   return errors;
 };
+
 function validatePlaca(placa: string) {
   if (/^[A-Z]{3}[0-9]{4}$/.test(placa)) return true;
   if (/^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(placa)) return true;
@@ -108,7 +111,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // Buscar agendamentos do banco - FILTRO NA QUERY!
+  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -117,7 +120,6 @@ const Agendamentos = () => {
         .select(`
           id,
           data_retirada,
-          horario,
           quantidade,
           motorista_nome,
           motorista_documento,
@@ -171,6 +173,7 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
+  // 🔥 MAPEAMENTO CORRIGIDO - REMOVIDO HORÁRIO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => ({
@@ -181,7 +184,7 @@ const Agendamentos = () => {
       data: item.data_retirada
         ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
         : "",
-      horario: item.horario || "00:00",
+      // REMOVIDO: horario: item.horario || "00:00",
       placa: item.placa_caminhao || "N/A",
       motorista: item.motorista_nome || "N/A",
       documento: item.motorista_documento || "N/A",
@@ -196,12 +199,13 @@ const Agendamentos = () => {
     }));
   }, [agendamentosData]);
 
-  // Estado do form/modal
+  // 🔥 ESTADO DO FORM CORRIGIDO - REMOVIDO HORÁRIO
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     liberacao: "",
     quantidade: "",
     data: "",
+    // REMOVIDO: horario: "",
     placa: "",
     motorista: "",
     documento: "",
@@ -238,11 +242,13 @@ const Agendamentos = () => {
     enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
 
+  // 🔥 RESET FORM CORRIGIDO - REMOVIDO HORÁRIO
   const resetFormNovoAgendamento = () => {
     setNovoAgendamento({
       liberacao: "",
       quantidade: "",
       data: "",
+      // REMOVIDO: horario: "",
       placa: "",
       motorista: "",
       documento: "",
@@ -252,7 +258,7 @@ const Agendamentos = () => {
     setFormError("");
   };
 
-  // >>> FUNÇÃO CORRIGIDA: REMOVIDO status <<<
+  // 🔥 FUNÇÃO CREATE CORRIGIDA - REMOVIDO HORÁRIO
   const handleCreateAgendamento = async () => {
     setFormError("");
     const erros = validateAgendamento(novoAgendamento);
@@ -275,7 +281,6 @@ const Agendamentos = () => {
       const placaSemMascara = (novoAgendamento.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
       const cpfSemMascara = (novoAgendamento.documento ?? "").replace(/\D/g, "");
 
-      // 🟢 Pegue o cliente_id e armazem_id da liberação selecionada!
       const selectedLiberacao = liberacoesPendentes?.find((l) => l.id === novoAgendamento.liberacao);
       const clienteIdDaLiberacao = selectedLiberacao?.cliente_id || null;
       const armazemIdDaLiberacao = selectedLiberacao?.armazem?.id || null;
@@ -287,12 +292,12 @@ const Agendamentos = () => {
           liberacao_id: novoAgendamento.liberacao,
           quantidade: qtdNum,
           data_retirada: novoAgendamento.data,
+          // REMOVIDO: horario: novoAgendamento.horario,
           placa_caminhao: placaSemMascara,
           motorista_nome: novoAgendamento.motorista.trim(),
           motorista_documento: cpfSemMascara,
           tipo_caminhao: novoAgendamento.tipoCaminhao || null,
           observacoes: novoAgendamento.observacoes || null,
-          // REMOVIDO: status: "confirmado",
           created_by: userData.user?.id,
           cliente_id: clienteIdDaLiberacao,
           armazem_id: armazemIdDaLiberacao,
@@ -460,6 +465,7 @@ const Agendamentos = () => {
                   </Select>
                 </div>
 
+                {/* 🔥 GRID CORRIGIDO - REMOVIDO CAMPO HORÁRIO */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="quantidade">Quantidade (t) *</Label>
@@ -627,7 +633,8 @@ const Agendamentos = () => {
                       <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
                       <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade}t • {ag.armazem}</p>
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
-                      <p className="text-xs text-muted-foreground">Data: {ag.data} • {ag.horario}</p>
+                      {/* 🔥 EXIBIÇÃO CORRIGIDA - REMOVIDO HORÁRIO */}
+                      <p className="text-xs text-muted-foreground">Data: {ag.data}</p>
                     </div>
                   </div>
                   <Badge
@@ -640,10 +647,13 @@ const Agendamentos = () => {
                     {ag.status === "confirmado" ? "Confirmado" : ag.status === "pendente" ? "Pendente" : ag.status === "concluido" ? "Concluído" : "Cancelado"}
                   </Badge>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-2">
-                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data} às {ag.horario}</span></div>
+                {/* 🔥 GRID DE INFORMAÇÕES CORRIGIDO - REMOVIDO HORÁRIO */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pt-2">
+                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data}</span></div>
                   <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{formatPlaca(ag.placa)}</span></div>
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{ag.motorista}</span></div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 text-sm">
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{formatCPF(ag.documento)}</span></div>
                 </div>
               </div>
@@ -652,8 +662,8 @@ const Agendamentos = () => {
         ))}
         {filteredAgendamentos.length === 0 && (
           <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
