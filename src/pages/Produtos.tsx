@@ -89,7 +89,7 @@ const Produtos = () => {
   useEffect(() => {
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('modal') === 'novo') {
+    if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
