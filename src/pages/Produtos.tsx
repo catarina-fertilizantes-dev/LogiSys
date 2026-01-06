@@ -87,6 +87,16 @@ const Produtos = () => {
   };
 
   useEffect(() => {
+    // Detectar se deve abrir o modal automaticamente
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('modal') === 'novo') {
+      setDialogOpen(true);
+      // Limpar o parâmetro da URL sem recarregar a página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+  
+  useEffect(() => {
     fetchProdutos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
