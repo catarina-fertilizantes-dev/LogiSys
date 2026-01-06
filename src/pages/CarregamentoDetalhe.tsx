@@ -160,6 +160,7 @@ const CarregamentoDetalhe = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
+  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, roles],
     queryFn: async () => {
@@ -193,7 +194,6 @@ const CarregamentoDetalhe = () => {
           agendamento:agendamentos!carregamentos_agendamento_id_fkey (
             id,
             data_retirada,
-            horario,
             quantidade,
             cliente:clientes!agendamentos_cliente_id_fkey (
               nome
@@ -504,8 +504,7 @@ const CarregamentoDetalhe = () => {
             if (podeClicar) {
               circleClasses += " cursor-pointer hover:scale-105";
             }
-
-            // Obter data da etapa
+                  // Obter data da etapa
             const getDataEtapa = () => {
               switch (etapaIndex) {
                 case 1: return carregamento?.data_chegada;
@@ -885,8 +884,19 @@ const CarregamentoDetalhe = () => {
               </div>
             </div>
 
-            {/* Linha 3: Apenas Etapa Atual (sem status redundante) */}
+            {/* 🔥 LINHA CORRIGIDA - REMOVIDO HORÁRIO, ADICIONADA DATA */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground block">Data Agendada</span>
+                  <span className="text-sm font-medium">
+                    {agendamento?.data_retirada 
+                      ? new Date(agendamento.data_retirada).toLocaleDateString("pt-BR")
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
@@ -896,7 +906,11 @@ const CarregamentoDetalhe = () => {
                   </Badge>
                 </div>
               </div>
-              {carregamento.numero_nf && (
+            </div>
+
+            {/* Linha 4: Nota Fiscal (se existir) */}
+            {carregamento.numero_nf && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex items-center gap-2">
                   <Hash className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
@@ -904,8 +918,8 @@ const CarregamentoDetalhe = () => {
                     <span className="text-sm font-medium">{carregamento.numero_nf}</span>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Estatísticas de Tempo */}
             {stats && (
@@ -935,7 +949,7 @@ const CarregamentoDetalhe = () => {
                     </div>
                   )}
                 </div>
-                            </div>
+              </div>
             )}
           </div>
         </CardContent>
