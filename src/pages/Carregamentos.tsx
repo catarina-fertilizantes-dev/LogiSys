@@ -17,7 +17,7 @@ interface CarregamentoItem {
   placa: string;
   motorista: string;
   data_retirada: string; // yyyy-mm-dd
-  horario: string;
+  // REMOVIDO: horario: string;
   etapa_atual: number;
   fotosTotal: number;
   numero_nf: string | null;
@@ -41,7 +41,7 @@ interface SupabaseCarregamentoItem {
   agendamento: {
     id: string;
     data_retirada: string;
-    horario: string | null;
+    // REMOVIDO: horario: string | null;
     quantidade: number | null;
     cliente: {
       nome: string | null;
@@ -114,6 +114,7 @@ const Carregamentos = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
+  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, roles],
     queryFn: async () => {
@@ -134,7 +135,6 @@ const Carregamentos = () => {
           agendamento:agendamentos!carregamentos_agendamento_id_fkey (
             id,
             data_retirada,
-            horario,
             quantidade,
             cliente:clientes!agendamentos_cliente_id_fkey (
               nome
@@ -170,6 +170,7 @@ const Carregamentos = () => {
     refetchInterval: 30000,
   });
 
+  // 🔥 MAPEAMENTO CORRIGIDO - REMOVIDO HORÁRIO
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     return carregamentosData.map((item: SupabaseCarregamentoItem) => {
@@ -192,7 +193,7 @@ const Carregamentos = () => {
         placa: agendamento?.placa_caminhao || "N/A",
         motorista: agendamento?.motorista_nome || "N/A",
         data_retirada: agendamento?.data_retirada || "N/A",
-        horario: agendamento?.horario || "00:00",
+        // REMOVIDO: horario: agendamento?.horario || "00:00",
         etapa_atual: etapaAtual,
         fotosTotal: fotosCount,
         numero_nf: item.numero_nf || null,
@@ -367,7 +368,8 @@ const Carregamentos = () => {
                         <div>
                           <h3 className="font-semibold text-foreground">{carr.cliente}</h3>
                           <p className="text-sm text-muted-foreground">{carr.quantidade} toneladas</p>
-                          <p className="text-xs text-muted-foreground">{carr.data_retirada} • {carr.horario}</p>
+                          {/* 🔥 EXIBIÇÃO CORRIGIDA - REMOVIDO HORÁRIO */}
+                          <p className="text-xs text-muted-foreground">{new Date(carr.data_retirada).toLocaleDateString("pt-BR")}</p>
                           <p className="text-xs text-muted-foreground">Placa: <span className="font-medium">{carr.placa}</span></p>
                           <p className="text-xs text-muted-foreground">Motorista: <span className="font-medium">{carr.motorista}</span></p>
                           {carr.numero_nf && (
