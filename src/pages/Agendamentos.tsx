@@ -280,7 +280,7 @@ const Agendamentos = () => {
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA COM CÁLCULO CORRETO
+  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA PARA NOVOS STATUS
   const { data: liberacoesDisponiveis } = useQuery({
     queryKey: ["liberacoes-disponiveis", currentCliente?.id],
     queryFn: async () => {
@@ -297,7 +297,7 @@ const Agendamentos = () => {
           produto:produtos(nome),
           armazem:armazens(id, cidade, estado, nome)
         `)
-        .in("status", ["disponivel", "agendada"])
+        .in("status", ["disponivel", "parcialmente_agendada"]) // 🔄 NOVOS STATUS
         .order("created_at", { ascending: false });
 
       if (userRole === "cliente" && currentCliente?.id) {
@@ -630,6 +630,33 @@ const Agendamentos = () => {
     }
   };
 
+  // 🎨 FUNÇÃO PARA CORES DOS STATUS DE LIBERAÇÃO ATUALIZADA
+  const getLiberacaoStatusColor = (status: string) => {
+    switch (status) {
+      case "disponivel":
+        return "text-green-600";
+      case "parcialmente_agendada":
+        return "text-yellow-600";
+      case "totalmente_agendada":
+        return "text-blue-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  const getLiberacaoStatusLabel = (status: string) => {
+    switch (status) {
+      case "disponivel":
+        return "Disponível";
+      case "parcialmente_agendada":
+        return "Parcialmente Agendada";
+      case "totalmente_agendada":
+        return "Totalmente Agendada";
+      default:
+        return status;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -908,7 +935,7 @@ const Agendamentos = () => {
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
                       <p className="text-xs text-muted-foreground">Data: {ag.data}</p>
                       
-                      {/* 📊 INFORMAÇÕES ADICIONAIS DA LIBERAÇÃO */}
+                      {/* 📊 INFORMAÇÕES ATUALIZADAS DA LIBERAÇÃO */}
                       <div className="mt-2 text-xs text-muted-foreground">
                         <span>Liberação: </span>
                         <span className="font-medium text-foreground">
@@ -919,14 +946,8 @@ const Agendamentos = () => {
                           {ag.quantidade_retirada.toLocaleString('pt-BR')}t retirada
                         </span>
                         <span> • Status: </span>
-                        <span className={`font-medium ${
-                          ag.liberacao_status === 'disponivel' ? 'text-green-600' :
-                          ag.liberacao_status === 'agendada' ? 'text-blue-600' :
-                          'text-gray-600'
-                        }`}>
-                          {ag.liberacao_status === 'disponivel' ? 'Disponível' :
-                           ag.liberacao_status === 'agendada' ? 'Agendada' :
-                           ag.liberacao_status === 'esgotada' ? 'Esgotada' : ag.liberacao_status}
+                        <span className={`font-medium ${getLiberacaoStatusColor(ag.liberacao_status)}`}>
+                          {getLiberacaoStatusLabel(ag.liberacao_status)}
                         </span>
                       </div>
                     </div>
