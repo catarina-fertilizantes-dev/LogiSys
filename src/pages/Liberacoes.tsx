@@ -650,26 +650,24 @@ const Liberacoes = () => {
                         </span>
                       </div>
                       
-                      {/* 📈 BARRAS DE PROGRESSO ATUALIZADAS */}
+                      {/* 📈 BARRAS DE PROGRESSO SIMPLIFICADAS */}
                       {lib.quantidade > 0 && (
                         <div className="space-y-1">
-                          {/* Barra de Agendamentos */}
-                          {lib.quantidadeAgendada > 0 && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-blue-600 font-medium w-16">Agendada:</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                                <div 
-                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${lib.percentualAgendado}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs text-muted-foreground font-medium w-8">
-                                {lib.percentualAgendado}%
-                              </span>
+                          {/* Barra de Agendamentos - SEMPRE VISÍVEL */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-blue-600 font-medium w-16">Agendada:</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                              <div 
+                                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                                style={{ width: `${lib.percentualAgendado}%` }}
+                              ></div>
                             </div>
-                          )}
+                            <span className="text-xs text-muted-foreground font-medium w-8">
+                              {lib.percentualAgendado}%
+                            </span>
+                          </div>
                           
-                          {/* Barra de Retiradas */}
+                          {/* Barra de Retiradas - APENAS SE HOUVER RETIRADAS */}
                           {lib.quantidadeRetirada > 0 && (
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-orange-600 font-medium w-16">Retirada:</span>
@@ -684,30 +682,6 @@ const Liberacoes = () => {
                               </span>
                             </div>
                           )}
-                          
-                          {/* Barra Combinada - Total de Progresso */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-600 font-medium w-16">Total:</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 relative">
-                              {/* Agendada (azul) */}
-                              <div 
-                                className="bg-blue-500 h-2 rounded-l-full absolute left-0 transition-all duration-300" 
-                                style={{ width: `${lib.percentualAgendado}%` }}
-                              ></div>
-                              {/* Retirada (laranja) - começa onde agendada termina */}
-                              <div 
-                                className="bg-orange-500 h-2 absolute transition-all duration-300" 
-                                style={{ 
-                                  left: `${lib.percentualAgendado}%`,
-                                  width: `${lib.percentualRetirado}%`,
-                                  borderRadius: lib.percentualAgendado + lib.percentualRetirado >= 100 ? '0 0.25rem 0.25rem 0' : '0'
-                                }}
-                              ></div>
-                            </div>
-                            <span className="text-xs text-muted-foreground font-medium w-8">
-                              {lib.percentualAgendado + lib.percentualRetirado}%
-                            </span>
-                          </div>
                         </div>
                       )}
                     </div>
