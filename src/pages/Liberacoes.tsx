@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type StatusLib = "pendente" | "parcial" | "concluido";
+// 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
+type StatusLiberacao = "disponivel" | "agendada" | "esgotada";
 
 interface LiberacaoItem {
   id: string;
@@ -23,10 +24,13 @@ interface LiberacaoItem {
   quantidadeRetirada: number;
   pedido: string;
   data: string;
-  status: StatusLib;
+  status: StatusLiberacao;
   armazem?: string;
   produto_id?: string;
   armazem_id?: string;
+  // 📊 NOVOS CAMPOS PARA MELHOR VISUALIZAÇÃO
+  quantidadeDisponivel: number;
+  percentualRetirado: number;
 }
 
 // Componente para exibir quando não há dados disponíveis
@@ -102,7 +106,7 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // FILTRO AGORA DIRETAMENTE NA QUERY
+  // 🔄 QUERY ATUALIZADA PARA NOVOS CAMPOS
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -133,25 +137,36 @@ const Liberacoes = () => {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 30000, // 🔄 ATUALIZAÇÃO AUTOMÁTICA PARA VER MUDANÇAS DE STATUS
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
+  // 📊 MAPEAMENTO ATUALIZADO COM NOVOS CÁLCULOS
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
-    return liberacoesData.map((item: any) => ({
-      id: item.id,
-      produto: item.produto?.nome || "N/A",
-      cliente: item.clientes?.nome || "N/A",
-      quantidade: item.quantidade_liberada,
-      quantidadeRetirada: item.quantidade_retirada,
-      pedido: item.pedido_interno,
-      data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
-      status: item.status as StatusLib,
-      armazem: item.armazem ? `${item.armazem.cidade}/${item.armazem.estado} - ${item.armazem.nome}` : "N/A",
-      produto_id: item.produto?.id,
-      armazem_id: item.armazem?.id,
-    }));
+    return liberacoesData.map((item: any) => {
+      const quantidadeRetirada = item.quantidade_retirada || 0;
+      const quantidadeDisponivel = Math.max(0, item.quantidade_liberada - quantidadeRetirada);
+      const percentualRetirado = item.quantidade_liberada > 0 
+        ? Math.round((quantidadeRetirada / item.quantidade_liberada) * 100) 
+        : 0;
+
+      return {
+        id: item.id,
+        produto: item.produto?.nome || "N/A",
+        cliente: item.clientes?.nome || "N/A",
+        quantidade: item.quantidade_liberada,
+        quantidadeRetirada,
+        quantidadeDisponivel,
+        percentualRetirado,
+        pedido: item.pedido_interno,
+        data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
+        status: item.status as StatusLiberacao,
+        armazem: item.armazem ? `${item.armazem.cidade}/${item.armazem.estado} - ${item.armazem.nome}` : "N/A",
+        produto_id: item.produto?.id,
+        armazem_id: item.armazem?.id,
+      };
+    });
   }, [liberacoesData]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -208,21 +223,21 @@ const Liberacoes = () => {
     }
   }, [canCreate]);
   
-  // Filtros avançados atualizados
+  // 🔄 FILTROS ATUALIZADOS PARA NOVOS STATUS
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState<StatusLib[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<StatusLiberacao[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedArmazens, setSelectedArmazens] = useState<string[]>([]);
 
-  const allStatuses: StatusLib[] = ["pendente", "parcial", "concluido"];
+  const allStatuses: StatusLiberacao[] = ["disponivel", "agendada", "esgotada"];
   const allArmazens = useMemo(
     () => Array.from(new Set(liberacoes.map((l) => l.armazem).filter(Boolean))) as string[],
     [liberacoes]
   );
 
-  const toggleStatus = (st: StatusLib) =>
+  const toggleStatus = (st: StatusLiberacao) =>
     setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const toggleArmazem = (a: string) =>
     setSelectedArmazens((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
@@ -267,6 +282,7 @@ const Liberacoes = () => {
     setNovaLiberacao({ produto: "", armazem: "", cliente_id: "", pedido: "", quantidade: "" });
   };
 
+  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA PARA NOVO STATUS PADRÃO
   const handleCreateLiberacao = async () => {
     const { produto, armazem, cliente_id, pedido, quantidade } = novaLiberacao;
 
@@ -295,11 +311,10 @@ const Liberacoes = () => {
           produto_id: produto,
           armazem_id: armazem,
           cliente_id: cliente_id,
-          // Removido cliente_nome: não mais necessário/desnormalizado
           pedido_interno: pedido.trim(),
           quantidade_liberada: qtdNum,
           quantidade_retirada: 0,
-          status: "pendente",
+          status: "disponivel", // 🔄 STATUS PADRÃO ATUALIZADO
           data_liberacao: new Date().toISOString().split('T')[0],
           created_by: userData.user?.id,
         })
@@ -325,6 +340,33 @@ const Liberacoes = () => {
         title: "Erro ao criar liberação",
         description: err instanceof Error ? err.message : "Erro desconhecido"
       });
+    }
+  };
+
+  // 🎨 FUNÇÃO PARA CORES DOS STATUS
+  const getStatusColor = (status: StatusLiberacao) => {
+    switch (status) {
+      case "disponivel":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "agendada":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "esgotada":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  const getStatusLabel = (status: StatusLiberacao) => {
+    switch (status) {
+      case "disponivel":
+        return "Disponível";
+      case "agendada":
+        return "Agendada";
+      case "esgotada":
+        return "Esgotada";
+      default:
+        return status;
     }
   };
 
@@ -507,7 +549,7 @@ const Liberacoes = () => {
             <div className="flex flex-wrap gap-2 mt-1">
               {allStatuses.map((st) => {
                 const active = selectedStatuses.includes(st);
-                const label = st === "pendente" ? "Pendente" : st === "parcial" ? "Parcial" : "Concluído";
+                const label = getStatusLabel(st);
                 return (
                   <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
                     {label}
@@ -551,22 +593,47 @@ const Liberacoes = () => {
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                     <ClipboardList className="h-5 w-5 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold text-foreground">{lib.produto}</h3>
                     <p className="text-sm text-muted-foreground">{lib.cliente}</p>
                     <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
                     <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Liberada: {lib.quantidade} • Retirada: {lib.quantidadeRetirada}</p>
+                    
+                    {/* 📊 NOVA SEÇÃO COM INFORMAÇÕES DETALHADAS */}
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
+                        </span>
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">Retirada:</span> {lib.quantidadeRetirada}t
+                        </span>
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
+                        </span>
+                      </div>
+                      
+                      {/* 📈 BARRA DE PROGRESSO */}
+                      {lib.quantidade > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                            <div 
+                              className="bg-gradient-primary h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${lib.percentualRetirado}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {lib.percentualRetirado}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <Badge
-                  variant={
-                    lib.status === "concluido" ? "default" :
-                      lib.status === "parcial" ? "secondary" :
-                        "outline"
-                  }
-                >
-                  {lib.status === "concluido" ? "Concluído" : lib.status === "parcial" ? "Parcial" : "Pendente"}
+                
+                {/* 🎨 BADGE DE STATUS ATUALIZADO */}
+                <Badge className={getStatusColor(lib.status)}>
+                  {getStatusLabel(lib.status)}
                 </Badge>
               </div>
             </CardContent>
