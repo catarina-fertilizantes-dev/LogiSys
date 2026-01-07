@@ -96,33 +96,15 @@ function formatCPF(cpf: string) {
   return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
 }
 
-// Função para buscar quantidade disponível de uma liberação
-const getQuantidadeDisponivel = async (liberacaoId: string): Promise<number> => {
-  try {
-    const { data, error } = await supabase.rpc('get_quantidade_disponivel_liberacao', {
-      liberacao_uuid: liberacaoId
-    });
-    
-    if (error) {
-      console.error('Erro ao buscar quantidade disponível:', error);
-      return 0;
-    }
-    
-    return data || 0;
-  } catch (error) {
-    console.error('Erro ao buscar quantidade disponível:', error);
-    return 0;
-  }
-};
-
 const parseDate = (d: string) => {
   const [dd, mm, yyyy] = d.split("/");
   return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
 };
 
-type AgendamentoStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
+// 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
+type AgendamentoStatus = "pendente" | "em_andamento" | "concluido" | "cancelado";
 
-// 🔥 VALIDAÇÃO CORRIGIDA - REMOVIDO HORÁRIO + VALIDAÇÃO DE QUANTIDADE
+// 🔄 VALIDAÇÃO ATUALIZADA
 const validateAgendamento = (ag: any, quantidadeDisponivel: number) => {
   const errors = [];
   if (!ag.liberacao) errors.push("Liberação");
@@ -187,7 +169,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
+  // 🔄 QUERY DE AGENDAMENTOS ATUALIZADA
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -208,6 +190,8 @@ const Agendamentos = () => {
             id,
             pedido_interno,
             quantidade_liberada,
+            quantidade_retirada,
+            status,
             cliente_id,
             clientes(nome, cnpj_cpf),
             produto:produtos(id, nome),
@@ -226,7 +210,7 @@ const Agendamentos = () => {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 30000, // 🔄 ATUALIZAÇÃO AUTOMÁTICA
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
@@ -249,7 +233,7 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔥 MAPEAMENTO CORRIGIDO - REMOVIDO HORÁRIO
+  // 🔄 MAPEAMENTO ATUALIZADO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => ({
@@ -271,10 +255,14 @@ const Agendamentos = () => {
       produto_id: item.liberacao?.produto?.id,
       armazem_id: item.liberacao?.armazem?.id,
       liberacao_id: item.liberacao?.id,
+      // 📊 NOVOS CAMPOS PARA MELHOR VISUALIZAÇÃO
+      liberacao_status: item.liberacao?.status,
+      quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
+      quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
     }));
   }, [agendamentosData]);
 
-  // 🔥 ESTADO DO FORM CORRIGIDO - REMOVIDO HORÁRIO + ADICIONADO ESTADOS DE VALIDAÇÃO
+  // Estado do formulário
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     liberacao: "",
@@ -288,12 +276,13 @@ const Agendamentos = () => {
   });
   const [formError, setFormError] = useState("");
   
-  // 🆕 NOVOS ESTADOS PARA VALIDAÇÃO DE QUANTIDADE
+  // Estados para validação de quantidade
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  const { data: liberacoesPendentes } = useQuery({
-    queryKey: ["liberacoes-pendentes", currentCliente?.id],
+  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA
+  const { data: liberacoesDisponiveis } = useQuery({
+    queryKey: ["liberacoes-disponiveis", currentCliente?.id],
     queryFn: async () => {
       let query = supabase
         .from("liberacoes")
@@ -302,12 +291,13 @@ const Agendamentos = () => {
           pedido_interno,
           quantidade_liberada,
           quantidade_retirada,
+          status,
           cliente_id,
           clientes(nome),
           produto:produtos(nome),
           armazem:armazens(id, cidade, estado, nome)
         `)
-        .in("status", ["pendente", "parcial"])
+        .in("status", ["disponivel", "agendada"]) // 🔄 NOVOS STATUS
         .order("created_at", { ascending: false });
 
       if (userRole === "cliente" && currentCliente?.id) {
@@ -315,7 +305,12 @@ const Agendamentos = () => {
       }
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // 📊 FILTRAR APENAS LIBERAÇÕES COM QUANTIDADE DISPONÍVEL
+      return (data || []).filter((lib: any) => {
+        const disponivel = lib.quantidade_liberada - (lib.quantidade_retirada || 0);
+        return disponivel > 0;
+      });
     },
     enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
@@ -330,7 +325,6 @@ const Agendamentos = () => {
     }
   }, [canCreate]);
 
-  // 🔥 RESET FORM CORRIGIDO - REMOVIDO HORÁRIO + RESET ESTADOS DE VALIDAÇÃO
   const resetFormNovoAgendamento = () => {
     setNovoAgendamento({
       liberacao: "",
@@ -347,7 +341,7 @@ const Agendamentos = () => {
     setValidandoQuantidade(false);
   };
 
-  // 🆕 FUNÇÃO PARA ATUALIZAR QUANTIDADE DISPONÍVEL
+  // 🔄 FUNÇÃO PARA CALCULAR QUANTIDADE DISPONÍVEL
   const atualizarQuantidadeDisponivel = async (liberacaoId: string) => {
     if (!liberacaoId) {
       setQuantidadeDisponivel(0);
@@ -356,17 +350,22 @@ const Agendamentos = () => {
     
     setValidandoQuantidade(true);
     try {
-      const disponivel = await getQuantidadeDisponivel(liberacaoId);
-      setQuantidadeDisponivel(disponivel);
+      const liberacao = liberacoesDisponiveis?.find(lib => lib.id === liberacaoId);
+      if (liberacao) {
+        const disponivel = liberacao.quantidade_liberada - (liberacao.quantidade_retirada || 0);
+        setQuantidadeDisponivel(Math.max(0, disponivel));
+      } else {
+        setQuantidadeDisponivel(0);
+      }
     } catch (error) {
-      console.error('Erro ao buscar quantidade disponível:', error);
+      console.error('Erro ao calcular quantidade disponível:', error);
       setQuantidadeDisponivel(0);
     } finally {
       setValidandoQuantidade(false);
     }
   };
 
-  // 🔥 FUNÇÃO CREATE CORRIGIDA - REMOVIDO HORÁRIO + VALIDAÇÃO DE QUANTIDADE
+  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA
   const handleCreateAgendamento = async () => {
     setFormError("");
     const erros = validateAgendamento(novoAgendamento, quantidadeDisponivel);
@@ -389,7 +388,7 @@ const Agendamentos = () => {
       const placaSemMascara = (novoAgendamento.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
       const cpfSemMascara = (novoAgendamento.documento ?? "").replace(/\D/g, "");
 
-      const selectedLiberacao = liberacoesPendentes?.find((l) => l.id === novoAgendamento.liberacao);
+      const selectedLiberacao = liberacoesDisponiveis?.find((l) => l.id === novoAgendamento.liberacao);
       const clienteIdDaLiberacao = selectedLiberacao?.cliente_id || null;
       const armazemIdDaLiberacao = selectedLiberacao?.armazem?.id || null;
 
@@ -452,7 +451,8 @@ const Agendamentos = () => {
       resetFormNovoAgendamento();
       setDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["agendamentos"] });
-      queryClient.invalidateQueries({ queryKey: ["liberacoes-pendentes"] });
+      queryClient.invalidateQueries({ queryKey: ["liberacoes-disponiveis"] });
+      queryClient.invalidateQueries({ queryKey: ["liberacoes"] }); // 🔄 ATUALIZAR LIBERAÇÕES TAMBÉM
 
     } catch (err: any) {
       setFormError(err.message || "Erro desconhecido.");
@@ -479,7 +479,7 @@ const Agendamentos = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const allStatuses: AgendamentoStatus[] = ["pendente", "confirmado", "concluido", "cancelado"];
+  const allStatuses: AgendamentoStatus[] = ["pendente", "em_andamento", "concluido", "cancelado"];
   const toggleStatus = (st: AgendamentoStatus) => setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const clearFilters = () => { setSearch(""); setSelectedStatuses([]); setDateFrom(""); setDateTo(""); };
 
@@ -509,7 +509,7 @@ const Agendamentos = () => {
   const activeAdvancedCount = (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
 
   // Verificar se há liberações disponíveis
-  const temLiberacoesDisponiveis = liberacoesPendentes && liberacoesPendentes.length > 0;
+  const temLiberacoesDisponiveis = liberacoesDisponiveis && liberacoesDisponiveis.length > 0;
 
   // 🎯 LÓGICA PARA RENDERIZAR CARD PERSONALIZADO BASEADO NO PERFIL
   const renderEmptyLiberacoesCard = () => {
@@ -517,14 +517,14 @@ const Agendamentos = () => {
       return (
         <EmptyStateCardWithoutAction
           title="Nenhuma liberação disponível"
-          description="Você não possui liberações pendentes no momento. Se acredita que isso é um erro, entre em contato com a equipe de operações para verificar o status dos seus pedidos."
+          description="Você não possui liberações disponíveis para agendamento no momento. Se acredita que isso é um erro, entre em contato com a equipe de operações para verificar o status dos seus pedidos."
         />
       );
     } else {
       return (
         <EmptyStateCardWithAction
           title="Nenhuma liberação disponível"
-          description="Para criar agendamentos, você precisa ter liberações pendentes ou parciais primeiro."
+          description="Para criar agendamentos, você precisa ter liberações disponíveis primeiro."
           actionText="Criar Liberação"
           actionUrl="https://logi-sys-shiy.vercel.app/liberacoes?modal=novo"
         />
@@ -532,11 +532,42 @@ const Agendamentos = () => {
     }
   };
 
-  // 🆕 VALIDAÇÃO EM TEMPO REAL DA QUANTIDADE
+  // Validação em tempo real da quantidade
   const quantidadeValida = useMemo(() => {
     const qtd = Number(novoAgendamento.quantidade);
     return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeDisponivel;
   }, [novoAgendamento.quantidade, quantidadeDisponivel]);
+
+  // 🎨 FUNÇÃO PARA CORES DOS STATUS DE AGENDAMENTO
+  const getStatusColor = (status: AgendamentoStatus) => {
+    switch (status) {
+      case "pendente":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "em_andamento":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case "concluido":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      case "cancelado":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  const getStatusLabel = (status: AgendamentoStatus) => {
+    switch (status) {
+      case "pendente":
+        return "Pendente";
+      case "em_andamento":
+        return "Em Andamento";
+      case "concluido":
+        return "Concluído";
+      case "cancelado":
+        return "Cancelado";
+      default:
+        return status;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -595,11 +626,11 @@ const Agendamentos = () => {
                           <SelectValue placeholder="Selecione a liberação" />
                         </SelectTrigger>
                         <SelectContent>
-                          {liberacoesPendentes?.map((lib: any) => {
-                            const disponivel = lib.quantidade_liberada - lib.quantidade_retirada;
+                          {liberacoesDisponiveis?.map((lib: any) => {
+                            const disponivel = lib.quantidade_liberada - (lib.quantidade_retirada || 0);
                             return (
                               <SelectItem key={lib.id} value={lib.id}>
-                                {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
+                                {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel.toLocaleString('pt-BR')}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
                               </SelectItem>
                             );
                           })}
@@ -612,11 +643,9 @@ const Agendamentos = () => {
 
                   {temLiberacoesDisponiveis && (
                     <>
-                      {/* 🔥 GRID CORRIGIDO - REMOVIDO CAMPO HORÁRIO */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="quantidade">Quantidade (t) *</Label>
-                          {/* 🆕 INDICADOR DE QUANTIDADE DISPONÍVEL */}
                           {novoAgendamento.liberacao && (
                             <div className="text-sm text-muted-foreground mb-1">
                               {validandoQuantidade ? (
@@ -648,11 +677,10 @@ const Agendamentos = () => {
                                 : ""
                             }
                           />
-                          {/* 🆕 MENSAGEM DE VALIDAÇÃO EM TEMPO REAL */}
                           {novoAgendamento.quantidade && !quantidadeValida && (
                             <p className="text-xs text-red-600">
                               {Number(novoAgendamento.quantidade) > quantidadeDisponivel 
-                                ? `Quantidade excede o disponível (${quantidadeDisponivel}t)`
+                                ? `Quantidade excede o disponível (${quantidadeDisponivel.toLocaleString('pt-BR')}t)`
                                 : "Quantidade deve ser maior que zero"
                               }
                             </p>
@@ -779,13 +807,7 @@ const Agendamentos = () => {
             <div className="flex flex-wrap gap-2 mt-1">
               {allStatuses.map((st) => {
                 const active = selectedStatuses.includes(st);
-                const label = st === "pendente"
-                  ? "Pendente"
-                  : st === "confirmado"
-                    ? "Confirmado"
-                    : st === "concluido"
-                      ? "Concluído"
-                      : "Cancelado";
+                const label = getStatusLabel(st);
                 return (
                   <Badge key={st} onClick={() => toggleStatus(st)}
                     className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
@@ -818,21 +840,39 @@ const Agendamentos = () => {
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                       <Calendar className="h-5 w-5 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
-                      <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade}t • {ag.armazem}</p>
+                      <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade.toLocaleString('pt-BR')}t • {ag.armazem}</p>
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
                       <p className="text-xs text-muted-foreground">Data: {ag.data}</p>
+                      
+                      {/* 📊 INFORMAÇÕES ADICIONAIS DA LIBERAÇÃO */}
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        <span>Liberação: </span>
+                        <span className="font-medium text-foreground">
+                          {ag.quantidade_liberada.toLocaleString('pt-BR')}t liberada
+                        </span>
+                        <span> • </span>
+                        <span className="font-medium text-foreground">
+                          {ag.quantidade_retirada.toLocaleString('pt-BR')}t retirada
+                        </span>
+                        <span> • Status: </span>
+                        <span className={`font-medium ${
+                          ag.liberacao_status === 'disponivel' ? 'text-green-600' :
+                          ag.liberacao_status === 'agendada' ? 'text-blue-600' :
+                          'text-gray-600'
+                        }`}>
+                          {ag.liberacao_status === 'disponivel' ? 'Disponível' :
+                           ag.liberacao_status === 'agendada' ? 'Agendada' :
+                           ag.liberacao_status === 'esgotada' ? 'Esgotada' : ag.liberacao_status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <Badge
-                    variant={
-                      ag.status === "confirmado" ? "default" :
-                        ag.status === "pendente" ? "secondary" :
-                          ag.status === "concluido" ? "default" : "destructive"
-                    }
-                  >
-                    {ag.status === "confirmado" ? "Confirmado" : ag.status === "pendente" ? "Pendente" : ag.status === "concluido" ? "Concluído" : "Cancelado"}
+                  
+                  {/* 🎨 BADGE DE STATUS ATUALIZADO */}
+                  <Badge className={getStatusColor(ag.status)}>
+                    {getStatusLabel(ag.status)}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pt-2">
