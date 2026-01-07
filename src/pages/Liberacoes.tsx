@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
-type StatusLiberacao = "disponivel" | "agendada" | "esgotada";
+type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
 interface LiberacaoItem {
   id: string;
@@ -30,7 +30,9 @@ interface LiberacaoItem {
   armazem_id?: string;
   // 📊 NOVOS CAMPOS PARA MELHOR VISUALIZAÇÃO
   quantidadeDisponivel: number;
+  quantidadeAgendada: number;
   percentualRetirado: number;
+  percentualAgendado: number;
 }
 
 // Componente para exibir quando não há dados disponíveis
@@ -106,7 +108,7 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY ATUALIZADA PARA NOVOS CAMPOS
+  // 🔄 QUERY ATUALIZADA PARA BUSCAR QUANTIDADE AGENDADA
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -141,14 +143,44 @@ const Liberacoes = () => {
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
+  // 📊 BUSCAR QUANTIDADES AGENDADAS
+  const { data: agendamentosData } = useQuery({
+    queryKey: ["agendamentos-totais"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select(`
+          liberacao_id,
+          quantidade,
+          status
+        `)
+        .eq("status", "pendente");
+      
+      if (error) throw error;
+      
+      // Agrupar por liberacao_id
+      const agrupados = (data || []).reduce((acc: Record<string, number>, item) => {
+        acc[item.liberacao_id] = (acc[item.liberacao_id] || 0) + Number(item.quantidade);
+        return acc;
+      }, {});
+      
+      return agrupados;
+    },
+    refetchInterval: 30000,
+  });
+
   // 📊 MAPEAMENTO ATUALIZADO COM NOVOS CÁLCULOS
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     return liberacoesData.map((item: any) => {
       const quantidadeRetirada = item.quantidade_retirada || 0;
-      const quantidadeDisponivel = Math.max(0, item.quantidade_liberada - quantidadeRetirada);
+      const quantidadeAgendada = agendamentosData?.[item.id] || 0;
+      const quantidadeDisponivel = Math.max(0, item.quantidade_liberada - quantidadeRetirada - quantidadeAgendada);
       const percentualRetirado = item.quantidade_liberada > 0 
         ? Math.round((quantidadeRetirada / item.quantidade_liberada) * 100) 
+        : 0;
+      const percentualAgendado = item.quantidade_liberada > 0 
+        ? Math.round((quantidadeAgendada / item.quantidade_liberada) * 100) 
         : 0;
 
       return {
@@ -157,8 +189,10 @@ const Liberacoes = () => {
         cliente: item.clientes?.nome || "N/A",
         quantidade: item.quantidade_liberada,
         quantidadeRetirada,
+        quantidadeAgendada,
         quantidadeDisponivel,
         percentualRetirado,
+        percentualAgendado,
         pedido: item.pedido_interno,
         data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
@@ -167,7 +201,7 @@ const Liberacoes = () => {
         armazem_id: item.armazem?.id,
       };
     });
-  }, [liberacoesData]);
+  }, [liberacoesData, agendamentosData]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novaLiberacao, setNovaLiberacao] = useState({
@@ -231,7 +265,7 @@ const Liberacoes = () => {
   const [dateTo, setDateTo] = useState("");
   const [selectedArmazens, setSelectedArmazens] = useState<string[]>([]);
 
-  const allStatuses: StatusLiberacao[] = ["disponivel", "agendada", "esgotada"];
+  const allStatuses: StatusLiberacao[] = ["disponivel", "parcialmente_agendada", "totalmente_agendada"];
   const allArmazens = useMemo(
     () => Array.from(new Set(liberacoes.map((l) => l.armazem).filter(Boolean))) as string[],
     [liberacoes]
@@ -343,15 +377,15 @@ const Liberacoes = () => {
     }
   };
 
-  // 🎨 FUNÇÃO PARA CORES DOS STATUS
+  // 🎨 FUNÇÃO PARA CORES DOS STATUS ATUALIZADA
   const getStatusColor = (status: StatusLiberacao) => {
     switch (status) {
       case "disponivel":
         return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-      case "agendada":
+      case "parcialmente_agendada":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case "totalmente_agendada":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
-      case "esgotada":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
     }
@@ -361,10 +395,10 @@ const Liberacoes = () => {
     switch (status) {
       case "disponivel":
         return "Disponível";
-      case "agendada":
-        return "Agendada";
-      case "esgotada":
-        return "Esgotada";
+      case "parcialmente_agendada":
+        return "Parcialmente Agendada";
+      case "totalmente_agendada":
+        return "Totalmente Agendada";
       default:
         return status;
     }
@@ -599,32 +633,81 @@ const Liberacoes = () => {
                     <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
                     <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
                     
-                    {/* 📊 NOVA SEÇÃO COM INFORMAÇÕES DETALHADAS */}
+                    {/* 📊 NOVA SEÇÃO COM INFORMAÇÕES DETALHADAS ATUALIZADAS */}
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center gap-4 text-xs">
                         <span className="text-muted-foreground">
                           <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
                         </span>
                         <span className="text-muted-foreground">
-                          <span className="font-medium text-foreground">Retirada:</span> {lib.quantidadeRetirada}t
+                          <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
+                        </span>
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
                         </span>
                         <span className="text-muted-foreground">
                           <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
                         </span>
                       </div>
                       
-                      {/* 📈 BARRA DE PROGRESSO */}
+                      {/* 📈 BARRAS DE PROGRESSO ATUALIZADAS */}
                       {lib.quantidade > 0 && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                            <div 
-                              className="bg-gradient-primary h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${lib.percentualRetirado}%` }}
-                            ></div>
+                        <div className="space-y-1">
+                          {/* Barra de Agendamentos */}
+                          {lib.quantidadeAgendada > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-blue-600 font-medium w-16">Agendada:</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                <div 
+                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${lib.percentualAgendado}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-muted-foreground font-medium w-8">
+                                {lib.percentualAgendado}%
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Barra de Retiradas */}
+                          {lib.quantidadeRetirada > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-orange-600 font-medium w-16">Retirada:</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                <div 
+                                  className="bg-orange-500 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${lib.percentualRetirado}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-muted-foreground font-medium w-8">
+                                {lib.percentualRetirado}%
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Barra Combinada - Total de Progresso */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-600 font-medium w-16">Total:</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 relative">
+                              {/* Agendada (azul) */}
+                              <div 
+                                className="bg-blue-500 h-2 rounded-l-full absolute left-0 transition-all duration-300" 
+                                style={{ width: `${lib.percentualAgendado}%` }}
+                              ></div>
+                              {/* Retirada (laranja) - começa onde agendada termina */}
+                              <div 
+                                className="bg-orange-500 h-2 absolute transition-all duration-300" 
+                                style={{ 
+                                  left: `${lib.percentualAgendado}%`,
+                                  width: `${lib.percentualRetirado}%`,
+                                  borderRadius: lib.percentualAgendado + lib.percentualRetirado >= 100 ? '0 0.25rem 0.25rem 0' : '0'
+                                }}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-muted-foreground font-medium w-8">
+                              {lib.percentualAgendado + lib.percentualRetirado}%
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {lib.percentualRetirado}%
-                          </span>
                         </div>
                       )}
                     </div>
