@@ -280,7 +280,7 @@ const Agendamentos = () => {
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA
+  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA COM CÁLCULO CORRETO
   const { data: liberacoesDisponiveis } = useQuery({
     queryKey: ["liberacoes-disponiveis", currentCliente?.id],
     queryFn: async () => {
@@ -297,20 +297,47 @@ const Agendamentos = () => {
           produto:produtos(nome),
           armazem:armazens(id, cidade, estado, nome)
         `)
-        .in("status", ["disponivel", "agendada"]) // 🔄 NOVOS STATUS
+        .in("status", ["disponivel", "agendada"])
         .order("created_at", { ascending: false });
 
       if (userRole === "cliente" && currentCliente?.id) {
         query = query.eq("cliente_id", currentCliente.id);
       }
+      
       const { data, error } = await query;
       if (error) throw error;
       
-      // 📊 FILTRAR APENAS LIBERAÇÕES COM QUANTIDADE DISPONÍVEL
-      return (data || []).filter((lib: any) => {
-        const disponivel = lib.quantidade_liberada - (lib.quantidade_retirada || 0);
-        return disponivel > 0;
-      });
+      if (!data) return [];
+
+      // 📊 CALCULAR DISPONIBILIDADE REAL PARA CADA LIBERAÇÃO
+      const liberacoesComDisponibilidade = await Promise.all(
+        data.map(async (lib: any) => {
+          // Buscar agendamentos pendentes para esta liberação
+          const { data: agendamentosPendentes } = await supabase
+            .from("agendamentos")
+            .select("quantidade")
+            .eq("liberacao_id", lib.id)
+            .in("status", ["pendente", "em_andamento"]);
+
+          const totalAgendado = (agendamentosPendentes || []).reduce(
+            (total, ag) => total + (ag.quantidade || 0), 
+            0
+          );
+
+          const disponivel = Math.max(
+            0, 
+            lib.quantidade_liberada - (lib.quantidade_retirada || 0) - totalAgendado
+          );
+
+          return {
+            ...lib,
+            quantidade_disponivel_real: disponivel
+          };
+        })
+      );
+      
+      // 🔄 FILTRAR APENAS LIBERAÇÕES COM QUANTIDADE DISPONÍVEL > 0
+      return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
     },
     enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
@@ -341,7 +368,7 @@ const Agendamentos = () => {
     setValidandoQuantidade(false);
   };
 
-  // 🔄 FUNÇÃO PARA CALCULAR QUANTIDADE DISPONÍVEL
+  // 🔄 FUNÇÃO CORRIGIDA PARA CALCULAR QUANTIDADE DISPONÍVEL
   const atualizarQuantidadeDisponivel = async (liberacaoId: string) => {
     if (!liberacaoId) {
       setQuantidadeDisponivel(0);
@@ -350,13 +377,47 @@ const Agendamentos = () => {
     
     setValidandoQuantidade(true);
     try {
+      // 1. Buscar dados da liberação
       const liberacao = liberacoesDisponiveis?.find(lib => lib.id === liberacaoId);
-      if (liberacao) {
-        const disponivel = liberacao.quantidade_liberada - (liberacao.quantidade_retirada || 0);
-        setQuantidadeDisponivel(Math.max(0, disponivel));
-      } else {
+      if (!liberacao) {
         setQuantidadeDisponivel(0);
+        return;
       }
+
+      // 2. Buscar agendamentos pendentes/em_andamento para esta liberação
+      const { data: agendamentosPendentes, error } = await supabase
+        .from("agendamentos")
+        .select("quantidade")
+        .eq("liberacao_id", liberacaoId)
+        .in("status", ["pendente", "em_andamento"]); // Não incluir "concluido" nem "cancelado"
+
+      if (error) {
+        console.error('Erro ao buscar agendamentos pendentes:', error);
+        setQuantidadeDisponivel(0);
+        return;
+      }
+
+      // 3. Calcular total agendado (pendente + em_andamento)
+      const totalAgendado = (agendamentosPendentes || []).reduce(
+        (total, agendamento) => total + (agendamento.quantidade || 0), 
+        0
+      );
+
+      // 4. Calcular disponível = liberada - retirada - agendado
+      const quantidadeLiberada = liberacao.quantidade_liberada || 0;
+      const quantidadeRetirada = liberacao.quantidade_retirada || 0;
+      const disponivel = Math.max(0, quantidadeLiberada - quantidadeRetirada - totalAgendado);
+      
+      console.log(`📊 Cálculo de disponibilidade:`, {
+        liberacaoId,
+        quantidadeLiberada,
+        quantidadeRetirada, 
+        totalAgendado,
+        disponivel
+      });
+
+      setQuantidadeDisponivel(disponivel);
+      
     } catch (error) {
       console.error('Erro ao calcular quantidade disponível:', error);
       setQuantidadeDisponivel(0);
@@ -627,7 +688,8 @@ const Agendamentos = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {liberacoesDisponiveis?.map((lib: any) => {
-                            const disponivel = lib.quantidade_liberada - (lib.quantidade_retirada || 0);
+                            const disponivel = lib.quantidade_disponivel_real || 
+                              (lib.quantidade_liberada - (lib.quantidade_retirada || 0));
                             return (
                               <SelectItem key={lib.id} value={lib.id}>
                                 {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel.toLocaleString('pt-BR')}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
