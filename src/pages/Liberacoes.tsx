@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -621,77 +621,64 @@ const Liberacoes = () => {
         {filteredLiberacoes.map((lib) => (
           <Card key={lib.id} className="transition-all hover:shadow-md">
             <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  {/* badge ícone à esquerda com cor do Estoque */}
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                    <ClipboardList className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{lib.produto}</h3>
-                    <p className="text-sm text-muted-foreground">{lib.cliente}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
-                    <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
-                    
-                    {/* 📊 NOVA SEÇÃO COM INFORMAÇÕES DETALHADAS ATUALIZADAS */}
-                    <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
-                        </span>
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
-                        </span>
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
-                        </span>
-                        <span className="text-muted-foreground">
-                          <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
-                        </span>
-                      </div>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    {/* badge ícone à esquerda com cor do Estoque */}
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                      <ClipboardList className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground">{lib.produto}</h3>
+                      <p className="text-sm text-muted-foreground">{lib.cliente}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
+                      <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
                       
-                      {/* 📈 BARRAS DE PROGRESSO SIMPLIFICADAS */}
-                      {lib.quantidade > 0 && (
-                        <div className="space-y-1">
-                          {/* Barra de Agendamentos - SEMPRE VISÍVEL */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-blue-600 font-medium w-16">Agendada:</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                              <div 
-                                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                                style={{ width: `${lib.percentualAgendado}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs text-muted-foreground font-medium w-8">
-                              {lib.percentualAgendado}%
-                            </span>
-                          </div>
-                          
-                          {/* Barra de Retiradas - APENAS SE HOUVER RETIRADAS */}
-                          {lib.quantidadeRetirada > 0 && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-orange-600 font-medium w-16">Retirada:</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                                <div 
-                                  className="bg-orange-500 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${lib.percentualRetirado}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs text-muted-foreground font-medium w-8">
-                                {lib.percentualRetirado}%
-                              </span>
-                            </div>
-                          )}
+                      {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS */}
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          <span>
+                            <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
+                          </span>
+                          <span>
+                            <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
+                          </span>
+                          <span>
+                            <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
+                          </span>
+                          <span>
+                            <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* 🎨 BADGE DE STATUS ATUALIZADO */}
+                  <Badge className={getStatusColor(lib.status)}>
+                    {getStatusLabel(lib.status)}
+                  </Badge>
                 </div>
-                
-                {/* 🎨 BADGE DE STATUS ATUALIZADO */}
-                <Badge className={getStatusColor(lib.status)}>
-                  {getStatusLabel(lib.status)}
-                </Badge>
+
+                {/* 📊 BARRA DE AGENDAMENTOS - SEMPRE VISÍVEL COM LAYOUT ESTILIZADO */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs text-blue-600 font-medium w-20">Agendada:</span>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${lib.percentualAgendado}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-muted-foreground font-medium w-12">
+                      {lib.percentualAgendado}%
+                    </span>
+                    <span className="text-xs text-blue-600 font-medium">
+                      {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada}t agendada` : 'Nenhum agendamento'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
