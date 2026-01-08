@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Package, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -169,7 +169,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY DE AGENDAMENTOS ATUALIZADA
+  // 🔄 QUERY DE AGENDAMENTOS ATUALIZADA COM CARREGAMENTOS
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -186,6 +186,7 @@ const Agendamentos = () => {
           status,
           observacoes,
           created_at,
+          updated_at,
           liberacao:liberacoes(
             id,
             pedido_interno,
@@ -196,6 +197,27 @@ const Agendamentos = () => {
             clientes(nome, cnpj_cpf),
             produto:produtos(id, nome),
             armazem:armazens(id, nome, cidade, estado)
+          ),
+          carregamento:carregamentos(
+            id,
+            etapa_atual,
+            data_chegada,
+            data_inicio,
+            data_carregando,
+            data_finalizacao,
+            data_documentacao,
+            observacao_chegada,
+            observacao_inicio,
+            observacao_carregando,
+            observacao_finalizacao,
+            observacao_documentacao,
+            url_foto_chegada,
+            url_foto_inicio,
+            url_foto_carregando,
+            url_foto_finalizacao,
+            url_nota_fiscal,
+            url_xml,
+            numero_nf
           )
         `)
         .order("created_at", { ascending: false });
@@ -233,7 +255,7 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO ATUALIZADO
+  // 🔄 MAPEAMENTO ATUALIZADO COM CARREGAMENTOS
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => ({
@@ -259,6 +281,29 @@ const Agendamentos = () => {
       liberacao_status: item.liberacao?.status,
       quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
       quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
+      updated_at: item.updated_at,
+      // 🚛 DADOS DO CARREGAMENTO
+      carregamento: item.carregamento ? {
+        id: item.carregamento.id,
+        etapa_atual: item.carregamento.etapa_atual,
+        data_chegada: item.carregamento.data_chegada,
+        data_inicio: item.carregamento.data_inicio,
+        data_carregando: item.carregamento.data_carregando,
+        data_finalizacao: item.carregamento.data_finalizacao,
+        data_documentacao: item.carregamento.data_documentacao,
+        observacao_chegada: item.carregamento.observacao_chegada,
+        observacao_inicio: item.carregamento.observacao_inicio,
+        observacao_carregando: item.carregamento.observacao_carregando,
+        observacao_finalizacao: item.carregamento.observacao_finalizacao,
+        observacao_documentacao: item.carregamento.observacao_documentacao,
+        url_foto_chegada: item.carregamento.url_foto_chegada,
+        url_foto_inicio: item.carregamento.url_foto_inicio,
+        url_foto_carregando: item.carregamento.url_foto_carregando,
+        url_foto_finalizacao: item.carregamento.url_foto_finalizacao,
+        url_nota_fiscal: item.carregamento.url_nota_fiscal,
+        url_xml: item.carregamento.url_xml,
+        numero_nf: item.carregamento.numero_nf,
+      } : null,
     }));
   }, [agendamentosData]);
 
@@ -657,6 +702,41 @@ const Agendamentos = () => {
     }
   };
 
+  // 🚛 FUNÇÃO PARA OBTER ETAPA ATUAL DO CARREGAMENTO
+  const getEtapaLabel = (etapa: number) => {
+    switch (etapa) {
+      case 1: return "Chegada";
+      case 2: return "Início";
+      case 3: return "Carregando";
+      case 4: return "Finalização";
+      case 5: return "Documentação";
+      default: return `Etapa ${etapa}`;
+    }
+  };
+
+  const getEtapaColor = (etapa: number) => {
+    switch (etapa) {
+      case 1: return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+      case 2: return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+      case 3: return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+      case 4: return "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400";
+      case 5: return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    }
+  };
+
+  // 🚛 FUNÇÃO PARA FORMATAR DATA
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "--";
+    return new Date(dateString).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -923,7 +1003,7 @@ const Agendamentos = () => {
         {filteredAgendamentos.map((ag) => (
           <Card key={ag.id} className="transition-all hover:shadow-md">
             <CardContent className="p-5">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
@@ -954,10 +1034,22 @@ const Agendamentos = () => {
                   </div>
                   
                   {/* 🎨 BADGE DE STATUS ATUALIZADO */}
-                  <Badge className={getStatusColor(ag.status)}>
-                    {getStatusLabel(ag.status)}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={getStatusColor(ag.status)}>
+                      {getStatusLabel(ag.status)}
+                    </Badge>
+                    
+                    {/* 🚛 BADGE DE ETAPA DO CARREGAMENTO */}
+                    {ag.carregamento && (
+                      <Badge className={getEtapaColor(ag.carregamento.etapa_atual)}>
+                        <Truck className="h-3 w-3 mr-1" />
+                        {getEtapaLabel(ag.carregamento.etapa_atual)}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
+                {/* 📋 INFORMAÇÕES BÁSICAS DO AGENDAMENTO */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pt-2">
                   <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data}</span></div>
                   <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{formatPlaca(ag.placa)}</span></div>
@@ -966,6 +1058,104 @@ const Agendamentos = () => {
                 <div className="grid grid-cols-1 md:grid-cols-1 gap-4 text-sm">
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{formatCPF(ag.documento)}</span></div>
                 </div>
+
+                {/* 🚛 INFORMAÇÕES DETALHADAS DO CARREGAMENTO */}
+                {ag.carregamento && (
+                  <div className="border-t pt-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Package className="h-4 w-4" />
+                      Detalhes do Carregamento
+                    </div>
+                    
+                    {/* 📅 CRONOGRAMA DE ETAPAS */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                      {ag.carregamento.data_chegada && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Chegada:</span>
+                          <span className="font-medium">{formatDateTime(ag.carregamento.data_chegada)}</span>
+                        </div>
+                      )}
+                      {ag.carregamento.data_inicio && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Início:</span>
+                          <span className="font-medium">{formatDateTime(ag.carregamento.data_inicio)}</span>
+                        </div>
+                      )}
+                      {ag.carregamento.data_carregando && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Carregando:</span>
+                          <span className="font-medium">{formatDateTime(ag.carregamento.data_carregando)}</span>
+                        </div>
+                      )}
+                      {ag.carregamento.data_finalizacao && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Finalização:</span>
+                          <span className="font-medium">{formatDateTime(ag.carregamento.data_finalizacao)}</span>
+                        </div>
+                      )}
+                      {ag.carregamento.data_documentacao && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Documentação:</span>
+                          <span className="font-medium">{formatDateTime(ag.carregamento.data_documentacao)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 📄 DOCUMENTOS */}
+                    {(ag.carregamento.numero_nf || ag.carregamento.url_nota_fiscal || ag.carregamento.url_xml) && (
+                      <div className="flex flex-wrap items-center gap-4 text-xs">
+                        {ag.carregamento.numero_nf && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">NF:</span>
+                            <span className="font-medium">{ag.carregamento.numero_nf}</span>
+                          </div>
+                        )}
+                        {ag.carregamento.url_nota_fiscal && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => window.open(ag.carregamento?.url_nota_fiscal, '_blank')}
+                          >
+                            Ver NF
+                          </Button>
+                        )}
+                        {ag.carregamento.url_xml && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => window.open(ag.carregamento?.url_xml, '_blank')}
+                          >
+                            Ver XML
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 📝 OBSERVAÇÕES MAIS RECENTES */}
+                    {(() => {
+                      const observacoes = [
+                        { etapa: 'Documentação', obs: ag.carregamento.observacao_documentacao },
+                        { etapa: 'Finalização', obs: ag.carregamento.observacao_finalizacao },
+                        { etapa: 'Carregando', obs: ag.carregamento.observacao_carregando },
+                        { etapa: 'Início', obs: ag.carregamento.observacao_inicio },
+                        { etapa: 'Chegada', obs: ag.carregamento.observacao_chegada },
+                      ].filter(item => item.obs);
+                      
+                      if (observacoes.length > 0) {
+                        const ultimaObs = observacoes[0];
+                        return (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Última observação ({ultimaObs.etapa}):</span>
+                            <p className="font-medium mt-1">{ultimaObs.obs}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
