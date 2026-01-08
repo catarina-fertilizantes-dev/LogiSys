@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, BarChart3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -169,7 +169,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY DE AGENDAMENTOS SIMPLIFICADA (SEM CARREGAMENTOS)
+  // 🔄 QUERY DE AGENDAMENTOS COM CARREGAMENTOS PARA BARRA DE PROGRESSO
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -197,6 +197,10 @@ const Agendamentos = () => {
             clientes(nome, cnpj_cpf),
             produto:produtos(id, nome),
             armazem:armazens(id, nome, cidade, estado)
+          ),
+          carregamento:carregamentos(
+            id,
+            etapa_atual
           )
         `)
         .order("created_at", { ascending: false });
@@ -234,7 +238,7 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO SIMPLIFICADO (SEM CARREGAMENTOS)
+  // 🔄 MAPEAMENTO COM DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => ({
@@ -261,6 +265,9 @@ const Agendamentos = () => {
       quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
       quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
       updated_at: item.updated_at,
+      // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
+      etapa_carregamento: item.carregamento?.etapa_atual || 0,
+      percentual_carregamento: item.carregamento?.etapa_atual ? Math.round((item.carregamento.etapa_atual / 5) * 100) : 0,
     }));
   }, [agendamentosData]);
 
@@ -925,7 +932,7 @@ const Agendamentos = () => {
         {filteredAgendamentos.map((ag) => (
           <Card key={ag.id} className="transition-all hover:shadow-md">
             <CardContent className="p-5">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
@@ -935,7 +942,6 @@ const Agendamentos = () => {
                       <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
                       <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade.toLocaleString('pt-BR')}t • {ag.armazem}</p>
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
-                      <p className="text-xs text-muted-foreground">Data: {ag.data}</p>
                       
                       {/* 📊 INFORMAÇÕES DA LIBERAÇÃO */}
                       <div className="mt-2 text-xs text-muted-foreground">
@@ -961,15 +967,47 @@ const Agendamentos = () => {
                   </Badge>
                 </div>
 
-                {/* 📋 INFORMAÇÕES DO AGENDAMENTO */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm pt-2">
-                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><span>{ag.data}</span></div>
-                  <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{formatPlaca(ag.placa)}</span></div>
-                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{ag.motorista}</span></div>
+                {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{ag.data}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatPlaca(ag.placa)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{ag.motorista}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatCPF(ag.documento)}</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 text-sm">
-                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>{formatCPF(ag.documento)}</span></div>
-                </div>
+
+                {/* 📊 BARRA DE PROGRESSO DO CARREGAMENTO */}
+                {ag.etapa_carregamento > 0 && (
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                        <div 
+                          className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${ag.percentual_carregamento}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium w-12">
+                        {ag.percentual_carregamento}%
+                      </span>
+                      <span className="text-xs text-purple-600 font-medium">
+                        Etapa {ag.etapa_carregamento}/5
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
