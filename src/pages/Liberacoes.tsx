@@ -143,7 +143,7 @@ const Liberacoes = () => {
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
-  // 📊 BUSCAR QUANTIDADES AGENDADAS
+  // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO
   const { data: agendamentosData } = useQuery({
     queryKey: ["agendamentos-totais"],
     queryFn: async () => {
@@ -154,7 +154,7 @@ const Liberacoes = () => {
           quantidade,
           status
         `)
-        .eq("status", "pendente");
+        .in("status", ["pendente", "em_andamento"]); // ✅ INCLUIR AMBOS OS STATUS
       
       if (error) throw error;
       
