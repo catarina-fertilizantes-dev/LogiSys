@@ -241,34 +241,39 @@ const Agendamentos = () => {
   // 🔄 MAPEAMENTO COM DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
-    return agendamentosData.map((item: any) => ({
-      id: item.id,
-      cliente: item.liberacao?.clientes?.nome || "N/A",
-      produto: item.liberacao?.produto?.nome || "N/A",
-      quantidade: item.quantidade,
-      data: item.data_retirada
-        ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
-        : "",
-      placa: item.placa_caminhao || "N/A",
-      motorista: item.motorista_nome || "N/A",
-      documento: item.motorista_documento || "N/A",
-      pedido: item.liberacao?.pedido_interno || "N/A",
-      status: item.status as AgendamentoStatus,
-      armazem: item.liberacao?.armazem
-        ? `${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado} - ${item.liberacao.armazem.nome}`
-        : "N/A",
-      produto_id: item.liberacao?.produto?.id,
-      armazem_id: item.liberacao?.armazem?.id,
-      liberacao_id: item.liberacao?.id,
-      // 📊 CAMPOS PARA VISUALIZAÇÃO DA LIBERAÇÃO
-      liberacao_status: item.liberacao?.status,
-      quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
-      quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
-      updated_at: item.updated_at,
-      // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
-      etapa_carregamento: item.carregamento?.etapa_atual || 0,
-      percentual_carregamento: item.carregamento?.etapa_atual ? Math.round((item.carregamento.etapa_atual / 5) * 100) : 0,
-    }));
+    return agendamentosData.map((item: any) => {
+      const etapaAtual = item.carregamento?.etapa_atual || 0;
+      const percentualCarregamento = etapaAtual > 0 ? Math.round((etapaAtual / 5) * 100) : 0;
+      
+      return {
+        id: item.id,
+        cliente: item.liberacao?.clientes?.nome || "N/A",
+        produto: item.liberacao?.produto?.nome || "N/A",
+        quantidade: item.quantidade,
+        data: item.data_retirada
+          ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
+          : "",
+        placa: item.placa_caminhao || "N/A",
+        motorista: item.motorista_nome || "N/A",
+        documento: item.motorista_documento || "N/A",
+        pedido: item.liberacao?.pedido_interno || "N/A",
+        status: item.status as AgendamentoStatus,
+        armazem: item.liberacao?.armazem
+          ? `${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado} - ${item.liberacao.armazem.nome}`
+          : "N/A",
+        produto_id: item.liberacao?.produto?.id,
+        armazem_id: item.liberacao?.armazem?.id,
+        liberacao_id: item.liberacao?.id,
+        // 📊 CAMPOS PARA VISUALIZAÇÃO DA LIBERAÇÃO
+        liberacao_status: item.liberacao?.status,
+        quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
+        quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
+        updated_at: item.updated_at,
+        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
+        etapa_carregamento: etapaAtual,
+        percentual_carregamento: percentualCarregamento,
+      };
+    });
   }, [agendamentosData]);
 
   // Estado do formulário
@@ -987,27 +992,25 @@ const Agendamentos = () => {
                   </div>
                 </div>
 
-                {/* 📊 BARRA DE PROGRESSO DO CARREGAMENTO */}
-                {ag.etapa_carregamento > 0 && (
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div 
-                          className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                          style={{ width: `${ag.percentual_carregamento}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-muted-foreground font-medium w-12">
-                        {ag.percentual_carregamento}%
-                      </span>
-                      <span className="text-xs text-purple-600 font-medium">
-                        Etapa {ag.etapa_carregamento}/5
-                      </span>
+                {/* 📊 BARRA DE PROGRESSO DO CARREGAMENTO - SEMPRE VISÍVEL */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                    <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                      <div 
+                        className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${ag.percentual_carregamento}%` }}
+                      ></div>
                     </div>
+                    <span className="text-xs text-muted-foreground font-medium w-12">
+                      {ag.percentual_carregamento}%
+                    </span>
+                    <span className="text-xs text-purple-600 font-medium">
+                      {ag.etapa_carregamento > 0 ? `Etapa ${ag.etapa_carregamento}/5` : 'Aguardando'}
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
             </CardContent>
           </Card>
