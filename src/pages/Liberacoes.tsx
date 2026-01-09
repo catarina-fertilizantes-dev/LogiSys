@@ -196,7 +196,7 @@ const Liberacoes = () => {
         pedido: item.pedido_interno,
         data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
-        armazem: item.armazem ? `${item.armazem.cidade}/${item.armazem.estado} - ${item.armazem.nome}` : "N/A",
+        armazem: item.armazem ? `${item.armazem.nome} - ${item.armazem.cidade}/${item.armazem.estado}` : "N/A",
         produto_id: item.produto?.id,
         armazem_id: item.armazem?.id,
       };
@@ -629,12 +629,13 @@ const Liberacoes = () => {
                       <ClipboardList className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{lib.produto}</h3>
-                      <p className="text-sm text-muted-foreground">{lib.cliente}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{lib.pedido}</span></p>
-                      <p className="text-xs text-muted-foreground">Data: {lib.data} {lib.armazem && <>• {lib.armazem}</>}</p>
+                      {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
+                      <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
+                      <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
+                      <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
+                      <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
                       
-                      {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS */}
+                      {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS - MANTIDAS COMO ESTAVAM */}
                       <div className="mt-2 text-xs text-muted-foreground">
                         <div className="flex items-center gap-4">
                           <span>
