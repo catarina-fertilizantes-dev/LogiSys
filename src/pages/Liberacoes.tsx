@@ -664,7 +664,7 @@ const Liberacoes = () => {
                 <div className="pt-2 border-t">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs text-blue-600 font-medium w-20">Agendada:</span>
+                    <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
                     <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
                       <div 
                         className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
