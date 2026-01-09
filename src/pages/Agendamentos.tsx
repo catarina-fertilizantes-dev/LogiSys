@@ -9,9 +9,56 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, BarChart3 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, BarChart3, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+
+// 🎯 FUNÇÃO PARA DETERMINAR STATUS DO CARREGAMENTO
+const getStatusCarregamento = (etapaAtual: number) => {
+  if (etapaAtual === 0) {
+    return {
+      status: "Aguardando",
+      percentual: 0,
+      cor: "bg-yellow-100 text-yellow-800",
+      tooltip: "Aguardando chegada do veículo"
+    };
+  } else if (etapaAtual >= 1 && etapaAtual < 5) {
+    const percentual = Math.round((etapaAtual / 5) * 100);
+    let tooltip = "";
+    
+    switch (etapaAtual) {
+      case 1:
+        tooltip = "Caminhão chegou ao armazém";
+        break;
+      case 2:
+        tooltip = "Carregamento do caminhão iniciado";
+        break;
+      case 3:
+        tooltip = "Carregando o caminhão";
+        break;
+      case 4:
+        tooltip = "Carregamento do caminhão finalizado";
+        break;
+      default:
+        tooltip = `Etapa ${etapaAtual} em andamento`;
+    }
+    
+    return {
+      status: "Em Andamento",
+      percentual,
+      cor: "bg-blue-100 text-blue-800",
+      tooltip
+    };
+  } else {
+    return {
+      status: "Finalizado",
+      percentual: 100,
+      cor: "bg-green-100 text-green-800",
+      tooltip: "Documentação anexada e processo concluído"
+    };
+  }
+};
 
 // Componente para exibir quando não há dados disponíveis - COM LINK
 const EmptyStateCardWithAction = ({ 
@@ -243,7 +290,7 @@ const Agendamentos = () => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => {
       const etapaAtual = item.carregamento?.etapa_atual || 0;
-      const percentualCarregamento = etapaAtual > 0 ? Math.round((etapaAtual / 5) * 100) : 0;
+      const statusInfo = getStatusCarregamento(etapaAtual);
       
       return {
         id: item.id,
@@ -269,9 +316,12 @@ const Agendamentos = () => {
         quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
         quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
         updated_at: item.updated_at,
-        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
+        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO - NOVO SISTEMA
         etapa_carregamento: etapaAtual,
-        percentual_carregamento: percentualCarregamento,
+        status_carregamento: statusInfo.status,
+        percentual_carregamento: statusInfo.percentual,
+        cor_carregamento: statusInfo.cor,
+        tooltip_carregamento: statusInfo.tooltip,
       };
     });
   }, [agendamentosData]);
@@ -695,332 +745,345 @@ const Agendamentos = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
-      <PageHeader
-        title="Agendamentos de Retirada"
-        subtitle="Gerencie os agendamentos de retirada de produtos"
-        icon={Calendar}
-        actions={
-          canCreate ? (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-primary">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Agendamento
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Novo Agendamento</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="liberacao">Liberação *</Label>
-                    {temLiberacoesDisponiveis ? (
-                      <Select
-                        value={novoAgendamento.liberacao}
-                        onValueChange={async (v) => {
-                          setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
-                          await atualizarQuantidadeDisponivel(v);
-                        }}
-                      >
-                        <SelectTrigger id="liberacao">
-                          <SelectValue placeholder="Selecione a liberação" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {liberacoesDisponiveis?.map((lib: any) => {
-                            const disponivel = lib.quantidade_disponivel_real || 
-                              (lib.quantidade_liberada - (lib.quantidade_retirada || 0));
-                            return (
-                              <SelectItem key={lib.id} value={lib.id}>
-                                {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel.toLocaleString('pt-BR')}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      renderEmptyLiberacoesCard()
-                    )}
-                  </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader
+          title="Agendamentos de Retirada"
+          subtitle="Gerencie os agendamentos de retirada de produtos"
+          icon={Calendar}
+          actions={
+            canCreate ? (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-primary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Agendamento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo Agendamento</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="liberacao">Liberação *</Label>
+                      {temLiberacoesDisponiveis ? (
+                        <Select
+                          value={novoAgendamento.liberacao}
+                          onValueChange={async (v) => {
+                            setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
+                            await atualizarQuantidadeDisponivel(v);
+                          }}
+                        >
+                          <SelectTrigger id="liberacao">
+                            <SelectValue placeholder="Selecione a liberação" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {liberacoesDisponiveis?.map((lib: any) => {
+                              const disponivel = lib.quantidade_disponivel_real || 
+                                (lib.quantidade_liberada - (lib.quantidade_retirada || 0));
+                              return (
+                                <SelectItem key={lib.id} value={lib.id}>
+                                  {lib.pedido_interno} - {lib.clientes?.nome} - {lib.produto?.nome} ({disponivel.toLocaleString('pt-BR')}t disponível) - {lib.armazem?.cidade}/{lib.armazem?.estado}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        renderEmptyLiberacoesCard()
+                      )}
+                    </div>
 
-                  {temLiberacoesDisponiveis && (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="quantidade">Quantidade (t) *</Label>
-                          {novoAgendamento.liberacao && (
-                            <div className="text-sm text-muted-foreground mb-1">
-                              {validandoQuantidade ? (
-                                <span className="flex items-center gap-1">
-                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                                  Verificando disponibilidade...
-                                </span>
-                              ) : (
-                                <span className={quantidadeDisponivel > 0 ? "text-green-600" : "text-red-600"}>
-                                  Disponível: {quantidadeDisponivel.toLocaleString('pt-BR')}t
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <Input
-                            id="quantidade"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max={quantidadeDisponivel || undefined}
-                            value={novoAgendamento.quantidade}
-                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
-                            placeholder="0.00"
-                            className={
-                              novoAgendamento.quantidade && !quantidadeValida 
-                                ? "border-red-500 focus:border-red-500" 
-                                : novoAgendamento.quantidade && quantidadeValida
-                                ? "border-green-500 focus:border-green-500"
-                                : ""
-                            }
-                          />
-                          {novoAgendamento.quantidade && !quantidadeValida && (
-                            <p className="text-xs text-red-600">
-                              {Number(novoAgendamento.quantidade) > quantidadeDisponivel 
-                                ? `Quantidade excede o disponível (${quantidadeDisponivel.toLocaleString('pt-BR')}t)`
-                                : "Quantidade deve ser maior que zero"
+                    {temLiberacoesDisponiveis && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                            {novoAgendamento.liberacao && (
+                              <div className="text-sm text-muted-foreground mb-1">
+                                {validandoQuantidade ? (
+                                  <span className="flex items-center gap-1">
+                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                    Verificando disponibilidade...
+                                  </span>
+                                ) : (
+                                  <span className={quantidadeDisponivel > 0 ? "text-green-600" : "text-red-600"}>
+                                    Disponível: {quantidadeDisponivel.toLocaleString('pt-BR')}t
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <Input
+                              id="quantidade"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={quantidadeDisponivel || undefined}
+                              value={novoAgendamento.quantidade}
+                              onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
+                              placeholder="0.00"
+                              className={
+                                novoAgendamento.quantidade && !quantidadeValida 
+                                  ? "border-red-500 focus:border-red-500" 
+                                  : novoAgendamento.quantidade && quantidadeValida
+                                  ? "border-green-500 focus:border-green-500"
+                                  : ""
                               }
-                            </p>
-                          )}
+                            />
+                            {novoAgendamento.quantidade && !quantidadeValida && (
+                              <p className="text-xs text-red-600">
+                                {Number(novoAgendamento.quantidade) > quantidadeDisponivel 
+                                  ? `Quantidade excede o disponível (${quantidadeDisponivel.toLocaleString('pt-BR')}t)`
+                                  : "Quantidade deve ser maior que zero"
+                                }
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="data">Data *</Label>
+                            <Input
+                              id="data"
+                              type="date"
+                              value={novoAgendamento.data}
+                              onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
+                            />
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="data">Data *</Label>
+                          <Label htmlFor="placa">Placa do Veículo *</Label>
                           <Input
-                            id="data"
-                            type="date"
-                            value={novoAgendamento.data}
-                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="placa">Placa do Veículo *</Label>
-                        <Input
-                          id="placa"
-                          value={novoAgendamento.placa}
-                          onChange={(e) =>
-                            setNovoAgendamento((s) => ({
-                              ...s,
-                              placa: maskPlaca(e.target.value),
-                            }))
-                          }
-                          placeholder="Ex: ABC-1234 ou ABC-1D23"
-                          maxLength={9}
-                          autoCapitalize="characters"
-                          spellCheck={false}
-                          inputMode="text"
-                        />
-                        <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="motorista">Nome do Motorista *</Label>
-                          <Input
-                            id="motorista"
-                            value={novoAgendamento.motorista}
-                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
-                            placeholder="Ex: João Silva"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="documento">Documento (CPF) *</Label>
-                          <Input
-                            id="documento"
-                            value={novoAgendamento.documento}
+                            id="placa"
+                            value={novoAgendamento.placa}
                             onChange={(e) =>
                               setNovoAgendamento((s) => ({
                                 ...s,
-                                documento: maskCPF(e.target.value),
+                                placa: maskPlaca(e.target.value),
                               }))
                             }
-                            placeholder="Ex: 123.456.789-00"
-                            maxLength={14}
+                            placeholder="Ex: ABC-1234 ou ABC-1D23"
+                            maxLength={9}
+                            autoCapitalize="characters"
+                            spellCheck={false}
+                            inputMode="text"
+                          />
+                          <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="motorista">Nome do Motorista *</Label>
+                            <Input
+                              id="motorista"
+                              value={novoAgendamento.motorista}
+                              onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
+                              placeholder="Ex: João Silva"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="documento">Documento (CPF) *</Label>
+                            <Input
+                              id="documento"
+                              value={novoAgendamento.documento}
+                              onChange={(e) =>
+                                setNovoAgendamento((s) => ({
+                                  ...s,
+                                  documento: maskCPF(e.target.value),
+                                }))
+                              }
+                              placeholder="Ex: 123.456.789-00"
+                              maxLength={14}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="tipoCaminhao">Tipo de Caminhão</Label>
+                          <Input
+                            id="tipoCaminhao"
+                            value={novoAgendamento.tipoCaminhao}
+                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
+                            placeholder="Ex: Bitrem, Carreta, Truck"
                           />
                         </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="tipoCaminhao">Tipo de Caminhão</Label>
-                        <Input
-                          id="tipoCaminhao"
-                          value={novoAgendamento.tipoCaminhao}
-                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
-                          placeholder="Ex: Bitrem, Carreta, Truck"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="observacoes">Observações</Label>
-                        <Input
-                          id="observacoes"
-                          value={novoAgendamento.observacoes}
-                          onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
-                          placeholder="Informações adicionais sobre o agendamento"
-                        />
-                      </div>
-                      
-                      {formError && (
-                        <div className="pt-3 text-destructive text-sm font-semibold border-t">
-                          {formError}
+                        <div className="space-y-2">
+                          <Label htmlFor="observacoes">Observações</Label>
+                          <Input
+                            id="observacoes"
+                            value={novoAgendamento.observacoes}
+                            onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
+                            placeholder="Informações adicionais sobre o agendamento"
+                          />
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                  <Button 
-                    className="bg-gradient-primary" 
-                    onClick={handleCreateAgendamento}
-                    disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade}
-                  >
-                    Criar Agendamento
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          ) : null
-        }
-      />
+                        
+                        {formError && (
+                          <div className="pt-3 text-destructive text-sm font-semibold border-t">
+                            {formError}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                    <Button 
+                      className="bg-gradient-primary" 
+                      onClick={handleCreateAgendamento}
+                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade}
+                    >
+                      Criar Agendamento
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : null
+          }
+        />
 
-      <div className="flex items-center gap-3">
-        <Input className="h-9 flex-1" placeholder="Buscar por cliente, produto, pedido ou motorista..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
-        <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
-          <FilterIcon className="h-4 w-4 mr-1" />
-          Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-          {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-        </Button>
-      </div>
-      
-      {filtersOpen && (
-        <div className="rounded-md border p-3 space-y-6 relative">
-          <div>
-            <Label className="text-sm font-semibold mb-1">Status</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {allStatuses.map((st) => {
-                const active = selectedStatuses.includes(st);
-                const label = getStatusLabel(st);
-                return (
-                  <Badge key={st} onClick={() => toggleStatus(st)}
-                    className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                    {label}
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
-            <div className="flex items-center gap-3 flex-1">
-              <Label className="text-sm font-semibold">Período</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-            </div>
-            <div className="flex flex-1 justify-end">
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <Input className="h-9 flex-1" placeholder="Buscar por cliente, produto, pedido ou motorista..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
+          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
+            <FilterIcon className="h-4 w-4 mr-1" />
+            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+          </Button>
         </div>
-      )}
+        
+        {filtersOpen && (
+          <div className="rounded-md border p-3 space-y-6 relative">
+            <div>
+              <Label className="text-sm font-semibold mb-1">Status</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {allStatuses.map((st) => {
+                  const active = selectedStatuses.includes(st);
+                  const label = getStatusLabel(st);
+                  return (
+                    <Badge key={st} onClick={() => toggleStatus(st)}
+                      className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                      {label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
+              <div className="flex items-center gap-3 flex-1">
+                <Label className="text-sm font-semibold">Período</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+              </div>
+              <div className="flex flex-1 justify-end">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
+              </div>
+            </div>
+          </div>
+        )}
 
-      <div className="grid gap-4">
-        {filteredAgendamentos.map((ag) => (
-          <Card key={ag.id} className="transition-all hover:shadow-md">
-            <CardContent className="p-5">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                      <Calendar className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
+        <div className="grid gap-4">
+          {filteredAgendamentos.map((ag) => (
+            <Card key={ag.id} className="transition-all hover:shadow-md">
+              <CardContent className="p-5">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                        <Calendar className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
                       <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade.toLocaleString('pt-BR')}t • {ag.armazem}</p>
                       <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
                       
-                      {/* 📊 INFORMAÇÕES DA LIBERAÇÃO */}
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        <span>Liberação: </span>
-                        <span className="font-medium text-foreground">
-                          {ag.quantidade_liberada.toLocaleString('pt-BR')}t liberada
-                        </span>
-                        <span> • </span>
-                        <span className="font-medium text-foreground">
-                          {ag.quantidade_retirada.toLocaleString('pt-BR')}t retirada
-                        </span>
-                        <span> • Status: </span>
-                        <span className={`font-medium ${getLiberacaoStatusColor(ag.liberacao_status)}`}>
-                          {getLiberacaoStatusLabel(ag.liberacao_status)}
-                        </span>
-                      </div>
+                    {/* 📊 INFORMAÇÕES DA LIBERAÇÃO */}
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <span>Liberação: </span>
+                      <span className="font-medium text-foreground">
+                        {ag.quantidade_liberada.toLocaleString('pt-BR')}t liberada
+                      </span>
+                      <span> • </span>
+                      <span className="font-medium text-foreground">
+                        {ag.quantidade_retirada.toLocaleString('pt-BR')}t retirada
+                      </span>
+                      <span> • Status: </span>
+                      <span className={`font-medium ${getLiberacaoStatusColor(ag.liberacao_status)}`}>
+                        {getLiberacaoStatusLabel(ag.liberacao_status)}
+                      </span>
                     </div>
                   </div>
-                  
-                  {/* 🎨 BADGE DE STATUS DO AGENDAMENTO */}
-                  <Badge className={getStatusColor(ag.status)}>
-                    {getStatusLabel(ag.status)}
-                  </Badge>
                 </div>
+                
+                {/* 🎨 BADGE DE STATUS DO AGENDAMENTO */}
+                <Badge className={getStatusColor(ag.status)}>
+                  {getStatusLabel(ag.status)}
+                </Badge>
+              </div>
 
-                {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{ag.data}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatPlaca(ag.placa)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{ag.motorista}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatCPF(ag.documento)}</span>
-                  </div>
+              {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>{ag.data}</span>
                 </div>
-
-                {/* 📊 BARRA DE PROGRESSO DO CARREGAMENTO - SEMPRE VISÍVEL */}
-                <div className="pt-2 border-t">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-purple-600" />
-                    <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                      <div 
-                        className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${ag.percentual_carregamento}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-muted-foreground font-medium w-12">
-                      {ag.percentual_carregamento}%
-                    </span>
-                    <span className="text-xs text-purple-600 font-medium">
-                      {ag.etapa_carregamento > 0 ? `Etapa ${ag.etapa_carregamento}/5` : 'Aguardando'}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  <span>{formatPlaca(ag.placa)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">{ag.motorista}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{formatCPF(ag.documento)}</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-        {filteredAgendamentos.length === 0 && (
-          <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
-        )}
-      </div>
+
+              {/* 📊 NOVA BARRA DE PROGRESSO COM SISTEMA DE 3 STATUS E TOOLTIP */}
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                    <div 
+                      className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${ag.percentual_carregamento}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium w-12">
+                    {ag.percentual_carregamento}%
+                  </span>
+                  
+                  {/* 🎯 NOVO BADGE COM STATUS TEXTUAL E TOOLTIP */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        <Badge className={`text-xs px-2 py-1 ${ag.cor_carregamento} border-0`}>
+                          {ag.status_carregamento}
+                        </Badge>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">{ag.tooltip_carregamento}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      {filteredAgendamentos.length === 0 && (
+        <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
+      )}
     </div>
-  );
-};
+  </div>
+</TooltipProvider>
+); };
 
 export default Agendamentos;
