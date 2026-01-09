@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User } from "lucide-react";
 
 // 🎯 FUNÇÃO PARA DETERMINAR STATUS DO CARREGAMENTO (MESMA DA PÁGINA AGENDAMENTOS)
 const getStatusCarregamento = (etapaAtual: number) => {
@@ -57,13 +57,39 @@ const getStatusCarregamento = (etapaAtual: number) => {
   }
 };
 
+// Funções de formatação
+function formatPlaca(placa: string) {
+  if (!placa || placa === "N/A") return placa;
+  const cleaned = placa.replace(/[^A-Z0-9]/g, "");
+  if (cleaned.length === 7) {
+    if (/[A-Z]{3}[0-9][A-Z][0-9]{2}/.test(cleaned)) {
+      return cleaned.replace(/^([A-Z]{3})([0-9][A-Z][0-9]{2})$/, "$1-$2");
+    }
+    return cleaned.replace(/^([A-Z]{3})([0-9]{4})$/, "$1-$2");
+  }
+  return placa;
+}
+
+function formatCPF(cpf: string) {
+  if (!cpf || cpf === "N/A") return cpf;
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length === 11) {
+    return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
+  return cpf;
+}
+
 interface CarregamentoItem {
   id: string;
   cliente: string;
+  produto: string;
+  pedido: string;
+  armazem: string;
   quantidade: number;
   placa: string;
   motorista: string;
-  data_retirada: string; // yyyy-mm-dd
+  documento: string;
+  data_retirada: string;
   etapa_atual: number;
   fotosTotal: number;
   numero_nf: string | null;
@@ -92,12 +118,23 @@ interface SupabaseCarregamentoItem {
     id: string;
     data_retirada: string;
     quantidade: number | null;
-    cliente: {
-      nome: string | null;
-    } | null;
     placa_caminhao: string | null;
     motorista_nome: string | null;
     motorista_documento: string | null;
+    liberacao: {
+      pedido_interno: string | null;
+      produto: {
+        nome: string | null;
+      } | null;
+      clientes: {
+        nome: string | null;
+      } | null;
+      armazem: {
+        nome: string | null;
+        cidade: string | null;
+        estado: string | null;
+      } | null;
+    } | null;
   } | null;
 }
 
@@ -160,7 +197,7 @@ const Carregamentos = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
-  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
+  // 🔥 QUERY ATUALIZADA PARA BUSCAR DADOS COMPLETOS
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, roles],
     queryFn: async () => {
@@ -182,12 +219,23 @@ const Carregamentos = () => {
             id,
             data_retirada,
             quantidade,
-            cliente:clientes!agendamentos_cliente_id_fkey (
-              nome
-            ),
             placa_caminhao,
             motorista_nome,
-            motorista_documento
+            motorista_documento,
+            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
+              pedido_interno,
+              produto:produtos!liberacoes_produto_id_fkey (
+                nome
+              ),
+              clientes!liberacoes_cliente_id_fkey (
+                nome
+              ),
+              armazem:armazens!liberacoes_armazem_id_fkey (
+                nome,
+                cidade,
+                estado
+              )
+            )
           )
         `)
         .order("data_chegada", { ascending: false });
@@ -216,11 +264,12 @@ const Carregamentos = () => {
     refetchInterval: 30000,
   });
 
-  // 🔥 MAPEAMENTO CORRIGIDO COM NOVO SISTEMA DE STATUS
+  // 🔥 MAPEAMENTO ATUALIZADO COM NOVO SISTEMA DE STATUS E DADOS COMPLETOS
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     return carregamentosData.map((item: SupabaseCarregamentoItem) => {
       const agendamento = item.agendamento;
+      const liberacao = agendamento?.liberacao;
       
       // Conta quantas fotos existem baseado nas URLs preenchidas
       const fotosCount = [
@@ -237,10 +286,16 @@ const Carregamentos = () => {
 
       return {
         id: item.id,
-        cliente: agendamento?.cliente?.nome || "N/A",
+        cliente: liberacao?.clientes?.nome || "N/A",
+        produto: liberacao?.produto?.nome || "N/A",
+        pedido: liberacao?.pedido_interno || "N/A",
+        armazem: liberacao?.armazem 
+          ? `${liberacao.armazem.nome} - ${liberacao.armazem.cidade}/${liberacao.armazem.estado}`
+          : "N/A",
         quantidade: agendamento?.quantidade || 0,
         placa: agendamento?.placa_caminhao || "N/A",
         motorista: agendamento?.motorista_nome || "N/A",
+        documento: agendamento?.motorista_documento || "N/A",
         data_retirada: agendamento?.data_retirada || "N/A",
         etapa_atual: etapaAtual,
         fotosTotal: fotosCount,
@@ -276,7 +331,7 @@ const Carregamentos = () => {
     return carregamentos.filter((c) => {
       const term = search.trim().toLowerCase();
       if (term) {
-        const hay = `${c.cliente} ${c.motorista} ${c.placa}`.toLowerCase();
+        const hay = `${c.cliente} ${c.motorista} ${c.placa} ${c.pedido}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
       // 🎯 FILTRO ATUALIZADO PARA USAR STATUS EM VEZ DE ETAPAS
@@ -352,7 +407,7 @@ const Carregamentos = () => {
 
         {/* Barra de busca/filtro */}
         <div className="flex items-center gap-3">
-          <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa ou motorista..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa, motorista ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
           </span>
@@ -407,20 +462,20 @@ const Carregamentos = () => {
               <Link key={carr.id} to={`/carregamentos/${carr.id}`} style={{ textDecoration: "none", color: "inherit" }}>
                 <Card className="transition-all hover:shadow-md cursor-pointer">
                   <CardContent className="p-5">
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
                           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                             <Truck className="h-5 w-5 text-white" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground">{carr.cliente}</h3>
-                            <p className="text-sm text-muted-foreground">{carr.quantidade} toneladas</p>
-                            <p className="text-xs text-muted-foreground">{new Date(carr.data_retirada).toLocaleDateString("pt-BR")}</p>
-                            <p className="text-xs text-muted-foreground">Placa: <span className="font-medium">{carr.placa}</span></p>
-                            <p className="text-xs text-muted-foreground">Motorista: <span className="font-medium">{carr.motorista}</span></p>
+                          <div className="flex-1">
+                            {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
+                            <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
+                            <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
+                            <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
+                            <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
                             {carr.numero_nf && (
-                              <p className="text-xs text-muted-foreground">Nº NF: <span className="font-medium">{carr.numero_nf}</span></p>
+                              <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
                             )}
                           </div>
                         </div>
@@ -440,6 +495,26 @@ const Carregamentos = () => {
                             </TooltipContent>
                           </Tooltip>
                           <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+                        </div>
+                      </div>
+
+                      {/* 📋 INFORMAÇÕES DO CARREGAMENTO NO ESTILO AGENDAMENTOS */}
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-muted-foreground" />
+                          <span>{formatPlaca(carr.placa)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="truncate">{carr.motorista}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{formatCPF(carr.documento)}</span>
                         </div>
                       </div>
                     </div>
