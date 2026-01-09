@@ -968,8 +968,8 @@ const Agendamentos = () => {
                         <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
                         <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
                         <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
-                        <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
                         <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
+                        <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
                       </div>
                     </div>
                     
