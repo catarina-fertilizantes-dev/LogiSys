@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, BarChart3, Info } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -306,15 +306,11 @@ const Agendamentos = () => {
         pedido: item.liberacao?.pedido_interno || "N/A",
         status: item.status as AgendamentoStatus,
         armazem: item.liberacao?.armazem
-          ? `${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado} - ${item.liberacao.armazem.nome}`
+          ? `${item.liberacao.armazem.nome} - ${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado}`
           : "N/A",
         produto_id: item.liberacao?.produto?.id,
         armazem_id: item.liberacao?.armazem?.id,
         liberacao_id: item.liberacao?.id,
-        // 📊 CAMPOS PARA VISUALIZAÇÃO DA LIBERAÇÃO
-        liberacao_status: item.liberacao?.status,
-        quantidade_liberada: item.liberacao?.quantidade_liberada || 0,
-        quantidade_retirada: item.liberacao?.quantidade_retirada || 0,
         updated_at: item.updated_at,
         // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO - NOVO SISTEMA
         etapa_carregamento: etapaAtual,
@@ -694,33 +690,6 @@ const Agendamentos = () => {
     }
   };
 
-  // 🎨 FUNÇÃO PARA CORES DOS STATUS DE LIBERAÇÃO ATUALIZADA
-  const getLiberacaoStatusColor = (status: string) => {
-    switch (status) {
-      case "disponivel":
-        return "text-green-600";
-      case "parcialmente_agendada":
-        return "text-yellow-600";
-      case "totalmente_agendada":
-        return "text-blue-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getLiberacaoStatusLabel = (status: string) => {
-    switch (status) {
-      case "disponivel":
-        return "Disponível";
-      case "parcialmente_agendada":
-        return "Parcialmente Agendada";
-      case "totalmente_agendada":
-        return "Totalmente Agendada";
-      default:
-        return status;
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -995,95 +964,75 @@ const Agendamentos = () => {
                         <Calendar className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{ag.cliente}</h3>
-                      <p className="text-sm text-muted-foreground">{ag.produto} - {ag.quantidade.toLocaleString('pt-BR')}t • {ag.armazem}</p>
-                      <p className="text-xs text-muted-foreground">Pedido: <span className="font-medium text-foreground">{ag.pedido}</span></p>
-                      
-                    {/* 📊 INFORMAÇÕES DA LIBERAÇÃO */}
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <span>Liberação: </span>
-                      <span className="font-medium text-foreground">
-                        {ag.quantidade_liberada.toLocaleString('pt-BR')}t liberada
-                      </span>
-                      <span> • </span>
-                      <span className="font-medium text-foreground">
-                        {ag.quantidade_retirada.toLocaleString('pt-BR')}t retirada
-                      </span>
-                      <span> • Status: </span>
-                      <span className={`font-medium ${getLiberacaoStatusColor(ag.liberacao_status)}`}>
-                        {getLiberacaoStatusLabel(ag.liberacao_status)}
+                        {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
+                        <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
+                        <p className="text-sm text-muted-foreground">Cliente: {ag.cliente}</p>
+                        <p className="text-sm text-muted-foreground">Produto: {ag.produto}</p>
+                        <p className="text-sm text-muted-foreground">Quantidade: {ag.quantidade.toLocaleString('pt-BR')}t</p>
+                        <p className="text-sm text-muted-foreground">Armazém: {ag.armazem}</p>
+                      </div>
+                    </div>
+                    
+                    {/* 🎨 BADGE DE STATUS DO AGENDAMENTO */}
+                    <Badge className={getStatusColor(ag.status)}>
+                      {getStatusLabel(ag.status)}
+                    </Badge>
+                  </div>
+
+                  {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{ag.data}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span>{formatPlaca(ag.placa)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{ag.motorista}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>{formatCPF(ag.documento)}</span>
+                    </div>
+                  </div>
+
+                  {/* 📊 NOVA BARRA DE PROGRESSO COM TOOLTIP NA PRÓPRIA BARRA */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help">
+                            <div 
+                              className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${ag.percentual_carregamento}%` }}
+                            ></div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{ag.tooltip_carregamento}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <span className="text-xs text-muted-foreground font-medium w-12">
+                        {ag.percentual_carregamento}%
                       </span>
                     </div>
                   </div>
                 </div>
-                
-                {/* 🎨 BADGE DE STATUS DO AGENDAMENTO */}
-                <Badge className={getStatusColor(ag.status)}>
-                  {getStatusLabel(ag.status)}
-                </Badge>
-              </div>
-
-              {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{ag.data}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatPlaca(ag.placa)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{ag.motorista}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatCPF(ag.documento)}</span>
-                </div>
-              </div>
-
-              {/* 📊 NOVA BARRA DE PROGRESSO COM SISTEMA DE 3 STATUS E TOOLTIP */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-purple-600" />
-                  <span className="text-xs text-purple-600 font-medium w-20">Progresso:</span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                    <div 
-                      className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${ag.percentual_carregamento}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium w-12">
-                    {ag.percentual_carregamento}%
-                  </span>
-                  
-                  {/* 🎯 NOVO BADGE COM STATUS TEXTUAL E TOOLTIP */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1">
-                        <Badge className={`text-xs px-2 py-1 ${ag.cor_carregamento} border-0`}>
-                          {ag.status_carregamento}
-                        </Badge>
-                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-sm">{ag.tooltip_carregamento}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {filteredAgendamentos.length === 0 && (
-        <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
-      )}
-    </div>
-  </div>
-</TooltipProvider>
-); };
+              </CardContent>
+            </Card>
+          ))}
+          {filteredAgendamentos.length === 0 && (
+            <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
+          )}
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+};
 
 export default Agendamentos;
