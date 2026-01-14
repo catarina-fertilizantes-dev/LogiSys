@@ -11,23 +11,20 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User } from "lucide-react";
 
-// 🎯 FUNÇÃO PARA DETERMINAR STATUS DO CARREGAMENTO (MESMA DA PÁGINA AGENDAMENTOS)
+// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
 const getStatusCarregamento = (etapaAtual: number) => {
-  if (etapaAtual === 0) {
+  if (etapaAtual === 1) {
     return {
       status: "Aguardando",
       percentual: 0,
       cor: "bg-yellow-100 text-yellow-800",
       tooltip: "Aguardando chegada do veículo"
     };
-  } else if (etapaAtual >= 1 && etapaAtual < 5) {
-    const percentual = Math.round((etapaAtual / 5) * 100);
+  } else if (etapaAtual >= 2 && etapaAtual <= 5) {
+    const percentual = Math.round(((etapaAtual - 1) / 5) * 100);
     let tooltip = "";
     
     switch (etapaAtual) {
-      case 1:
-        tooltip = "Caminhão chegou ao armazém";
-        break;
       case 2:
         tooltip = "Carregamento do caminhão iniciado";
         break;
@@ -36,6 +33,9 @@ const getStatusCarregamento = (etapaAtual: number) => {
         break;
       case 4:
         tooltip = "Carregamento do caminhão finalizado";
+        break;
+      case 5:
+        tooltip = "Anexando documentação";
         break;
       default:
         tooltip = `Etapa ${etapaAtual} em andamento`;
@@ -95,10 +95,11 @@ interface CarregamentoItem {
   numero_nf: string | null;
   cliente_id: string | null;
   armazem_id: string | null;
-  // 🎯 NOVOS CAMPOS PARA O SISTEMA DE STATUS
+  // 🎯 CAMPOS PARA O SISTEMA DE STATUS E BARRA DE PROGRESSO
   status_carregamento: string;
   cor_carregamento: string;
   tooltip_carregamento: string;
+  percentual_carregamento: number;
 }
 
 interface SupabaseCarregamentoItem {
@@ -138,7 +139,7 @@ interface SupabaseCarregamentoItem {
   } | null;
 }
 
-// 🎯 ARRAY DE STATUS PARA FILTROS (SUBSTITUINDO ETAPAS)
+// 🎯 ARRAY DE STATUS PARA FILTROS
 const STATUS_CARREGAMENTO = [
   { id: "Aguardando", nome: "Aguardando", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
   { id: "Em Andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
@@ -197,7 +198,7 @@ const Carregamentos = () => {
     // eslint-disable-next-line
   }, [userId, roles]);
 
-  // 🔥 QUERY ATUALIZADA PARA BUSCAR DADOS COMPLETOS
+  // 🔥 QUERY PARA BUSCAR DADOS COMPLETOS
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, roles],
     queryFn: async () => {
@@ -264,7 +265,7 @@ const Carregamentos = () => {
     refetchInterval: 30000,
   });
 
-  // 🔥 MAPEAMENTO ATUALIZADO COM NOVO SISTEMA DE STATUS E DADOS COMPLETOS
+  // 🔥 MAPEAMENTO CORRIGIDO COM NOVO SISTEMA DE STATUS
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     return carregamentosData.map((item: SupabaseCarregamentoItem) => {
@@ -281,7 +282,7 @@ const Carregamentos = () => {
 
       const etapaAtual = item.etapa_atual ?? 1;
       
-      // 🎯 APLICAR NOVO SISTEMA DE STATUS
+      // 🎯 APLICAR NOVO SISTEMA DE STATUS CORRIGIDO
       const statusInfo = getStatusCarregamento(etapaAtual);
 
       return {
@@ -302,15 +303,16 @@ const Carregamentos = () => {
         numero_nf: item.numero_nf || null,
         cliente_id: item.cliente_id ?? null,
         armazem_id: item.armazem_id ?? null,
-        // 🎯 NOVOS CAMPOS DO SISTEMA DE STATUS
+        // 🎯 CAMPOS DO SISTEMA DE STATUS E BARRA DE PROGRESSO
         status_carregamento: statusInfo.status,
         cor_carregamento: statusInfo.cor,
         tooltip_carregamento: statusInfo.tooltip,
+        percentual_carregamento: statusInfo.percentual,
       };
     });
   }, [carregamentosData]);
 
-  // 🎯 FILTROS ATUALIZADOS PARA USAR STATUS EM VEZ DE ETAPAS
+  // 🎯 FILTROS PARA USAR STATUS
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
@@ -334,7 +336,7 @@ const Carregamentos = () => {
         const hay = `${c.cliente} ${c.motorista} ${c.placa} ${c.pedido}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
-      // 🎯 FILTRO ATUALIZADO PARA USAR STATUS EM VEZ DE ETAPAS
+      // 🎯 FILTRO PARA USAR STATUS
       if (selectedStatus.length > 0 && !selectedStatus.includes(c.status_carregamento)) return false;
       if (dateFrom) {
         const from = new Date(dateFrom);
@@ -418,7 +420,7 @@ const Carregamentos = () => {
           </Button>
         </div>
 
-        {/* 🎯 FILTROS ATUALIZADOS COM SISTEMA DE STATUS */}
+        {/* 🎯 FILTROS COM SISTEMA DE STATUS */}
         {filtersOpen && (
           <div className="rounded-md border p-3 space-y-6 relative">
             <div>
@@ -469,18 +471,20 @@ const Carregamentos = () => {
                             <Truck className="h-5 w-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
+                            {/* 🎯 LAYOUT DO CARD */}
                             <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
                             <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
                             <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
                             <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
+                            {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
+                            <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
                             {carr.numero_nf && (
                               <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
                             )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          {/* 🎯 NOVO BADGE COM STATUS E TOOLTIP */}
+                          {/* 🎯 BADGE COM STATUS E TOOLTIP COM ÍCONE "i" */}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex items-center gap-1">
@@ -498,7 +502,7 @@ const Carregamentos = () => {
                         </div>
                       </div>
 
-                      {/* 📋 INFORMAÇÕES DO CARREGAMENTO NO ESTILO AGENDAMENTOS */}
+                      {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -515,6 +519,31 @@ const Carregamentos = () => {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span>{formatCPF(carr.documento)}</span>
+                        </div>
+                      </div>
+
+                      {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP E ÍCONE "i" */}
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-purple-600" />
+                          <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help">
+                                <div 
+                                  className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${carr.percentual_carregamento}%` }}
+                                ></div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-sm">{carr.tooltip_carregamento}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          <span className="text-xs text-muted-foreground font-medium w-12">
+                            {carr.percentual_carregamento}%
+                          </span>
                         </div>
                       </div>
                     </div>
