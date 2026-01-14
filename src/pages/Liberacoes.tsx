@@ -5,13 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
@@ -28,12 +29,27 @@ interface LiberacaoItem {
   armazem?: string;
   produto_id?: string;
   armazem_id?: string;
+  created_at?: string;
   // 📊 NOVOS CAMPOS PARA MELHOR VISUALIZAÇÃO
   quantidadeDisponivel: number;
   quantidadeAgendada: number;
   percentualRetirado: number;
   percentualAgendado: number;
 }
+
+// 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE LIBERAÇÃO
+const getLiberacaoStatusTooltip = (status: StatusLiberacao) => {
+  switch (status) {
+    case "disponivel":
+      return "Esta liberação está disponível para agendamento de retirada";
+    case "parcialmente_agendada":
+      return "Esta liberação possui agendamentos, mas ainda há quantidade disponível";
+    case "totalmente_agendada":
+      return "Toda a quantidade desta liberação já foi agendada para retirada";
+    default:
+      return "";
+  }
+};
 
 // Componente para exibir quando não há dados disponíveis
 const EmptyStateCard = ({ 
@@ -77,6 +93,9 @@ const Liberacoes = () => {
   const canCreate = hasRole("logistica") || hasRole("admin");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // 🆕 ESTADO PARA MODAL DE DETALHES
+  const [detalhesLiberacao, setDetalhesLiberacao] = useState<LiberacaoItem | null>(null);
 
   const { data: currentCliente } = useQuery({
     queryKey: ["current-cliente", user?.id],
@@ -199,6 +218,7 @@ const Liberacoes = () => {
         armazem: item.armazem ? `${item.armazem.nome} - ${item.armazem.cidade}/${item.armazem.estado}` : "N/A",
         produto_id: item.produto?.id,
         armazem_id: item.armazem?.id,
+        created_at: item.created_at,
       };
     });
   }, [liberacoesData, agendamentosData]);
@@ -433,262 +453,390 @@ const Liberacoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
-      <PageHeader
-        title="Liberações de Produtos"
-        subtitle="Gerencie as liberações de produtos para clientes"
-        icon={ClipboardList}
-        actions={
-          canCreate ? (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-primary">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Liberação
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Nova Liberação</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="pedido">Número do Pedido *</Label>
-                    <Input
-                      id="pedido"
-                      value={novaLiberacao.pedido}
-                      onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
-                      placeholder="Ex: PED-2024-001"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="produto">Produto *</Label>
-                    {temProdutosDisponiveis ? (
-                      <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
-                        <SelectTrigger id="produto">
-                          <SelectValue placeholder="Selecione o produto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {produtos?.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <EmptyStateCard
-                        title="Nenhum produto cadastrado"
-                        description="Para criar liberações, você precisa cadastrar produtos primeiro."
-                        actionText="Cadastrar Produto"
-                        actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
-                      />
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="armazem">Armazém *</Label>
-                    {temArmazensDisponiveis ? (
-                      <Select value={novaLiberacao.armazem} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v }))}>
-                        <SelectTrigger id="armazem">
-                          <SelectValue placeholder="Selecione o armazém" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {armazens?.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <EmptyStateCard
-                        title="Nenhum armazém cadastrado"
-                        description="Para criar liberações, você precisa cadastrar armazéns primeiro."
-                        actionText="Cadastrar Armazém"
-                        actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
-                      />
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cliente">Cliente *</Label>
-                    {temClientesDisponiveis ? (
-                      <Select value={novaLiberacao.cliente_id} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}>
-                        <SelectTrigger id="cliente">
-                          <SelectValue placeholder="Selecione o cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clientesData?.map((cliente) => (
-                            <SelectItem key={cliente.id} value={cliente.id}>
-                              {cliente.nome} - {cliente.cnpj_cpf}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <EmptyStateCard
-                        title="Nenhum cliente cadastrado"
-                        description="Para criar liberações, você precisa cadastrar clientes primeiro."
-                        actionText="Cadastrar Cliente"
-                        actionUrl="https://logi-sys-shiy.vercel.app/clientes?modal=novo"
-                      />
-                    )}
-                  </div>
-                  
-                  {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && (
+    <TooltipProvider>
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader
+          title="Liberações de Produtos"
+          subtitle="Gerencie as liberações de produtos para clientes"
+          icon={ClipboardList}
+          actions={
+            canCreate ? (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-primary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Liberação
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Nova Liberação</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                      <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                      <Label htmlFor="pedido">Número do Pedido *</Label>
                       <Input
-                        id="quantidade"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={novaLiberacao.quantidade}
-                        onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
-                        placeholder="0.00"
+                        id="pedido"
+                        value={novaLiberacao.pedido}
+                        onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
+                        placeholder="Ex: PED-2024-001"
                       />
                     </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                  <Button 
-                    className="bg-gradient-primary" 
-                    onClick={handleCreateLiberacao}
-                    disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || !temClientesDisponiveis}
-                  >
-                    Criar Liberação
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          ) : null
-        }
-      />
-      
-      <div className="flex items-center gap-3">
-        <Input className="h-9 flex-1" placeholder="Buscar por produto, cliente ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
-        <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
-          <FilterIcon className="h-4 w-4 mr-1" />
-          Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-          {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-        </Button>
-      </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="produto">Produto *</Label>
+                      {temProdutosDisponiveis ? (
+                        <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
+                          <SelectTrigger id="produto">
+                            <SelectValue placeholder="Selecione o produto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {produtos?.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <EmptyStateCard
+                          title="Nenhum produto cadastrado"
+                          description="Para criar liberações, você precisa cadastrar produtos primeiro."
+                          actionText="Cadastrar Produto"
+                          actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="armazem">Armazém *</Label>
+                      {temArmazensDisponiveis ? (
+                        <Select value={novaLiberacao.armazem} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v }))}>
+                          <SelectTrigger id="armazem">
+                            <SelectValue placeholder="Selecione o armazém" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {armazens?.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <EmptyStateCard
+                          title="Nenhum armazém cadastrado"
+                          description="Para criar liberações, você precisa cadastrar armazéns primeiro."
+                          actionText="Cadastrar Armazém"
+                          actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="cliente">Cliente *</Label>
+                      {temClientesDisponiveis ? (
+                        <Select value={novaLiberacao.cliente_id} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}>
+                          <SelectTrigger id="cliente">
+                            <SelectValue placeholder="Selecione o cliente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clientesData?.map((cliente) => (
+                              <SelectItem key={cliente.id} value={cliente.id}>
+                                {cliente.nome} - {cliente.cnpj_cpf}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <EmptyStateCard
+                          title="Nenhum cliente cadastrado"
+                          description="Para criar liberações, você precisa cadastrar clientes primeiro."
+                          actionText="Cadastrar Cliente"
+                          actionUrl="https://logi-sys-shiy.vercel.app/clientes?modal=novo"
+                        />
+                      )}
+                    </div>
+                    
+                    {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && (
+                      <div className="space-y-2">
+                        <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                        <Input
+                          id="quantidade"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={novaLiberacao.quantidade}
+                          onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                    <Button 
+                      className="bg-gradient-primary" 
+                      onClick={handleCreateLiberacao}
+                      disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || !temClientesDisponiveis}
+                    >
+                      Criar Liberação
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : null
+          }
+        />
+        
+        <div className="flex items-center gap-3">
+          <Input className="h-9 flex-1" placeholder="Buscar por produto, cliente ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
+          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
+            <FilterIcon className="h-4 w-4 mr-1" />
+            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+          </Button>
+        </div>
 
-      {filtersOpen && (
-        <div className="rounded-md border p-3 space-y-6 relative">
-          <div>
-            <Label className="text-sm font-semibold mb-1">Status</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {allStatuses.map((st) => {
-                const active = selectedStatuses.includes(st);
-                const label = getStatusLabel(st);
-                return (
-                  <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                    {label}
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-          {allArmazens.length > 0 && (
+        {filtersOpen && (
+          <div className="rounded-md border p-3 space-y-6 relative">
             <div>
-              <Label className="text-sm font-semibold mb-1">Armazém</Label>
+              <Label className="text-sm font-semibold mb-1">Status</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {allArmazens.map((a) => {
-                  const active = selectedArmazens.includes(a);
+                {allStatuses.map((st) => {
+                  const active = selectedStatuses.includes(st);
+                  const label = getStatusLabel(st);
                   return (
-                    <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                      {a}
+                    <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                      {label}
                     </Badge>
                   );
                 })}
               </div>
             </div>
-          )}
-          <div className="flex items-center gap-4">
-            <Label className="text-sm font-semibold mb-1">Período</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-            <div className="flex-1"></div>
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
+            {allArmazens.length > 0 && (
+              <div>
+                <Label className="text-sm font-semibold mb-1">Armazém</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {allArmazens.map((a) => {
+                    const active = selectedArmazens.includes(a);
+                    return (
+                      <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                        {a}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <Label className="text-sm font-semibold mb-1">Período</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+              <div className="flex-1"></div>
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="grid gap-4">
-        {filteredLiberacoes.map((lib) => (
-          <Card key={lib.id} className="transition-all hover:shadow-md">
-            <CardContent className="p-5">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4">
-                    {/* badge ícone à esquerda com cor do Estoque */}
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                      <ClipboardList className="h-5 w-5 text-white" />
+        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO */}
+        <Dialog open={!!detalhesLiberacao} onOpenChange={open => !open && setDetalhesLiberacao(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Liberação</DialogTitle>
+              <DialogDescription>
+                Pedido: {detalhesLiberacao?.pedido}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {detalhesLiberacao && (
+                <>
+                  {/* Informações Básicas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Número do Pedido:</Label>
+                      <p className="font-semibold">{detalhesLiberacao.pedido}</p>
                     </div>
-                    <div className="flex-1">
-                      {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
-                      <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
-                      <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
-                      <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
-                      <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
-                      
-                      {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS - MANTIDAS COMO ESTAVAM */}
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-4">
-                          <span>
-                            <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
-                          </span>
-                          <span>
-                            <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
-                          </span>
-                          <span>
-                            <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
-                          </span>
-                          <span>
-                            <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
-                          </span>
-                        </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status da Liberação:</Label>
+                      <Badge className={getStatusColor(detalhesLiberacao.status)}>
+                        {getStatusLabel(detalhesLiberacao.status)}
+                      </Badge>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Produto:</Label>
+                      <p className="font-semibold">{detalhesLiberacao.produto}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Data de Criação:</Label>
+                      <p className="font-semibold">{detalhesLiberacao.data}</p>
+                    </div>
+                  </div>
+
+                  {/* Cliente e Armazém */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Cliente e Armazém</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Cliente:</Label>
+                        <p className="font-semibold">{detalhesLiberacao.cliente}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Armazém:</Label>
+                        <p className="font-semibold">{detalhesLiberacao.armazem}</p>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* 🎨 BADGE DE STATUS ATUALIZADO */}
-                  <Badge className={getStatusColor(lib.status)}>
-                    {getStatusLabel(lib.status)}
-                  </Badge>
-                </div>
 
-                {/* 📊 BARRA DE AGENDAMENTOS - SEMPRE VISÍVEL COM LAYOUT ESTILIZADO */}
-                <div className="pt-2 border-t">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${lib.percentualAgendado}%` }}
-                      ></div>
+                  {/* Quantidades */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Informações de Quantidade</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
+                        <p className="font-semibold text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
+                        <p className="font-semibold text-lg text-blue-600">{detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Quantidade Retirada:</Label>
+                        <p className="font-semibold text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Quantidade Disponível:</Label>
+                        <p className="font-semibold text-lg text-green-600">{detalhesLiberacao.quantidadeDisponivel.toLocaleString('pt-BR')}t</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground font-medium w-12">
-                      {lib.percentualAgendado}%
-                    </span>
-                    <span className="text-xs text-blue-600 font-medium">
-                      {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada}t agendada` : 'Nenhum agendamento'}
-                    </span>
+                  </div>
+
+                  {/* Progresso Visual */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Progresso de Agendamentos</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-600">
+                          {detalhesLiberacao.percentualAgendado}% agendado
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                        <div 
+                          className="bg-blue-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ width: `${detalhesLiberacao.percentualAgendado}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {detalhesLiberacao.quantidadeAgendada > 0 
+                          ? `${detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t de ${detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t agendada para retirada`
+                          : 'Nenhuma quantidade agendada ainda'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setDetalhesLiberacao(null)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <div className="grid gap-4">
+          {filteredLiberacoes.map((lib) => (
+            <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
+              <CardContent className="p-5">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div 
+                      className="flex items-start gap-4 flex-1"
+                      onClick={() => setDetalhesLiberacao(lib)}
+                    >
+                      {/* badge ícone à esquerda com cor do Estoque */}
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                        <ClipboardList className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        {/* 🎯 LAYOUT DO CARD */}
+                        <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
+                        <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
+                        <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
+                        <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
+                        
+                        {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS - MANTIDAS COMO ESTAVAM */}
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-4">
+                            <span>
+                              <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
+                            </span>
+                            <span>
+                              <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
+                            </span>
+                            <span>
+                              <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
+                            </span>
+                            <span>
+                              <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="flex items-center gap-1 cursor-help"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Badge className={getStatusColor(lib.status)}>
+                            {getStatusLabel(lib.status)}
+                          </Badge>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  {/* 📊 BARRA DE AGENDAMENTOS - CLICÁVEL */}
+                  <div 
+                    className="pt-2 border-t"
+                    onClick={() => setDetalhesLiberacao(lib)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${lib.percentualAgendado}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium w-12">
+                        {lib.percentualAgendado}%
+                      </span>
+                      <span className="text-xs text-blue-600 font-medium">
+                        {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada}t agendada` : 'Nenhum agendamento'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {filteredLiberacoes.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma liberação encontrada.</div>
-        )}
+              </CardContent>
+            </Card>
+          ))}
+          {filteredLiberacoes.length === 0 && (
+            <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma liberação encontrada.</div>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
