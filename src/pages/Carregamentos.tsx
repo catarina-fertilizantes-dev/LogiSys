@@ -480,7 +480,7 @@ const Carregamentos = () => {
                           <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
                           <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
                           {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
-                          <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
+                          <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
                           {carr.numero_nf && (
                             <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
                           )}
