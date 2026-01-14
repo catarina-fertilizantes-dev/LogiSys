@@ -461,48 +461,60 @@ const Carregamentos = () => {
         <div className="grid gap-4">
           {filteredCarregamentos.map((carr) => {
             return (
-              <Link key={carr.id} to={`/carregamentos/${carr.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <Card className="transition-all hover:shadow-md cursor-pointer">
-                  <CardContent className="p-5">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                            <Truck className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            {/* 🎯 LAYOUT DO CARD */}
-                            <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
-                            <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
-                            <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
-                            <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
-                            {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
-                            <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
-                            {carr.numero_nf && (
-                              <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
-                            )}
-                          </div>
+              <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <Link 
+                        to={`/carregamentos/${carr.id}`} 
+                        className="flex items-start gap-4 flex-1 text-inherit no-underline"
+                        style={{ textDecoration: "none", color: "inherit" }}
+                      >
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                          <Truck className="h-5 w-5 text-white" />
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {/* 🎯 BADGE COM STATUS E TOOLTIP COM ÍCONE "i" */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
-                                  {carr.status_carregamento}
-                                </Badge>
-                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">{carr.tooltip_carregamento}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+                        <div className="flex-1">
+                          {/* 🎯 LAYOUT DO CARD */}
+                          <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
+                          <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
+                          <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
+                          <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
+                          {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
+                          <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
+                          {carr.numero_nf && (
+                            <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
+                          )}
                         </div>
+                      </Link>
+                      
+                      <div className="flex flex-col items-end gap-2">
+                        {/* 🎯 BADGE COM STATUS E TOOLTIP - NÃO CLICÁVEL */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className="flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()} // Impede propagação do clique
+                            >
+                              <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
+                                {carr.status_carregamento}
+                              </Badge>
+                              <Info className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">{carr.tooltip_carregamento}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
                       </div>
-
-                      {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
+                    </div>
+          
+                    {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
+                    <Link 
+                      to={`/carregamentos/${carr.id}`} 
+                      className="block text-inherit no-underline"
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
                       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -521,35 +533,51 @@ const Carregamentos = () => {
                           <span>{formatCPF(carr.documento)}</span>
                         </div>
                       </div>
-
-                      {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP E ÍCONE "i" */}
-                      <div className="pt-2 border-t">
-                        <div className="flex items-center gap-2">
+                    </Link>
+          
+                    {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP - NÃO CLICÁVEL */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          to={`/carregamentos/${carr.id}`} 
+                          className="flex items-center gap-2 flex-1 text-inherit no-underline"
+                          style={{ textDecoration: "none", color: "inherit" }}
+                        >
                           <Truck className="h-4 w-4 text-purple-600" />
                           <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help">
-                                <div 
-                                  className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${carr.percentual_carregamento}%` }}
-                                ></div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">{carr.tooltip_carregamento}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </Link>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700"
+                              onClick={(e) => e.stopPropagation()} // Impede propagação do clique
+                            >
+                              <div 
+                                className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                                style={{ width: `${carr.percentual_carregamento}%` }}
+                              ></div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">{carr.tooltip_carregamento}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <div 
+                          className="flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()} // Impede propagação do clique
+                        >
+                          <Info className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground font-medium w-12">
                             {carr.percentual_carregamento}%
                           </span>
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
           {filteredCarregamentos.length === 0 && (
