@@ -488,12 +488,12 @@ const Carregamentos = () => {
                       </Link>
                       
                       <div className="flex flex-col items-end gap-2">
-                        {/* 🎯 BADGE COM STATUS E TOOLTIP - NÃO CLICÁVEL */}
-                        <Tooltip>
+                        {/* 🎯 BADGE COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
+                        <Tooltip delayDuration={100}>
                           <TooltipTrigger asChild>
                             <div 
-                              className="flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()} // Impede propagação do clique
+                              className="flex items-center gap-1 cursor-help"
+                              onClick={(e) => e.stopPropagation()} // Impede navegação
                             >
                               <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
                                 {carr.status_carregamento}
@@ -535,23 +535,23 @@ const Carregamentos = () => {
                       </div>
                     </Link>
           
-                    {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP - NÃO CLICÁVEL */}
+                    {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
                     <div className="pt-2 border-t">
                       <div className="flex items-center gap-2">
                         <Link 
                           to={`/carregamentos/${carr.id}`} 
-                          className="flex items-center gap-2 flex-1 text-inherit no-underline"
+                          className="flex items-center gap-2 text-inherit no-underline"
                           style={{ textDecoration: "none", color: "inherit" }}
                         >
                           <Truck className="h-4 w-4 text-purple-600" />
                           <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
                         </Link>
                         
-                        <Tooltip>
+                        <Tooltip delayDuration={100}>
                           <TooltipTrigger asChild>
                             <div 
-                              className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700"
-                              onClick={(e) => e.stopPropagation()} // Impede propagação do clique
+                              className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                              onClick={(e) => e.stopPropagation()} // Impede navegação
                             >
                               <div 
                                 className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
@@ -564,15 +564,22 @@ const Carregamentos = () => {
                           </TooltipContent>
                         </Tooltip>
                         
-                        <div 
-                          className="flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()} // Impede propagação do clique
-                        >
-                          <Info className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground font-medium w-12">
-                            {carr.percentual_carregamento}%
-                          </span>
-                        </div>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className="flex items-center gap-1 cursor-help"
+                              onClick={(e) => e.stopPropagation()} // Impede navegação
+                            >
+                              <Info className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground font-medium w-12">
+                                {carr.percentual_carregamento}%
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">{carr.tooltip_carregamento}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
