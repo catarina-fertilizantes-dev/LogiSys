@@ -709,31 +709,6 @@ const Liberacoes = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Progresso Visual */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Progresso de Agendamentos</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">
-                          {detalhesLiberacao.percentualAgendado}% agendado
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                        <div 
-                          className="bg-blue-500 h-3 rounded-full transition-all duration-300" 
-                          style={{ width: `${detalhesLiberacao.percentualAgendado}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {detalhesLiberacao.quantidadeAgendada > 0 
-                          ? `${detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t de ${detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t agendada para retirada`
-                          : 'Nenhuma quantidade agendada ainda'
-                        }
-                      </p>
-                    </div>
-                  </div>
                 </>
               )}
             </div>
