@@ -30,8 +30,7 @@ interface LiberacaoItem {
   produto_id?: string;
   armazem_id?: string;
   created_at?: string;
-  // 📊 NOVOS CAMPOS PARA MELHOR VISUALIZAÇÃO
-  quantidadeDisponivel: number;
+  // 📊 CAMPOS PARA VISUALIZAÇÃO (SEM "DISPONÍVEL")
   quantidadeAgendada: number;
   percentualRetirado: number;
   percentualAgendado: number;
@@ -127,7 +126,7 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY ATUALIZADA PARA BUSCAR QUANTIDADE AGENDADA
+  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -162,7 +161,7 @@ const Liberacoes = () => {
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
-  // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO
+  // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO PARA INCLUIR TODOS OS STATUS
   const { data: agendamentosData } = useQuery({
     queryKey: ["agendamentos-totais"],
     queryFn: async () => {
@@ -173,11 +172,11 @@ const Liberacoes = () => {
           quantidade,
           status
         `)
-        .in("status", ["pendente", "em_andamento"]); // ✅ INCLUIR AMBOS OS STATUS
+        .in("status", ["pendente", "em_andamento", "concluido"]); // ✅ CORRIGIDO: INCLUIR TODOS OS STATUS
       
       if (error) throw error;
       
-      // Agrupar por liberacao_id
+      // ✅ CORRIGIDO: Agrupar APENAS por liberacao_id (sem status)
       const agrupados = (data || []).reduce((acc: Record<string, number>, item) => {
         acc[item.liberacao_id] = (acc[item.liberacao_id] || 0) + Number(item.quantidade);
         return acc;
@@ -188,13 +187,15 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO ATUALIZADO COM NOVOS CÁLCULOS
+  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL"
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     return liberacoesData.map((item: any) => {
+      // ✅ AGORA quantidade_retirada VEM CORRETA DO BACKEND
       const quantidadeRetirada = item.quantidade_retirada || 0;
+      // ✅ AGORA quantidade_agendada INCLUI TODOS OS STATUS
       const quantidadeAgendada = agendamentosData?.[item.id] || 0;
-      const quantidadeDisponivel = Math.max(0, item.quantidade_liberada - quantidadeRetirada - quantidadeAgendada);
+      
       const percentualRetirado = item.quantidade_liberada > 0 
         ? Math.round((quantidadeRetirada / item.quantidade_liberada) * 100) 
         : 0;
@@ -209,7 +210,6 @@ const Liberacoes = () => {
         quantidade: item.quantidade_liberada,
         quantidadeRetirada,
         quantidadeAgendada,
-        quantidadeDisponivel,
         percentualRetirado,
         percentualAgendado,
         pedido: item.pedido_interno,
@@ -638,7 +638,7 @@ const Liberacoes = () => {
           </div>
         )}
 
-        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO */}
+        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO - SEM "DISPONÍVEL" */}
         <Dialog open={!!detalhesLiberacao} onOpenChange={open => !open && setDetalhesLiberacao(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -687,10 +687,10 @@ const Liberacoes = () => {
                     </div>
                   </div>
 
-                  {/* Quantidades */}
+                  {/* Quantidades - SEM "DISPONÍVEL" */}
                   <div className="border-t pt-4">
                     <h4 className="font-semibold mb-3">Informações de Quantidade</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
                         <p className="font-semibold text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
@@ -702,10 +702,6 @@ const Liberacoes = () => {
                       <div>
                         <Label className="text-xs text-muted-foreground">Quantidade Retirada:</Label>
                         <p className="font-semibold text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Quantidade Disponível:</Label>
-                        <p className="font-semibold text-lg text-green-600">{detalhesLiberacao.quantidadeDisponivel.toLocaleString('pt-BR')}t</p>
                       </div>
                     </div>
                   </div>
@@ -741,20 +737,17 @@ const Liberacoes = () => {
                         <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
                         <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
                         
-                        {/* 📊 INFORMAÇÕES DETALHADAS ATUALIZADAS - MANTIDAS COMO ESTAVAM */}
+                        {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
                         <div className="mt-2 text-xs text-muted-foreground">
                           <div className="flex items-center gap-4">
                             <span>
-                              <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade}t
+                              <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
                             </span>
                             <span>
-                              <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada}t
+                              <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
                             </span>
                             <span>
-                              <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada}t
-                            </span>
-                            <span>
-                              <span className="font-medium text-green-600">Disponível:</span> {lib.quantidadeDisponivel}t
+                              <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
                             </span>
                           </div>
                         </div>
@@ -798,7 +791,7 @@ const Liberacoes = () => {
                         {lib.percentualAgendado}%
                       </span>
                       <span className="text-xs text-blue-600 font-medium">
-                        {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada}t agendada` : 'Nenhum agendamento'}
+                        {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada.toLocaleString('pt-BR')}t agendada` : 'Nenhum agendamento'}
                       </span>
                     </div>
                   </div>
