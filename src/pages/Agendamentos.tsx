@@ -233,7 +233,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY CORRIGIDA COM RELACIONAMENTO CORRETO
+  // 🔄 QUERY CORRIGIDA COM SINTAXE CORRETA DO SUPABASE
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -262,13 +262,13 @@ const Agendamentos = () => {
             produto:produtos(id, nome),
             armazem:armazens(id, nome, cidade, estado)
           ),
-          carregamento:carregamentos!carregamentos_agendamento_id_fkey(
+          carregamentos!carregamentos_agendamento_id_fkey(
             id,
             etapa_atual
           )
         `)
         .order("created_at", { ascending: false });
-
+  
       if (userRole === "cliente" && currentCliente?.id) {
         query = query.eq("cliente_id", currentCliente.id);
       }
@@ -302,12 +302,13 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO CORRIGIDO COM DADOS DO CARREGAMENTO
+  // 🔄 MAPEAMENTO CORRIGIDO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => {
-      // 🎯 AGORA DEVE FUNCIONAR CORRETAMENTE
-      const etapaAtual = item.carregamento?.etapa_atual ?? 1;
+      // 🎯 AGORA DEVE ACESSAR COMO ARRAY (relacionamento 1:1)
+      const carregamento = item.carregamentos?.[0]; // ← MUDANÇA AQUI!
+      const etapaAtual = carregamento?.etapa_atual ?? 1;
       const statusInfo = getStatusCarregamento(etapaAtual);
       
       return {
