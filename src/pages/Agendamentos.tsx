@@ -14,7 +14,7 @@ import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDow
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
+// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO (IGUAL À PÁGINA CARREGAMENTOS)
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
     return {
@@ -233,7 +233,7 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY DE AGENDAMENTOS COM CARREGAMENTOS PARA BARRA DE PROGRESSO
+  // 🔄 QUERY CORRIGIDA COM RELACIONAMENTO CORRETO
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -262,7 +262,7 @@ const Agendamentos = () => {
             produto:produtos(id, nome),
             armazem:armazens(id, nome, cidade, estado)
           ),
-          carregamento:carregamentos(
+          carregamento:carregamentos!carregamentos_agendamento_id_fkey(
             id,
             etapa_atual
           )
@@ -279,7 +279,7 @@ const Agendamentos = () => {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 30000, // 🔄 ATUALIZAÇÃO AUTOMÁTICA
+    refetchInterval: 30000,
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
@@ -302,11 +302,12 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO COM DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
+  // 🔄 MAPEAMENTO CORRIGIDO COM DADOS DO CARREGAMENTO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => {
-      const etapaAtual = item.carregamento?.etapa_atual || 1;
+      // 🎯 AGORA DEVE FUNCIONAR CORRETAMENTE
+      const etapaAtual = item.carregamento?.etapa_atual ?? 1;
       const statusInfo = getStatusCarregamento(etapaAtual);
       
       return {
@@ -331,7 +332,7 @@ const Agendamentos = () => {
         updated_at: item.updated_at,
         tipo_caminhao: item.tipo_caminhao,
         observacoes: item.observacoes,
-        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO - NOVO SISTEMA
+        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
         etapa_carregamento: etapaAtual,
         status_carregamento: statusInfo.status,
         percentual_carregamento: statusInfo.percentual,
@@ -376,7 +377,7 @@ const Agendamentos = () => {
           produto:produtos(nome),
           armazem:armazens(id, cidade, estado, nome)
         `)
-        .in("status", ["disponivel", "parcialmente_agendada"]) // 🔄 NOVOS STATUS
+        .in("status", ["disponivel", "parcialmente_agendada"])
         .order("created_at", { ascending: false });
 
       if (userRole === "cliente" && currentCliente?.id) {
@@ -415,7 +416,6 @@ const Agendamentos = () => {
         })
       );
       
-      // 🔄 FILTRAR APENAS LIBERAÇÕES COM QUANTIDADE DISPONÍVEL > 0
       return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
     },
     enabled: userRole !== "cliente" || !!currentCliente?.id,
@@ -468,7 +468,7 @@ const Agendamentos = () => {
         .from("agendamentos")
         .select("quantidade")
         .eq("liberacao_id", liberacaoId)
-        .in("status", ["pendente", "em_andamento"]); // Não incluir "concluido" nem "cancelado"
+        .in("status", ["pendente", "em_andamento"]);
 
       if (error) {
         console.error('Erro ao buscar agendamentos pendentes:', error);
@@ -487,14 +487,6 @@ const Agendamentos = () => {
       const quantidadeRetirada = liberacao.quantidade_retirada || 0;
       const disponivel = Math.max(0, quantidadeLiberada - quantidadeRetirada - totalAgendado);
       
-      console.log(`📊 Cálculo de disponibilidade:`, {
-        liberacaoId,
-        quantidadeLiberada,
-        quantidadeRetirada, 
-        totalAgendado,
-        disponivel
-      });
-
       setQuantidadeDisponivel(disponivel);
       
     } catch (error) {
@@ -592,7 +584,7 @@ const Agendamentos = () => {
       setDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["agendamentos"] });
       queryClient.invalidateQueries({ queryKey: ["liberacoes-disponiveis"] });
-      queryClient.invalidateQueries({ queryKey: ["liberacoes"] }); // 🔄 ATUALIZAR LIBERAÇÕES TAMBÉM
+      queryClient.invalidateQueries({ queryKey: ["liberacoes"] });
 
     } catch (err: any) {
       setFormError(err.message || "Erro desconhecido.");
@@ -972,7 +964,7 @@ const Agendamentos = () => {
           </div>
         )}
 
-        {/* 🆕 MODAL DE DETALHES DO AGENDAMENTO */}
+        {/* 🆕 MODAL DE DETALHES DO AGENDAMENTO (SEM PROGRESSO DO CARREGAMENTO) */}
         <Dialog open={!!detalhesAgendamento} onOpenChange={open => !open && setDetalhesAgendamento(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -999,7 +991,7 @@ const Agendamentos = () => {
                       <p className="font-semibold">{detalhesAgendamento.armazem}</p>
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
+                      <Label className="text-xs text-muted-foreground">Quantidade:</Label>
                       <p className="font-semibold">{detalhesAgendamento.quantidade.toLocaleString('pt-BR')}t</p>
                     </div>
                   </div>
@@ -1044,30 +1036,6 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Progresso do Carregamento */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Progresso do Carregamento</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Badge className={detalhesAgendamento.cor_carregamento}>
-                          {detalhesAgendamento.status_carregamento}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {detalhesAgendamento.percentual_carregamento}% concluído
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                        <div 
-                          className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
-                          style={{ width: `${detalhesAgendamento.percentual_carregamento}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {detalhesAgendamento.tooltip_carregamento}
-                      </p>
-                    </div>
-                  </div>
-
                   {/* Observações */}
                   {detalhesAgendamento.observacoes && (
                     <div className="border-t pt-4">
@@ -1102,12 +1070,12 @@ const Agendamentos = () => {
                         <Calendar className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        {/* 🎯 LAYOUT DO CARD COM "AGENDADA" */}
+                        {/* 🎯 LAYOUT DO CARD COM "QUANTIDADE" */}
                         <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
                         <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
                         <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
                         <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
-                        <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
+                        <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
                       </div>
                     </div>
                     
@@ -1153,7 +1121,7 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* 📊 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
+                  {/* 📊 BARRA DE PROGRESSO CORRIGIDA COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
                   <div className="pt-2 border-t">
                     <div className="flex items-center gap-2">
                       <div 
