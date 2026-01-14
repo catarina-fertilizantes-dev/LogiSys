@@ -7,30 +7,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// 🎯 FUNÇÃO PARA DETERMINAR STATUS DO CARREGAMENTO
+// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
 const getStatusCarregamento = (etapaAtual: number) => {
-  if (etapaAtual === 0) {
+  if (etapaAtual === 1) {
     return {
       status: "Aguardando",
       percentual: 0,
       cor: "bg-yellow-100 text-yellow-800",
       tooltip: "Aguardando chegada do veículo"
     };
-  } else if (etapaAtual >= 1 && etapaAtual < 5) {
-    const percentual = Math.round((etapaAtual / 5) * 100);
+  } else if (etapaAtual >= 2 && etapaAtual <= 5) {
+    const percentual = Math.round(((etapaAtual - 1) / 5) * 100);
     let tooltip = "";
     
     switch (etapaAtual) {
-      case 1:
-        tooltip = "Caminhão chegou ao armazém";
-        break;
       case 2:
         tooltip = "Carregamento do caminhão iniciado";
         break;
@@ -39,6 +36,9 @@ const getStatusCarregamento = (etapaAtual: number) => {
         break;
       case 4:
         tooltip = "Carregamento do caminhão finalizado";
+        break;
+      case 5:
+        tooltip = "Anexando documentação";
         break;
       default:
         tooltip = `Etapa ${etapaAtual} em andamento`;
@@ -57,6 +57,20 @@ const getStatusCarregamento = (etapaAtual: number) => {
       cor: "bg-green-100 text-green-800",
       tooltip: "Documentação anexada e processo concluído"
     };
+  }
+};
+
+// 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE AGENDAMENTO
+const getAgendamentoStatusTooltip = (status: string) => {
+  switch (status) {
+    case "pendente":
+      return "O carregamento referente à este agendamento ainda não foi iniciado";
+    case "em_andamento":
+      return "O carregamento referente à este agendamento está sendo realizado";
+    case "concluido":
+      return "O carregamento referente à este agendamento foi finalizado e o caminhão liberado";
+    default:
+      return "";
   }
 };
 
@@ -184,6 +198,9 @@ const Agendamentos = () => {
   const { hasRole, userRole, user } = useAuth();
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
 
+  // 🆕 ESTADO PARA MODAL DE DETALHES
+  const [detalhesAgendamento, setDetalhesAgendamento] = useState<any | null>(null);
+
   // Buscar cliente atual vinculado ao usuário logado
   const { data: currentCliente } = useQuery({
     queryKey: ["current-cliente", user?.id],
@@ -289,7 +306,7 @@ const Agendamentos = () => {
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     return agendamentosData.map((item: any) => {
-      const etapaAtual = item.carregamento?.etapa_atual || 0;
+      const etapaAtual = item.carregamento?.etapa_atual || 1;
       const statusInfo = getStatusCarregamento(etapaAtual);
       
       return {
@@ -312,6 +329,8 @@ const Agendamentos = () => {
         armazem_id: item.liberacao?.armazem?.id,
         liberacao_id: item.liberacao?.id,
         updated_at: item.updated_at,
+        tipo_caminhao: item.tipo_caminhao,
+        observacoes: item.observacoes,
         // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO - NOVO SISTEMA
         etapa_carregamento: etapaAtual,
         status_carregamento: statusInfo.status,
@@ -953,34 +972,169 @@ const Agendamentos = () => {
           </div>
         )}
 
+        {/* 🆕 MODAL DE DETALHES DO AGENDAMENTO */}
+        <Dialog open={!!detalhesAgendamento} onOpenChange={open => !open && setDetalhesAgendamento(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes do Agendamento</DialogTitle>
+              <DialogDescription>
+                Pedido: {detalhesAgendamento?.pedido}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {detalhesAgendamento && (
+                <>
+                  {/* Informações do Cliente e Produto */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cliente:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.cliente}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Produto:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.produto}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Armazém:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.armazem}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.quantidade.toLocaleString('pt-BR')}t</p>
+                    </div>
+                  </div>
+
+                  {/* Informações do Agendamento */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Informações do Agendamento</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Data de Retirada:</Label>
+                        <p className="font-semibold">{detalhesAgendamento.data}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Status:</Label>
+                        <Badge className={getStatusColor(detalhesAgendamento.status)}>
+                          {getStatusLabel(detalhesAgendamento.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informações do Veículo e Motorista */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Veículo e Motorista</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Placa do Veículo:</Label>
+                        <p className="font-semibold">{formatPlaca(detalhesAgendamento.placa)}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Tipo de Caminhão:</Label>
+                        <p className="font-semibold">{detalhesAgendamento.tipo_caminhao || "—"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Nome do Motorista:</Label>
+                        <p className="font-semibold">{detalhesAgendamento.motorista}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">CPF do Motorista:</Label>
+                        <p className="font-semibold">{formatCPF(detalhesAgendamento.documento)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progresso do Carregamento */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Progresso do Carregamento</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge className={detalhesAgendamento.cor_carregamento}>
+                          {detalhesAgendamento.status_carregamento}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {detalhesAgendamento.percentual_carregamento}% concluído
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                        <div 
+                          className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ width: `${detalhesAgendamento.percentual_carregamento}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {detalhesAgendamento.tooltip_carregamento}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Observações */}
+                  {detalhesAgendamento.observacoes && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-3">Observações</h4>
+                      <p className="text-sm bg-muted p-3 rounded-md">
+                        {detalhesAgendamento.observacoes}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setDetalhesAgendamento(null)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid gap-4">
           {filteredAgendamentos.map((ag) => (
-            <Card key={ag.id} className="transition-all hover:shadow-md">
+            <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
               <CardContent className="p-5">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
+                    <div 
+                      className="flex items-start gap-4 flex-1"
+                      onClick={() => setDetalhesAgendamento(ag)}
+                    >
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                         <Calendar className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        {/* 🎯 NOVO LAYOUT DO CARD CONFORME SOLICITADO */}
+                        {/* 🎯 LAYOUT DO CARD COM "AGENDADA" */}
                         <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
                         <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
                         <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
                         <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
-                        <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
+                        <p className="text-xs text-muted-foreground">Agendada: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
                       </div>
                     </div>
                     
-                    {/* 🎨 BADGE DE STATUS DO AGENDAMENTO */}
-                    <Badge className={getStatusColor(ag.status)}>
-                      {getStatusLabel(ag.status)}
-                    </Badge>
+                    {/* 🎨 BADGE DE STATUS DO AGENDAMENTO COM TOOLTIP HÍBRIDO */}
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="flex items-center gap-1 cursor-help"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Badge className={getStatusColor(ag.status)}>
+                            {getStatusLabel(ag.status)}
+                          </Badge>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">{getAgendamentoStatusTooltip(ag.status)}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
 
-                  {/* 📋 INFORMAÇÕES DO AGENDAMENTO EM LINHA ÚNICA PARA TELAS GRANDES */}
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+                  {/* 📋 INFORMAÇÕES DO AGENDAMENTO - CLICÁVEL */}
+                  <div 
+                    className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2"
+                    onClick={() => setDetalhesAgendamento(ag)}
+                  >
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span>{ag.data}</span>
@@ -999,14 +1153,23 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* 📊 NOVA BARRA DE PROGRESSO COM TOOLTIP NA PRÓPRIA BARRA */}
+                  {/* 📊 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
                   <div className="pt-2 border-t">
                     <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
-                      <Tooltip>
+                      <div 
+                        className="flex items-center gap-2"
+                        onClick={() => setDetalhesAgendamento(ag)}
+                      >
+                        <Truck className="h-4 w-4 text-purple-600" />
+                        <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+                      </div>
+                      
+                      <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
-                          <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help">
+                          <div 
+                            className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <div 
                               className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
                               style={{ width: `${ag.percentual_carregamento}%` }}
@@ -1017,9 +1180,23 @@ const Agendamentos = () => {
                           <p className="text-sm">{ag.tooltip_carregamento}</p>
                         </TooltipContent>
                       </Tooltip>
-                      <span className="text-xs text-muted-foreground font-medium w-12">
-                        {ag.percentual_carregamento}%
-                      </span>
+                      
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex items-center gap-1 cursor-help"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground font-medium w-12">
+                              {ag.percentual_carregamento}%
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{ag.tooltip_carregamento}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>
