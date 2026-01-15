@@ -337,7 +337,7 @@ const Estoque = () => {
     unidade: "t" as Unidade,
   });
 
-  // 🔍 EFFECT COM LOGS DETALHADOS PARA DEBUG
+  // 🔍 EFFECT COM CORREÇÃO - NÃO LIMPAR URL ATÉ PROCESSAR PARÂMETROS
   useEffect(() => {
     console.log("🔍 [DEBUG ESTOQUE] useEffect executado");
     console.log("🔍 [DEBUG ESTOQUE] hasRole:", hasRole);
@@ -360,54 +360,55 @@ const Estoque = () => {
       console.log("🔍 [DEBUG ESTOQUE] Abrindo modal...");
       setDialogOpen(true);
       
-      // PRÉ-SELECIONAR CAMPOS APENAS SE OS DADOS JÁ CARREGARAM
-      if ((produtoParam || armazemParam) && produtosCadastrados && armazensAtivos) {
-        console.log("🔍 [DEBUG ESTOQUE] Tentando pré-selecionar campos...");
+      // 🆕 SÓ PROCESSAR E LIMPAR URL QUANDO DADOS ESTIVEREM CARREGADOS
+      if (produtosCadastrados && armazensAtivos) {
+        console.log("🔍 [DEBUG ESTOQUE] Dados carregados - processando pré-seleção...");
         
-        // Validar se o produto existe na lista e está ativo
-        const produtoValido = produtoParam && produtosCadastrados.some(p => {
-          console.log("🔍 [DEBUG ESTOQUE] Verificando produto:", p.id, "===", produtoParam, "ativo:", p.ativo);
-          return p.id === produtoParam && p.ativo;
-        });
-        
-        // Validar se o armazém existe na lista e está ativo
-        const armazemValido = armazemParam && armazensAtivos.some(a => {
-          console.log("🔍 [DEBUG ESTOQUE] Verificando armazém:", a.id, "===", armazemParam, "ativo:", a.ativo);
-          return a.id === armazemParam;
-        });
-        
-        console.log("🔍 [DEBUG ESTOQUE] Validações:", {
-          produtoValido,
-          armazemValido,
-          produtoParam,
-          armazemParam
-        });
-        
-        if (produtoValido || armazemValido) {
-          console.log("🔍 [DEBUG ESTOQUE] Aplicando pré-seleção...");
-          setNovoProduto(prev => {
-            const newState = {
-              ...prev,
-              produtoId: produtoValido ? produtoParam : "",
-              armazem: armazemValido ? armazemParam : ""
-            };
-            console.log("🔍 [DEBUG ESTOQUE] Novo estado:", newState);
-            return newState;
+        // PRÉ-SELECIONAR CAMPOS SE HOUVER PARÂMETROS
+        if (produtoParam || armazemParam) {
+          console.log("🔍 [DEBUG ESTOQUE] Tentando pré-selecionar campos...");
+          
+          // Validar se o produto existe na lista e está ativo
+          const produtoValido = produtoParam && produtosCadastrados.some(p => {
+            console.log("🔍 [DEBUG ESTOQUE] Verificando produto:", p.id, "===", produtoParam, "ativo:", p.ativo);
+            return p.id === produtoParam && p.ativo;
           });
-        } else {
-          console.log("🔍 [DEBUG ESTOQUE] Nenhuma validação passou - modal vazio");
+          
+          // Validar se o armazém existe na lista e está ativo
+          const armazemValido = armazemParam && armazensAtivos.some(a => {
+            console.log("🔍 [DEBUG ESTOQUE] Verificando armazém:", a.id, "===", armazemParam, "ativo:", a.ativo);
+            return a.id === armazemParam;
+          });
+          
+          console.log("🔍 [DEBUG ESTOQUE] Validações:", {
+            produtoValido,
+            armazemValido,
+            produtoParam,
+            armazemParam
+          });
+          
+          if (produtoValido || armazemValido) {
+            console.log("🔍 [DEBUG ESTOQUE] Aplicando pré-seleção...");
+            setNovoProduto(prev => {
+              const newState = {
+                ...prev,
+                produtoId: produtoValido ? produtoParam : "",
+                armazem: armazemValido ? armazemParam : ""
+              };
+              console.log("🔍 [DEBUG ESTOQUE] Novo estado:", newState);
+              return newState;
+            });
+          } else {
+            console.log("🔍 [DEBUG ESTOQUE] Nenhuma validação passou - modal vazio");
+          }
         }
+        
+        // 🆕 LIMPAR URL APENAS APÓS PROCESSAR OS PARÂMETROS
+        console.log("🔍 [DEBUG ESTOQUE] Limpando URL após processamento...");
+        window.history.replaceState({}, document.title, window.location.pathname);
       } else {
-        console.log("🔍 [DEBUG ESTOQUE] Dados ainda não carregaram ou sem parâmetros:", {
-          temParametros: !!(produtoParam || armazemParam),
-          temProdutos: !!produtosCadastrados,
-          temArmazens: !!armazensAtivos
-        });
+        console.log("🔍 [DEBUG ESTOQUE] Aguardando dados carregarem...");
       }
-      
-      // Limpar os parâmetros da URL sem recarregar a página
-      console.log("🔍 [DEBUG ESTOQUE] Limpando URL...");
-      window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       console.log("🔍 [DEBUG ESTOQUE] Condições não atendidas:", {
         modal,
@@ -673,7 +674,6 @@ const Estoque = () => {
         <br />Armazéns carregados: {armazensAtivos?.length || 0}
       </div>
 
-      {/* Resto do componente continua igual... */}
       <div className="flex items-center gap-3">
         <Input
           className="h-9 flex-1"
