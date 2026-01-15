@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Filter as FilterIcon } from "lucide-react";
+import { Users, Plus, Filter as FilterIcon, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +30,9 @@ const estadosBrasil = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-type Cliente = Database['public']['Tables']['clientes']['Row'];
+type Cliente = Database['public']['Tables']['clientes']['Row'] & {
+  temp_password?: string | null;
+};
 
 // Helpers de formatação
 const formatCPF = (cpf: string) =>
@@ -169,7 +171,7 @@ const Clientes = () => {
     try {
       const { data, error } = await supabase
         .from("clientes")
-        .select("*")
+        .select("*, temp_password")
         .order("nome", { ascending: true });
       if (error) {
         setError(error.message);
@@ -355,6 +357,24 @@ const Clientes = () => {
         title: "Erro ao alterar status",
       });
     }
+  };
+
+  const handleShowCredentials = (cliente: Cliente) => {
+    if (!cliente.temp_password) {
+      toast({
+        variant: "destructive",
+        title: "Credenciais não disponíveis",
+        description: "O usuário já fez o primeiro login ou as credenciais expiraram.",
+      });
+      return;
+    }
+
+    setCredenciaisModal({
+      show: true,
+      email: cliente.email || "",
+      senha: cliente.temp_password,
+      nome: cliente.nome || "",
+    });
   };
 
   const filteredClientes = useMemo(() => {
@@ -639,7 +659,17 @@ const Clientes = () => {
             <p><b>CNPJ/CPF:</b> {detalhesCliente?.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
             <p><b>Status:</b> {detalhesCliente?.ativo ? "Ativo" : "Inativo"}</p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
+            {canCreate && detalhesCliente?.temp_password && (
+              <Button
+                variant="outline"
+                onClick={() => handleShowCredentials(detalhesCliente)}
+                className="flex-1"
+              >
+                <Key className="h-4 w-4 mr-2" />
+                Ver Credenciais
+              </Button>
+            )}
             <Button onClick={() => setDetalhesCliente(null)}>
               Fechar
             </Button>
@@ -661,9 +691,25 @@ const Clientes = () => {
                   <h3 className="font-semibold text-lg">{cliente.nome}</h3>
                   <p className="text-sm text-muted-foreground">{cliente.email}</p>
                 </div>
-                <Badge variant={cliente.ativo ? "default" : "secondary"}>
-                  {cliente.ativo ? "Ativo" : "Inativo"}
-                </Badge>
+                <div className="flex flex-col gap-2 items-end">
+                  <Badge variant={cliente.ativo ? "default" : "secondary"}>
+                    {cliente.ativo ? "Ativo" : "Inativo"}
+                  </Badge>
+                  {canCreate && cliente.temp_password && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShowCredentials(cliente);
+                      }}
+                      className="text-xs"
+                    >
+                      <Key className="h-3 w-3 mr-1" />
+                      Credenciais
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-1 text-sm">
                 <p>
