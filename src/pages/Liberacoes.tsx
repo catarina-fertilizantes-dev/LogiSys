@@ -683,7 +683,7 @@ const Liberacoes = () => {
                         title="Estoque não cadastrado"
                         description="Este produto não possui estoque cadastrado no armazém selecionado. É necessário registrar uma entrada de estoque primeiro."
                         actionText="Registrar Estoque"
-                        actionUrl="https://logi-sys-shiy.vercel.app/estoque?modal=novo"
+                        actionUrl={`https://logi-sys-shiy.vercel.app/estoque?modal=novo&produto=${novaLiberacao.produto}&armazem=${novaLiberacao.armazem}`}
                       />
                     )}
                     
