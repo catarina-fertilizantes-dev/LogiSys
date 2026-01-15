@@ -101,6 +101,25 @@ const parseDate = (d: string) => {
 
 const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
+  
+  // 🚫 PROTEÇÃO ADICIONAL: Redirecionar role 'armazem' para dashboard
+  useEffect(() => {
+    if (userRole === "armazem") {
+      window.location.href = "/";
+      return;
+    }
+  }, [userRole]);
+
+  // Se for role 'armazem', não renderizar nada enquanto redireciona
+  if (userRole === "armazem") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Redirecionando...</p>
+      </div>
+    );
+  }
+
   const canCreate = hasRole("logistica") || hasRole("admin");
   const { toast } = useToast();
   const queryClient = useQueryClient();
