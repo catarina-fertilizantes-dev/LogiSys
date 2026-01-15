@@ -599,6 +599,10 @@ const Armazens = () => {
               <p className="text-base font-semibold">{credenciaisModal.nome}</p>
               <div className="space-y-2">
                 <div>
+                  <Label className="text-xs text-muted-foreground">Acesse:</Label>
+                  <p className="font-mono text-sm text-blue-600">{window.location.origin}</p>
+                </div>
+                <div>
                   <Label className="text-xs text-muted-foreground">Email:</Label>
                   <p className="font-mono text-sm">{credenciaisModal.email}</p>
                 </div>
