@@ -263,6 +263,11 @@ const Liberacoes = () => {
     quantidade: "",
   });
 
+  // 🆕 ESTADOS PARA VALIDAÇÃO DE ESTOQUE
+  const [quantidadeEstoque, setQuantidadeEstoque] = useState<number>(0);
+  const [validandoEstoque, setValidandoEstoque] = useState(false);
+  const [temEstoqueCadastrado, setTemEstoqueCadastrado] = useState<boolean | null>(null);
+
   const { data: produtos } = useQuery({
     queryKey: ["produtos-list"],
     queryFn: async () => {
@@ -298,6 +303,53 @@ const Liberacoes = () => {
     },
   });
 
+  // 🆕 FUNÇÃO PARA VALIDAR ESTOQUE
+  const validarEstoque = async (produtoId: string, armazemId: string) => {
+    if (!produtoId || !armazemId) {
+      setQuantidadeEstoque(0);
+      setTemEstoqueCadastrado(null);
+      return;
+    }
+    
+    setValidandoEstoque(true);
+    try {
+      const { data: estoqueData, error } = await supabase
+        .from("estoque")
+        .select("quantidade")
+        .eq("produto_id", produtoId)
+        .eq("armazem_id", armazemId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar estoque:', error);
+        setQuantidadeEstoque(0);
+        setTemEstoqueCadastrado(false);
+        return;
+      }
+
+      if (estoqueData) {
+        setQuantidadeEstoque(estoqueData.quantidade || 0);
+        setTemEstoqueCadastrado(true);
+      } else {
+        setQuantidadeEstoque(0);
+        setTemEstoqueCadastrado(false);
+      }
+      
+    } catch (error) {
+      console.error('Erro ao validar estoque:', error);
+      setQuantidadeEstoque(0);
+      setTemEstoqueCadastrado(false);
+    } finally {
+      setValidandoEstoque(false);
+    }
+  };
+
+  // 🆕 VALIDAÇÃO EM TEMPO REAL DA QUANTIDADE
+  const quantidadeValida = useMemo(() => {
+    const qtd = Number(novaLiberacao.quantidade);
+    return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeEstoque;
+  }, [novaLiberacao.quantidade, quantidadeEstoque]);
+
   useEffect(() => {
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
@@ -307,6 +359,16 @@ const Liberacoes = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [canCreate]);
+
+  // 🆕 EFFECT PARA VALIDAR ESTOQUE QUANDO PRODUTO E ARMAZÉM MUDAREM
+  useEffect(() => {
+    if (novaLiberacao.produto && novaLiberacao.armazem) {
+      validarEstoque(novaLiberacao.produto, novaLiberacao.armazem);
+    } else {
+      setQuantidadeEstoque(0);
+      setTemEstoqueCadastrado(null);
+    }
+  }, [novaLiberacao.produto, novaLiberacao.armazem]);
   
   // 🔄 FILTROS ATUALIZADOS PARA NOVOS STATUS
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -365,9 +427,12 @@ const Liberacoes = () => {
 
   const resetFormNovaLiberacao = () => {
     setNovaLiberacao({ produto: "", armazem: "", cliente_id: "", pedido: "", quantidade: "" });
+    setQuantidadeEstoque(0);
+    setTemEstoqueCadastrado(null);
+    setValidandoEstoque(false);
   };
 
-  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA PARA NOVO STATUS PADRÃO
+  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA COM VALIDAÇÃO DE ESTOQUE
   const handleCreateLiberacao = async () => {
     const { produto, armazem, cliente_id, pedido, quantidade } = novaLiberacao;
 
@@ -378,6 +443,25 @@ const Liberacoes = () => {
     const qtdNum = Number(quantidade);
     if (Number.isNaN(qtdNum) || qtdNum <= 0) {
       toast({ variant: "destructive", title: "Quantidade inválida" });
+      return;
+    }
+
+    // 🆕 VALIDAÇÃO DE ESTOQUE
+    if (!temEstoqueCadastrado) {
+      toast({ 
+        variant: "destructive", 
+        title: "Estoque não cadastrado", 
+        description: "É necessário cadastrar estoque para este produto no armazém selecionado." 
+      });
+      return;
+    }
+
+    if (qtdNum > quantidadeEstoque) {
+      toast({ 
+        variant: "destructive", 
+        title: "Estoque insuficiente", 
+        description: `Quantidade solicitada (${qtdNum.toLocaleString('pt-BR')}t) excede o estoque disponível (${quantidadeEstoque.toLocaleString('pt-BR')}t).` 
+      });
       return;
     }
 
@@ -517,7 +601,10 @@ const Liberacoes = () => {
                     <div className="space-y-2">
                       <Label htmlFor="produto">Produto *</Label>
                       {temProdutosDisponiveis ? (
-                        <Select value={novaLiberacao.produto} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v }))}>
+                        <Select 
+                          value={novaLiberacao.produto} 
+                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }))}
+                        >
                           <SelectTrigger id="produto">
                             <SelectValue placeholder="Selecione o produto" />
                           </SelectTrigger>
@@ -540,7 +627,10 @@ const Liberacoes = () => {
                     <div className="space-y-2">
                       <Label htmlFor="armazem">Armazém *</Label>
                       {temArmazensDisponiveis ? (
-                        <Select value={novaLiberacao.armazem} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v }))}>
+                        <Select 
+                          value={novaLiberacao.armazem} 
+                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }))}
+                        >
                           <SelectTrigger id="armazem">
                             <SelectValue placeholder="Selecione o armazém" />
                           </SelectTrigger>
@@ -587,18 +677,58 @@ const Liberacoes = () => {
                       )}
                     </div>
                     
-                    {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && (
+                    {/* 🆕 VALIDAÇÃO DE ESTOQUE */}
+                    {novaLiberacao.produto && novaLiberacao.armazem && temEstoqueCadastrado === false && (
+                      <EmptyStateCard
+                        title="Estoque não cadastrado"
+                        description="Este produto não possui estoque cadastrado no armazém selecionado. É necessário registrar uma entrada de estoque primeiro."
+                        actionText="Registrar Estoque"
+                        actionUrl="https://logi-sys-shiy.vercel.app/estoque?modal=novo"
+                      />
+                    )}
+                    
+                    {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && temEstoqueCadastrado && (
                       <div className="space-y-2">
                         <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                        {novaLiberacao.produto && novaLiberacao.armazem && (
+                          <div className="text-sm text-muted-foreground mb-1">
+                            {validandoEstoque ? (
+                              <span className="flex items-center gap-1">
+                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                Verificando estoque...
+                              </span>
+                            ) : (
+                              <span className={quantidadeEstoque > 0 ? "text-green-600" : "text-red-600"}>
+                                Estoque disponível: {quantidadeEstoque.toLocaleString('pt-BR')}t
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <Input
                           id="quantidade"
                           type="number"
                           step="0.01"
                           min="0"
+                          max={quantidadeEstoque || undefined}
                           value={novaLiberacao.quantidade}
                           onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
                           placeholder="0.00"
+                          className={
+                            novaLiberacao.quantidade && !quantidadeValida 
+                              ? "border-red-500 focus:border-red-500" 
+                              : novaLiberacao.quantidade && quantidadeValida
+                              ? "border-green-500 focus:border-green-500"
+                              : ""
+                          }
                         />
+                        {novaLiberacao.quantidade && !quantidadeValida && (
+                          <p className="text-xs text-red-600">
+                            {Number(novaLiberacao.quantidade) > quantidadeEstoque 
+                              ? `Quantidade excede o estoque disponível (${quantidadeEstoque.toLocaleString('pt-BR')}t)`
+                              : "Quantidade deve ser maior que zero"
+                            }
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -607,7 +737,14 @@ const Liberacoes = () => {
                     <Button 
                       className="bg-gradient-primary" 
                       onClick={handleCreateLiberacao}
-                      disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || !temClientesDisponiveis}
+                      disabled={
+                        !temProdutosDisponiveis || 
+                        !temArmazensDisponiveis || 
+                        !temClientesDisponiveis || 
+                        !temEstoqueCadastrado || 
+                        !quantidadeValida || 
+                        validandoEstoque
+                      }
                     >
                       Criar Liberação
                     </Button>
