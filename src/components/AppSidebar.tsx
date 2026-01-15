@@ -37,6 +37,8 @@ const upperMenuItems = [
     url: "/liberacoes",
     icon: ClipboardList,
     resource: "liberacoes" as const,
+    // 🚫 NOVA RESTRIÇÃO: Ocultar para role 'armazem'
+    excludeRoles: ["armazem"] as const,
   },
   {
     title: "Agendamentos",
@@ -105,6 +107,13 @@ export function AppSidebar() {
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
     return items.filter(item => {
+      // 🚫 NOVA VERIFICAÇÃO: Verificar excludeRoles
+      if ('excludeRoles' in item && item.excludeRoles && userRole) {
+        if (item.excludeRoles.includes(userRole as any)) {
+          return false;
+        }
+      }
+
       if ('requiresRole' in item && item.requiresRole) {
         const hasRequiredRole = userRole ? item.requiresRole.includes(userRole) : false;
         if (!hasRequiredRole) {
