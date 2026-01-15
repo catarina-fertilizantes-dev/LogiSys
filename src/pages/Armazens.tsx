@@ -99,7 +99,22 @@ const estadosBrasil = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-type Armazem = Database['public']['Tables']['armazens']['Row'] & {
+type Armazem = {
+  id: string;
+  nome: string;
+  cidade: string;
+  estado: string;
+  email: string;
+  telefone?: string | null;
+  endereco?: string | null;
+  capacidade_total?: number | null;
+  capacidade_disponivel?: number | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at?: string | null;
+  cep?: string | null;
+  cnpj_cpf?: string | null;
+  user_id?: string | null;
   temp_password?: string | null;
 };
 
@@ -186,6 +201,13 @@ const Armazens = () => {
     }
   };
 
+  const canCreate = hasRole("admin") || hasRole("logistica");
+
+  useEffect(() => {
+    fetchArmazens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
@@ -194,12 +216,7 @@ const Armazens = () => {
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
-  
-  useEffect(() => {
-    fetchArmazens();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canCreate]);
 
   const handleCreateArmazem = async () => {
     const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep, cnpj_cpf } = novoArmazem;
@@ -316,6 +333,9 @@ const Armazens = () => {
           description: `${nome} foi adicionado ao sistema.`,
         });
 
+        // ✅ CORREÇÃO: Fazer o refresh ANTES de mostrar o modal
+        await fetchArmazens();
+
         setCredenciaisModal({
           show: true,
           email: email.trim(),
@@ -325,7 +345,6 @@ const Armazens = () => {
 
         resetForm();
         setDialogOpen(false);
-        fetchArmazens();
       } else {
         toast({
           variant: "destructive",
@@ -397,8 +416,6 @@ const Armazens = () => {
       return true;
     });
   }, [armazens, filterStatus, searchTerm]);
-
-  const canCreate = hasRole("admin") || hasRole("logistica");
 
   if (loading) {
     return (
