@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Check if user needs to change password
           const forceChange = session.user.user_metadata?.force_password_change === true;
           setNeedsPasswordChange(forceChange);
-          console.log('🔍 [DEBUG] Force password change:', forceChange);
+          console.log('�� [DEBUG] Force password change:', forceChange);
         } else {
           setUserRole(null);
           setNeedsPasswordChange(false);
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Check if user needs to change password
         const forceChange = session.user.user_metadata?.force_password_change === true;
         setNeedsPasswordChange(forceChange);
-        console.log('🔍 [DEBUG] Force password change:', forceChange);
+        console.log('�� [DEBUG] Force password change:', forceChange);
       }
       
       setLoading(false);
@@ -95,32 +95,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const emailResult = emailSchema.safeParse(email);
-    const passwordResult = passwordSchema.safeParse(password);
-    
-    if (!emailResult.success || !passwordResult.success) {
+    try {
+      setLoading(true);
+      
+      const emailResult = emailSchema.safeParse(email);
+      const passwordResult = passwordSchema.safeParse(password);
+      
+      if (!emailResult.success || !passwordResult.success) {
+        toast({
+          variant: "destructive",
+          title: "Erro de validação",
+          description: "Email ou senha inválidos"
+        });
+        return { error: new Error("Validation failed") };
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: emailResult.data, 
+        password: passwordResult.data 
+      });
+
+      if (error) {
+        let errorMessage = "Erro ao fazer login";
+        
+        if (error.message === "Invalid login credentials") {
+          errorMessage = "Email ou senha incorretos";
+        } else if (error.message === "Email not confirmed") {
+          errorMessage = "Email não confirmado";
+        } else if (error.message === "Too many requests") {
+          errorMessage = "Muitas tentativas. Tente novamente mais tarde";
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Erro no login",
+          description: errorMessage,
+        });
+      } else if (data.user) {
+        // ✅ NOVA FUNCIONALIDADE - Limpar senha temporária no primeiro login
+        try {
+          const { data: clearResult, error: clearError } = await supabase.rpc('clear_user_temp_password', {
+            user_email: emailResult.data.toLowerCase()
+          });
+          
+          if (clearError) {
+            console.warn('Could not clear temporary password:', clearError);
+          } else if (clearResult?.cleared_count > 0) {
+            console.log('Temporary password cleared for user:', emailResult.data);
+          }
+        } catch (clearError) {
+          // Não falhar o login se não conseguir limpar a senha temporária
+          console.warn('Error clearing temporary password:', clearError);
+        }
+
+        // Verificar se precisa trocar senha
+        const needsChange = data.user.user_metadata?.force_password_change === true;
+        
+        if (needsChange) {
+          setNeedsPasswordChange(true);
+        }
+        
+        // Verificar se está em modo recovery
+        if (data.user.recovery_sent_at) {
+          setRecoveryMode(true);
+        }
+        
+        toast({
+          title: "Login realizado com sucesso!",
+          description: `Bem-vindo${needsChange ? '. Você deve alterar sua senha.' : '!'}`,
+        });
+      }
+      
+      return { error };
+    } catch (err) {
+      console.error("Erro inesperado no login:", err);
       toast({
         variant: "destructive",
-        title: "Erro de validação",
-        description: "Email ou senha inválidos"
+        title: "Erro inesperado",
+        description: "Tente novamente ou entre em contato com o suporte",
       });
-      return { error: new Error("Validation failed") };
+      return { error: err };
+    } finally {
+      setLoading(false);
     }
-    
-    const { error } = await supabase.auth.signInWithPassword({ 
-      email: emailResult.data, 
-      password: passwordResult.data 
-    });
-    
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao fazer login",
-        description: error.message
-      });
-    }
-    
-    return { error };
   };
 
   const signUp = async (email: string, password: string, nome: string) => {
