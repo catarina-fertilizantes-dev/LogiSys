@@ -50,6 +50,18 @@ const getLiberacaoStatusTooltip = (status: StatusLiberacao) => {
   }
 };
 
+// 🎯 FUNÇÃO PARA TOOLTIPS DA BARRA DE AGENDAMENTO
+const getAgendamentoBarTooltip = (percentualAgendado: number, quantidadeAgendada: number, quantidadeTotal: number) => {
+  if (percentualAgendado === 0) {
+    return "Nenhuma quantidade desta liberação foi agendada para retirada";
+  } else if (percentualAgendado === 100) {
+    return `Toda a quantidade desta liberação (${quantidadeTotal.toLocaleString('pt-BR')}t) foi agendada para retirada`;
+  } else {
+    const quantidadeRestante = quantidadeTotal - quantidadeAgendada;
+    return `${quantidadeAgendada.toLocaleString('pt-BR')}t agendada de ${quantidadeTotal.toLocaleString('pt-BR')}t total. Restam ${quantidadeRestante.toLocaleString('pt-BR')}t disponíveis para agendamento`;
+  }
+};
+
 // Componente para exibir quando não há dados disponíveis
 const EmptyStateCard = ({ 
   title, 
@@ -773,7 +785,7 @@ const Liberacoes = () => {
                     </Tooltip>
                   </div>
 
-                  {/* 📊 BARRA DE AGENDAMENTOS - CLICÁVEL */}
+                  {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
                   <div 
                     className="pt-2 border-t"
                     onClick={() => setDetalhesLiberacao(lib)}
@@ -781,15 +793,43 @@ const Liberacoes = () => {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-blue-600" />
                       <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div 
-                          className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                          style={{ width: `${lib.percentualAgendado}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-muted-foreground font-medium w-12">
-                        {lib.percentualAgendado}%
-                      </span>
+                      
+                      {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div 
+                              className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${lib.percentualAgendado}%` }}
+                            ></div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex items-center gap-1 cursor-help"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground font-medium w-12">
+                              {lib.percentualAgendado}%
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
                       <span className="text-xs text-blue-600 font-medium">
                         {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada.toLocaleString('pt-BR')}t agendada` : 'Nenhum agendamento'}
                       </span>
