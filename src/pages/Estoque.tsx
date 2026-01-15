@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -337,6 +337,35 @@ const Estoque = () => {
     unidade: "t" as Unidade,
   });
 
+  // 🆕 EFFECT PARA DETECTAR PARÂMETRO ?modal=novo COM PRÉ-SELEÇÃO ROBUSTA
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modal = urlParams.get('modal');
+    const produtoParam = urlParams.get('produto');
+    const armazemParam = urlParams.get('armazem');
+    
+    if (modal === 'novo' && (hasRole("logistica") || hasRole("admin"))) {
+      setDialogOpen(true);
+      
+      // 🆕 PRÉ-SELECIONAR CAMPOS APENAS SE OS DADOS JÁ CARREGARAM
+      if ((produtoParam || armazemParam) && produtosCadastrados && armazensAtivos) {
+        // Validar se o produto existe na lista e está ativo
+        const produtoValido = produtoParam && produtosCadastrados.some(p => p.id === produtoParam && p.ativo);
+        // Validar se o armazém existe na lista e está ativo
+        const armazemValido = armazemParam && armazensAtivos.some(a => a.id === armazemParam);
+        
+        setNovoProduto(prev => ({
+          ...prev,
+          produtoId: produtoValido ? produtoParam : "",
+          armazem: armazemValido ? armazemParam : ""
+        }));
+      }
+      
+      // Limpar os parâmetros da URL sem recarregar a página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [hasRole, produtosCadastrados, armazensAtivos]);
+
   const resetFormNovoProduto = () =>
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
 
@@ -433,6 +462,29 @@ const Estoque = () => {
   
   const temProdutosDisponiveis = produtosAtivos.length > 0;
   const temArmazensDisponiveis = armazensDisponiveis.length > 0;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Controle de Estoque" subtitle="Carregando..." icon={Package} actions={<></>} />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando estoque...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-6 space-y-6">
+        <PageHeader title="Controle de Estoque" subtitle="Erro ao carregar dados" icon={Package} actions={<></>} />
+        <div className="text-center">
+          <p className="text-destructive">Erro: {(error as Error).message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
