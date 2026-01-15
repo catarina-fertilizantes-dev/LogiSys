@@ -85,6 +85,7 @@ const lowerMenuItems = [
     url: "/estoque",
     icon: Package,
     resource: "estoque" as const,
+    // ✅ MODIFICAÇÃO: Removido qualquer restrição - agora armazém pode acessar
   },
 ];
 
@@ -142,8 +143,9 @@ export function AppSidebar() {
     ? []
     : filterMenuItems(lowerMenuItems);
 
+  // ✅ MODIFICAÇÃO: Incluir armazém para poder ver a seção Cadastros (especificamente Estoque)
   const showCadastros =
-    userRole === "admin" || userRole === "logistica";
+    userRole === "admin" || userRole === "logistica" || userRole === "armazem";
 
   return (
     <Sidebar 
