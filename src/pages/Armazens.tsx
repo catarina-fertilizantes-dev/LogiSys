@@ -11,14 +11,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Warehouse, Plus, Filter as FilterIcon } from "lucide-react";
+import { Warehouse, Plus, Filter as FilterIcon, Key } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Navigate } from "react-router-dom";
+import type { Database } from "@/integrations/supabase/types";
 
 // Helpers de máscara e formatação
 function maskPhoneInput(value: string): string {
@@ -95,25 +99,18 @@ const estadosBrasil = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-type Armazem = {
-  id: string;
-  nome: string;
-  cidade: string;
-  estado: string;
-  email: string;
-  telefone?: string;
-  endereco?: string;
-  capacidade_total?: number;
-  capacidade_disponivel?: number;
-  ativo: boolean;
-  created_at: string;
-  cep?: string;
-  cnpj_cpf?: string;
+type Armazem = Database['public']['Tables']['armazens']['Row'] & {
+  temp_password?: string | null;
 };
 
 const Armazens = () => {
   const { toast } = useToast();
   const { hasRole } = useAuth();
+  const { canAccess, loading: permissionsLoading } = usePermissions();
+
+  if (!permissionsLoading && !(hasRole("admin") || hasRole("logistica"))) {
+    return <Navigate to="/" replace />;
+  }
 
   const [armazens, setArmazens] = useState<Armazem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +161,7 @@ const Armazens = () => {
     try {
       const { data, error } = await supabase
         .from("armazens")
-        .select("*")
+        .select("*, temp_password")
         .order("cidade", { ascending: true });
       if (error) {
         setError(error.message);
@@ -364,6 +361,24 @@ const Armazens = () => {
     }
   };
 
+  const handleShowCredentials = (armazem: Armazem) => {
+    if (!armazem.temp_password) {
+      toast({
+        variant: "destructive",
+        title: "Credenciais não disponíveis",
+        description: "O usuário já fez o primeiro login ou as credenciais expiraram.",
+      });
+      return;
+    }
+
+    setCredenciaisModal({
+      show: true,
+      email: armazem.email || "",
+      senha: armazem.temp_password,
+      nome: armazem.nome || "",
+    });
+  };
+
   const filteredArmazens = useMemo(() => {
     if (!armazens) return [];
     return armazens.filter((armazem) => {
@@ -372,9 +387,9 @@ const Armazens = () => {
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const matches =
-          armazem.nome.toLowerCase().includes(term) ||
-          armazem.cidade.toLowerCase().includes(term) ||
-          armazem.estado.toLowerCase().includes(term) ||
+          armazem.nome?.toLowerCase().includes(term) ||
+          armazem.cidade?.toLowerCase().includes(term) ||
+          armazem.estado?.toLowerCase().includes(term) ||
           armazem.email?.toLowerCase().includes(term) ||
           (armazem.cnpj_cpf && armazem.cnpj_cpf.toLowerCase().includes(term));
         if (!matches) return false;
@@ -424,6 +439,9 @@ const Armazens = () => {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Cadastrar Novo Armazém</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados do armazém. Um usuário de acesso será criado automaticamente.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -592,6 +610,9 @@ const Armazens = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>✅ Armazém cadastrado com sucesso!</DialogTitle>
+            <DialogDescription>
+              Credenciais de acesso criadas. Envie ao responsável por email ou WhatsApp.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
@@ -624,7 +645,7 @@ const Armazens = () => {
               variant="outline"
               onClick={() => {
                 const baseUrl = window.location.origin;
-                const texto = `Credenciais de acesso ao Sistema\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
@@ -656,7 +677,17 @@ const Armazens = () => {
             <p><b>Disponível:</b> {detalhesArmazem?.capacidade_disponivel ?? "—"} t</p>
             <p><b>Status:</b> {detalhesArmazem?.ativo ? "Ativo" : "Inativo"}</p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
+            {canCreate && detalhesArmazem?.temp_password && (
+              <Button
+                variant="outline"
+                onClick={() => handleShowCredentials(detalhesArmazem)}
+                className="flex-1"
+              >
+                <Key className="h-4 w-4 mr-2" />
+                Ver Credenciais
+              </Button>
+            )}
             <Button onClick={() => setDetalhesArmazem(null)}>
               Fechar
             </Button>
@@ -678,9 +709,25 @@ const Armazens = () => {
                   <h3 className="font-semibold text-lg">{armazem.nome}</h3>
                   <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
                 </div>
-                <Badge variant={armazem.ativo ? "default" : "secondary"}>
-                  {armazem.ativo ? "Ativo" : "Inativo"}
-                </Badge>
+                <div className="flex flex-col gap-2 items-end">
+                  <Badge variant={armazem.ativo ? "default" : "secondary"}>
+                    {armazem.ativo ? "Ativo" : "Inativo"}
+                  </Badge>
+                  {canCreate && armazem.temp_password && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShowCredentials(armazem);
+                      }}
+                      className="text-xs"
+                    >
+                      <Key className="h-3 w-3 mr-1" />
+                      Credenciais
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-1 text-sm">
                 <p>
