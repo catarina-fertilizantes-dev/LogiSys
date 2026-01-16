@@ -297,7 +297,7 @@ const Estoque = () => {
 
   const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
     const newQty = Number(newQtyStr);
-    if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr)) {
+    if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr.trim())) {
       toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior ou igual a zero." });
       return;
     }
@@ -388,7 +388,7 @@ const Estoque = () => {
     setObservacoesRemessa("");
   };
 
-  // 🆕 FUNÇÃO MELHORADA PARA VALIDAÇÃO DE ARQUIVO
+  // Função melhorada para validação de arquivo
   const handleFileChange = (
     file: File | null, 
     allowedTypes: string[], 
@@ -492,7 +492,7 @@ const Estoque = () => {
       Number.isNaN(qtdNum) ||
       qtdNum <= 0 ||
       quantidade.trim() === "" ||
-      !/^\\d+(\\.\\d+)?$/.test(quantidade)
+      !/^\d+(\.\d+)?$/.test(quantidade.trim())
     ) {
       toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior que zero." });
       return;
@@ -776,7 +776,7 @@ const Estoque = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 CAMPOS ADICIONAIS DA REMESSA - LAYOUT RESPONSIVO */}
+                    {/* Campos adicionais da remessa - layout responsivo */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className="space-y-2">
                         <Label htmlFor="numero-remessa">Número da Remessa</Label>
@@ -803,7 +803,7 @@ const Estoque = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 SEÇÃO DE DOCUMENTOS OBRIGATÓRIOS */}
+                    {/* Seção de documentos obrigatórios */}
                     <div className="border-t pt-4 space-y-4">
                       <div className="flex items-center gap-2 mb-3">
                         <FileText className="h-5 w-5 text-primary" />
@@ -879,7 +879,7 @@ const Estoque = () => {
                   </>
                 )}
                 
-                {/* 🆕 LEGENDA SIMPLES PARA CAMPOS OBRIGATÓRIOS */}
+                {/* Legenda simples para campos obrigatórios */}
                 <p className="text-xs text-muted-foreground">
                   * Campos obrigatórios
                 </p>
