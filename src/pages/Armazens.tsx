@@ -222,10 +222,13 @@ const Armazens = () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-      // Limpar o parâmetro da URL sem recarregar a página
+    }
+    
+    // 🚀 LIMPAR TODOS OS PARÂMETROS DA URL (não apenas 'modal')
+    if (urlParams.toString()) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [canCreate]); // 🚀 DEPENDÊNCIA ADICIONADA
+  }, [canCreate]);
   
   useEffect(() => {
     fetchArmazens();
