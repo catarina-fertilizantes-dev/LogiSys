@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -197,6 +197,9 @@ const Agendamentos = () => {
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
+
+  // 🚀 NOVO ESTADO DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
 
   // 🆕 ESTADO PARA MODAL DE DETALHES
   const [detalhesAgendamento, setDetalhesAgendamento] = useState<any | null>(null);
@@ -498,7 +501,7 @@ const Agendamentos = () => {
     }
   };
 
-  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA
+  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
   const handleCreateAgendamento = async () => {
     setFormError("");
     const erros = validateAgendamento(novoAgendamento, quantidadeDisponivel);
@@ -517,6 +520,10 @@ const Agendamentos = () => {
       toast({ variant: "destructive", title: "Quantidade inválida" });
       return;
     }
+
+    // 🚀 ATIVAR LOADING STATE
+    setIsCreating(true);
+
     try {
       const placaSemMascara = (novoAgendamento.placa ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
       const cpfSemMascara = (novoAgendamento.documento ?? "").replace(/\D/g, "");
@@ -602,6 +609,9 @@ const Agendamentos = () => {
           description: err instanceof Error ? err.message : "Erro desconhecido"
         });
       }
+    } finally {
+      // 🚀 DESATIVAR LOADING STATE
+      setIsCreating(false);
     }
   };
 
@@ -734,7 +744,11 @@ const Agendamentos = () => {
           icon={Calendar}
           actions={
             canCreate ? (
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+                if (!open && isCreating) return;
+                setDialogOpen(open);
+              }}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-primary">
                     <Plus className="mr-2 h-4 w-4" />
@@ -755,6 +769,7 @@ const Agendamentos = () => {
                             setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
                             await atualizarQuantidadeDisponivel(v);
                           }}
+                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                         >
                           <SelectTrigger id="liberacao">
                             <SelectValue placeholder="Selecione a liberação" />
@@ -811,6 +826,7 @@ const Agendamentos = () => {
                                   ? "border-green-500 focus:border-green-500"
                                   : ""
                               }
+                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                             />
                             {novoAgendamento.quantidade && !quantidadeValida && (
                               <p className="text-xs text-red-600">
@@ -829,6 +845,7 @@ const Agendamentos = () => {
                               type="date"
                               value={novoAgendamento.data}
                               onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
+                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                             />
                           </div>
                         </div>
@@ -849,6 +866,7 @@ const Agendamentos = () => {
                             autoCapitalize="characters"
                             spellCheck={false}
                             inputMode="text"
+                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                           />
                           <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
                         </div>
@@ -861,6 +879,7 @@ const Agendamentos = () => {
                               value={novoAgendamento.motorista}
                               onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
                               placeholder="Ex: João Silva"
+                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                             />
                           </div>
 
@@ -877,6 +896,7 @@ const Agendamentos = () => {
                               }
                               placeholder="Ex: 123.456.789-00"
                               maxLength={14}
+                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                             />
                           </div>
                         </div>
@@ -888,6 +908,7 @@ const Agendamentos = () => {
                             value={novoAgendamento.tipoCaminhao}
                             onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
                             placeholder="Ex: Bitrem, Carreta, Truck"
+                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                           />
                         </div>
 
@@ -898,6 +919,7 @@ const Agendamentos = () => {
                             value={novoAgendamento.observacoes}
                             onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
                             placeholder="Informações adicionais sobre o agendamento"
+                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                           />
                         </div>
                         
@@ -910,13 +932,26 @@ const Agendamentos = () => {
                     )}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    >
+                      Cancelar
+                    </Button>
                     <Button 
                       className="bg-gradient-primary" 
                       onClick={handleCreateAgendamento}
-                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade}
+                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade || isCreating} // 🚀 DESABILITAR DURANTE LOADING
                     >
-                      Criar Agendamento
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        "Criar Agendamento"
+                      )}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
