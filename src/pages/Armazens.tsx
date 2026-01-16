@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Warehouse, Plus, Filter as FilterIcon, Key, Loader2 } from "lucide-react";
@@ -24,50 +24,40 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
-const estadosBrasil = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-];
-
-type Armazem = {
-  id: string;
-  nome: string;
-  cidade: string;
-  estado: string;
-  email: string;
-  telefone?: string | null;
-  endereco?: string | null;
-  capacidade_total?: number | null;
-  capacidade_disponivel?: number | null;
-  ativo: boolean;
-  created_at: string;
-  updated_at?: string | null;
-  cep?: string | null;
-  cnpj_cpf?: string | null;
-  user_id?: string | null;
-  temp_password?: string | null;
-};
-
-// Helpers de formatação
-const formatCPF = (cpf: string) =>
-  cpf.replace(/\D/g, "")
-    .padStart(11, "0")
-    .slice(0, 11)
-    .replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-
-const formatCNPJ = (cnpj: string) =>
-  cnpj.replace(/\D/g, "")
-    .padStart(14, "0")
-    .slice(0, 14)
-    .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-
-function formatCpfCnpj(v: string): string {
-  const onlyDigits = v.replace(/\D/g, "");
-  if (onlyDigits.length <= 11) {
-    return formatCPF(onlyDigits);
-  }
-  return formatCNPJ(onlyDigits);
+// Helpers de máscara e formatação
+function maskPhoneInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length > 6)
+    return cleaned.replace(/^(\d{2})(\d{0,5})(\d{0,4})$/, "($1) $2-$3");
+  if (cleaned.length > 2)
+    return cleaned.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  if (cleaned.length > 0)
+    return cleaned.replace(/^(\d{0,2})/, "($1");
+  return "";
+}
+function formatPhone(phone: string): string {
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  return phone;
+}
+function maskCEPInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length > 5)
+    return cleaned.replace(/^(\d{5})(\d{0,3})$/, "$1-$2");
+  return cleaned;
+}
+function formatCEP(cep: string): string {
+  const cleaned = cep.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length === 8)
+    return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+  return cep;
 }
 function maskCpfCnpjInput(value: string): string {
   const digits = value.replace(/\D/g, "");
@@ -95,40 +85,38 @@ function maskCpfCnpjInput(value: string): string {
     return cnpj;
   }
 }
-function formatPhone(phone: string): string {
-  let cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length === 11)
-    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length === 10)
-    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-  return phone;
+function formatCpfCnpj(v: string): string {
+  const onlyDigits = v.replace(/\D/g, "");
+  if (onlyDigits.length <= 11) {
+    return onlyDigits.padStart(11, "0").replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
+  return onlyDigits.padStart(14, "0").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
-function maskPhoneInput(value: string): string {
-  const cleaned = value.replace(/\D/g, "").slice(0, 11);
-  if (cleaned.length === 11)
-    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length === 10)
-    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length > 6)
-    return cleaned.replace(/^(\d{2})(\d{0,5})(\d{0,4})$/, "($1) $2-$3");
-  if (cleaned.length > 2)
-    return cleaned.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-  if (cleaned.length > 0)
-    return cleaned.replace(/^(\d{0,2})/, "($1");
-  return "";
-}
-function formatCEP(cep: string): string {
-  const cleaned = cep.replace(/\D/g, "").slice(0, 8);
-  if (cleaned.length === 8)
-    return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
-  return cep;
-}
-function maskCEPInput(value: string): string {
-  const cleaned = value.replace(/\D/g, "").slice(0, 8);
-  if (cleaned.length > 5)
-    return cleaned.replace(/^(\d{5})(\d{0,3})$/, "$1-$2");
-  return cleaned;
-}
+
+const estadosBrasil = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
+type Armazem = {
+  id: string;
+  nome: string;
+  cidade: string;
+  estado: string;
+  email: string;
+  telefone?: string | null;
+  endereco?: string | null;
+  capacidade_total?: number | null;
+  capacidade_disponivel?: number | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at?: string | null;
+  cep?: string | null;
+  cnpj_cpf?: string | null;
+  user_id?: string | null;
+  temp_password?: string | null;
+};
 
 const Armazens = () => {
   const { toast } = useToast();
@@ -143,18 +131,17 @@ const Armazens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ FORMULÁRIO COM ORDEM CORRETA DOS CAMPOS
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoArmazem, setNovoArmazem] = useState({
     nome: "",
     cidade: "",
     estado: "",
     email: "",
-    cnpj_cpf: "",
     telefone: "",
     endereco: "",
-    cep: "",
     capacidade_total: "",
+    cep: "",
+    cnpj_cpf: "",
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -165,6 +152,7 @@ const Armazens = () => {
   });
 
   const [detalhesArmazem, setDetalhesArmazem] = useState<Armazem | null>(null);
+
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -178,11 +166,11 @@ const Armazens = () => {
       cidade: "",
       estado: "",
       email: "",
-      cnpj_cpf: "",
       telefone: "",
       endereco: "",
-      cep: "",
       capacidade_total: "",
+      cep: "",
+      cnpj_cpf: "",
     });
   };
 
@@ -193,13 +181,13 @@ const Armazens = () => {
       const { data, error } = await supabase
         .from("armazens")
         .select("*, temp_password")
-        .order("nome", { ascending: true });
+        .order("cidade", { ascending: true });
       if (error) {
         setError(error.message);
         toast({
           variant: "destructive",
           title: "Erro ao carregar armazéns",
-          description: "Não foi possível carregar a lista de armazéns.",
+          description: "Não foi possível carregar os armazéns.",
         });
         setLoading(false);
         return;
@@ -217,6 +205,13 @@ const Armazens = () => {
     }
   };
 
+  const canCreate = hasRole("admin") || hasRole("logistica");
+
+  useEffect(() => {
+    fetchArmazens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
@@ -226,21 +221,13 @@ const Armazens = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [canCreate]);
-  
-  useEffect(() => {
-    fetchArmazens();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleCreateArmazem = async () => {
-    const { nome, cidade, estado, email, cnpj_cpf, telefone, endereco, cep, capacidade_total } = novoArmazem;
-    
-    // ✅ VALIDAÇÃO CORRIGIDA - CAMPOS OBRIGATÓRIOS CONFORME EDGE FUNCTION
+    const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep, cnpj_cpf } = novoArmazem;
     if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim() || !cnpj_cpf.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
-        description: "Nome, Cidade, Estado, Email e CNPJ/CPF são obrigatórios.",
       });
       return;
     }
@@ -270,12 +257,6 @@ const Armazens = () => {
         });
         return;
       }
-
-      // Salva SEM formatação
-      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
-      const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
-      const cleanCep = cep ? cep.replace(/\D/g, "") : null;
-      
       let capacidadeTotalNumber: number | undefined = undefined;
       if (capacidade_total && capacidade_total.trim()) {
         capacidadeTotalNumber = parseFloat(capacidade_total);
@@ -289,7 +270,10 @@ const Armazens = () => {
         }
       }
 
-      // ✅ PAYLOAD CORRIGIDO - GARANTIR QUE CAMPOS OBRIGATÓRIOS SEJAM STRINGS
+      const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : undefined;
+      const cleanCep = cep ? cep.replace(/\D/g, "") : undefined;
+      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
+
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -298,15 +282,15 @@ const Armazens = () => {
           apikey: supabaseAnonKey,
         },
         body: JSON.stringify({
-          nome: nome.trim(),                    // ✅ string obrigatória
-          cidade: cidade.trim(),                // ✅ string obrigatória
-          estado: estado.trim(),                // ✅ string obrigatória (2 chars)
-          email: email.trim(),                  // ✅ string obrigatória
-          cnpj_cpf: cleanCnpjCpf,              // ✅ string obrigatória
-          telefone: cleanTelefone,              // ✅ string opcional (pode ser null)
-          endereco: endereco?.trim() || null,   // ✅ string opcional (pode ser null)
-          cep: cleanCep,                       // ✅ string opcional (pode ser null)
-          capacidade_total: capacidadeTotalNumber, // ✅ number opcional (pode ser null)
+          nome: nome.trim(),
+          email: email.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          telefone: cleanTelefone,
+          endereco: endereco?.trim() || undefined,
+          capacidade_total: capacidadeTotalNumber,
+          cep: cleanCep,
+          cnpj_cpf: cleanCnpjCpf,
         }),
       });
 
@@ -332,8 +316,8 @@ const Armazens = () => {
                 msg === "Invalid email" ? "Email inválido"
                   : msg === "Required" ? "Campo obrigatório"
                     : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
-                      : msg
-              ).join(" | ");
+                      : msg)
+              .join(" | ");
           } else if (typeof data.details === "string") {
             errorMessage = data.details;
           } else if (data.error) {
@@ -356,6 +340,9 @@ const Armazens = () => {
           description: `${nome} foi adicionado ao sistema.`,
         });
 
+        // ✅ CORREÇÃO: Fazer o refresh ANTES de mostrar o modal
+        await fetchArmazens();
+
         setCredenciaisModal({
           show: true,
           email: email.trim(),
@@ -365,7 +352,6 @@ const Armazens = () => {
 
         resetForm();
         setDialogOpen(false);
-        fetchArmazens();
       } else {
         toast({
           variant: "destructive",
@@ -438,16 +424,15 @@ const Armazens = () => {
         const term = searchTerm.toLowerCase();
         const matches =
           armazem.nome?.toLowerCase().includes(term) ||
+          armazem.cidade?.toLowerCase().includes(term) ||
+          armazem.estado?.toLowerCase().includes(term) ||
           armazem.email?.toLowerCase().includes(term) ||
-          armazem.cnpj_cpf?.toLowerCase().includes(term) ||
-          (armazem.cidade && armazem.cidade.toLowerCase().includes(term));
+          (armazem.cnpj_cpf && armazem.cnpj_cpf.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
     });
   }, [armazens, filterStatus, searchTerm]);
-
-  const canCreate = hasRole("logistica") || hasRole("admin");
 
   if (loading) {
     return (
@@ -497,7 +482,6 @@ const Armazens = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  {/* ✅ FORMULÁRIO COM ORDEM CORRETA E ASTERISCOS */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <Label htmlFor="nome">Nome *</Label>
@@ -506,7 +490,7 @@ const Armazens = () => {
                         value={novoArmazem.nome}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
                         placeholder="Nome do armazém"
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -515,8 +499,8 @@ const Armazens = () => {
                         id="cidade"
                         value={novoArmazem.cidade}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
-                        placeholder="Nome da cidade"
-                        disabled={isCreating}
+                        placeholder="Cidade"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -524,7 +508,7 @@ const Armazens = () => {
                       <Select
                         value={novoArmazem.estado}
                         onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       >
                         <SelectTrigger id="estado">
                           <SelectValue placeholder="Selecione o estado" />
@@ -546,7 +530,7 @@ const Armazens = () => {
                         value={novoArmazem.email}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
                         placeholder="email@exemplo.com"
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -559,7 +543,7 @@ const Armazens = () => {
                         }
                         placeholder="00.000.000/0000-00 ou 000.000.000-00"
                         maxLength={18}
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -567,7 +551,7 @@ const Armazens = () => {
                       <Input
                         id="telefone"
                         value={novoArmazem.telefone}
-                        onChange={e =>
+                        onChange={(e) =>
                           setNovoArmazem({
                             ...novoArmazem,
                             telefone: maskPhoneInput(e.target.value),
@@ -575,7 +559,7 @@ const Armazens = () => {
                         }
                         placeholder="(00) 00000-0000"
                         maxLength={15}
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div className="col-span-2">
@@ -585,7 +569,7 @@ const Armazens = () => {
                         value={novoArmazem.endereco}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -593,15 +577,18 @@ const Armazens = () => {
                       <Input
                         id="cep"
                         value={novoArmazem.cep}
-                        onChange={e =>
-                          setNovoArmazem({ ...novoArmazem, cep: maskCEPInput(e.target.value) })
+                        onChange={(e) =>
+                          setNovoArmazem({
+                            ...novoArmazem,
+                            cep: maskCEPInput(e.target.value),
+                          })
                         }
                         placeholder="00000-000"
                         maxLength={9}
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
-                    <div>
+                    <div className="col-span-2">
                       <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
                       <Input
                         id="capacidade_total"
@@ -609,7 +596,7 @@ const Armazens = () => {
                         value={novoArmazem.capacidade_total}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                         placeholder="Ex: 1000"
-                        disabled={isCreating}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                   </div>
@@ -621,14 +608,14 @@ const Armazens = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => setDialogOpen(false)}
-                    disabled={isCreating}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                   >
                     Cancelar
                   </Button>
                   <Button 
                     className="bg-gradient-primary" 
                     onClick={handleCreateArmazem}
-                    disabled={isCreating}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                   >
                     {isCreating ? (
                       <>
@@ -666,7 +653,7 @@ const Armazens = () => {
             </Select>
           </div>
           <Input
-            placeholder="Buscar por nome, email, CNPJ/CPF..."
+            placeholder="Buscar por nome, cidade, estado, email ou CNPJ/CPF..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -674,7 +661,7 @@ const Armazens = () => {
         </div>
       </div>
 
-      {/* Modal credenciais temporárias do Armazém */}
+      {/* Modal de credenciais temporárias do Armazém */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -744,7 +731,7 @@ const Armazens = () => {
             <DialogTitle>{detalhesArmazem?.nome}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-4">
-            <p><b>Email:</b> {detalhesArmazem?.email}</p>
+            <p><b>Email:</b> {detalhesArmazem?.email ?? "—"}</p>
             <p><b>Telefone:</b> {detalhesArmazem?.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
             <p><b>CEP:</b> {detalhesArmazem?.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
             <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
@@ -773,8 +760,8 @@ const Armazens = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Lista de armazéns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid de armazéns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         {filteredArmazens.map((armazem) => (
           <Card
             key={armazem.id}
@@ -785,7 +772,7 @@ const Armazens = () => {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{armazem.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{armazem.email}</p>
+                  <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge variant={armazem.ativo ? "default" : "secondary"}>
@@ -809,13 +796,22 @@ const Armazens = () => {
               </div>
               <div className="space-y-1 text-sm">
                 <p>
-                  <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(armazem.cnpj_cpf)}
+                  <span className="text-muted-foreground">Email:</span> {armazem.email ?? "—"}
                 </p>
-                {(armazem.telefone || armazem.cep) && (
-                  <>
-                    {armazem.telefone && <p><span className="text-muted-foreground">Telefone:</span> {formatPhone(armazem.telefone)}</p>}
-                    {armazem.cep && <p><span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}</p>}
-                  </>
+                {armazem.telefone && (
+                  <p>
+                    <span className="text-muted-foreground">Telefone:</span> {formatPhone(armazem.telefone)}
+                  </p>
+                )}
+                {armazem.cep && (
+                  <p>
+                    <span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}
+                  </p>
+                )}
+                {armazem.cnpj_cpf && (
+                  <p>
+                    <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(armazem.cnpj_cpf)}
+                  </p>
                 )}
               </div>
               {canCreate && (
@@ -830,7 +826,7 @@ const Armazens = () => {
                       checked={armazem.ativo}
                       onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
                       onClick={e => e.stopPropagation()}
-                      disabled={isTogglingStatus[armazem.id]}
+                      disabled={isTogglingStatus[armazem.id]} // 🚀 DESABILITAR DURANTE LOADING
                     />
                     {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
                     {isTogglingStatus[armazem.id] && (
