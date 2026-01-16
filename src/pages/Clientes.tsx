@@ -350,13 +350,15 @@ const Clientes = () => {
     }
   };
 
-  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING - CORRIGIDA
+  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING - VERSÃO CORRIGIDA E COM DEBUG
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     console.log('🔄 Iniciando toggle:', { id, ativoAtual, novoValor: !ativoAtual });
     
+    // Ativar loading para este cliente específico
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
   
     try {
+      // Fazer o update com select para verificar o resultado
       const { data, error } = await supabase
         .from("clientes")
         .update({ 
@@ -364,25 +366,45 @@ const Clientes = () => {
           updated_at: new Date().toISOString() 
         })
         .eq("id", id)
-        .select(); // Adicionar select para ver o resultado
+        .select("id, nome, ativo"); // Adicionar select para ver o resultado
   
       console.log('📊 Resultado do update:', { data, error });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro no Supabase:', error);
+        throw error;
+      }
   
-      toast({
-        title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
-      });
+      // Verificar se o update realmente aconteceu
+      if (data && data.length > 0) {
+        console.log('✅ Cliente atualizado:', data[0]);
+        
+        toast({
+          title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
+        });
   
-      await fetchClientes();
+        // Aguardar um pouco e recarregar
+        setTimeout(() => {
+          fetchClientes();
+        }, 200);
+        
+      } else {
+        console.warn('⚠️ Nenhum registro foi atualizado');
+        toast({
+          variant: "destructive",
+          title: "Nenhum registro foi atualizado",
+        });
+      }
       
     } catch (err) {
-      console.error('❌ Erro no toggle:', err);
+      console.error('❌ Erro completo no toggle:', err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
+        description: err instanceof Error ? err.message : "Erro desconhecido",
       });
     } finally {
+      // Desativar loading para este cliente
       setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
