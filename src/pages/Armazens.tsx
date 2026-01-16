@@ -207,7 +207,6 @@ const Armazens = () => {
 
   const canCreate = hasRole("admin") || hasRole("logistica");
 
-  // ✅ CORRIGIR ORDEM DOS useEffect - IGUAL AOS CLIENTES
   useEffect(() => {
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
@@ -216,7 +215,7 @@ const Armazens = () => {
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [canCreate]); // ✅ ADICIONAR DEPENDÊNCIA
+  }, [canCreate]);
 
   useEffect(() => {
     fetchArmazens();
@@ -258,6 +257,7 @@ const Armazens = () => {
         });
         return;
       }
+      
       let capacidadeTotalNumber: number | undefined = undefined;
       if (capacidade_total && capacidade_total.trim()) {
         capacidadeTotalNumber = parseFloat(capacidade_total);
@@ -271,7 +271,7 @@ const Armazens = () => {
         }
       }
 
-      // ✅ CORRIGIR LIMPEZA DE DADOS - IGUAL AOS CLIENTES
+      // ✅ LIMPEZA DE DADOS - IGUAL AOS CLIENTES
       const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
       const cleanCep = cep ? cep.replace(/\D/g, "") : null;
       const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
@@ -342,7 +342,7 @@ const Armazens = () => {
           description: `${nome} foi adicionado ao sistema.`,
         });
 
-        // ✅ CORRIGIR ORDEM - IGUAL AOS CLIENTES
+        // ✅ SEQUÊNCIA EXATA DOS CLIENTES
         setCredenciaisModal({
           show: true,
           email: email.trim(),
@@ -352,7 +352,10 @@ const Armazens = () => {
 
         resetForm();
         setDialogOpen(false);
-        fetchArmazens(); // ✅ MOVER PARA DEPOIS DO MODAL
+        
+        // ✅ AGUARDAR UM POUCO E ENTÃO FAZER FETCH
+        await new Promise(resolve => setTimeout(resolve, 500));
+        fetchArmazens();
       } else {
         toast({
           variant: "destructive",
@@ -488,8 +491,8 @@ const Armazens = () => {
                       <Label htmlFor="nome">Nome *</Label>
                       <Input
                         id="nome"
-                        name="nome" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="organization" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="nome"
+                        autoComplete="organization"
                         value={novoArmazem.nome}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
                         placeholder="Nome do armazém"
@@ -500,8 +503,8 @@ const Armazens = () => {
                       <Label htmlFor="cidade">Cidade *</Label>
                       <Input
                         id="cidade"
-                        name="cidade" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="address-level2" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="cidade"
+                        autoComplete="address-level2"
                         value={novoArmazem.cidade}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
                         placeholder="Cidade"
@@ -531,9 +534,9 @@ const Armazens = () => {
                       <Label htmlFor="email">Email *</Label>
                       <Input
                         id="email"
-                        name="email" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
+                        name="email"
                         type="email"
-                        autoComplete="email" // ✅ ADICIONAR AUTOCOMPLETE
+                        autoComplete="email"
                         value={novoArmazem.email}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
                         placeholder="email@exemplo.com"
@@ -544,8 +547,8 @@ const Armazens = () => {
                       <Label htmlFor="cnpj_cpf">CNPJ/CPF *</Label>
                       <Input
                         id="cnpj_cpf"
-                        name="cnpj_cpf" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="off" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="cnpj_cpf"
+                        autoComplete="off"
                         value={novoArmazem.cnpj_cpf}
                         onChange={(e) =>
                           setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
@@ -559,8 +562,8 @@ const Armazens = () => {
                       <Label htmlFor="telefone">Telefone</Label>
                       <Input
                         id="telefone"
-                        name="telefone" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="tel" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="telefone"
+                        autoComplete="tel"
                         value={novoArmazem.telefone}
                         onChange={(e) =>
                           setNovoArmazem({
@@ -577,8 +580,8 @@ const Armazens = () => {
                       <Label htmlFor="endereco">Endereço</Label>
                       <Input
                         id="endereco"
-                        name="endereco" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="street-address" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="endereco"
+                        autoComplete="street-address"
                         value={novoArmazem.endereco}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
@@ -589,8 +592,8 @@ const Armazens = () => {
                       <Label htmlFor="cep">CEP</Label>
                       <Input
                         id="cep"
-                        name="cep" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
-                        autoComplete="postal-code" // ✅ ADICIONAR AUTOCOMPLETE
+                        name="cep"
+                        autoComplete="postal-code"
                         value={novoArmazem.cep}
                         onChange={(e) =>
                           setNovoArmazem({
@@ -607,9 +610,9 @@ const Armazens = () => {
                       <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
                       <Input
                         id="capacidade_total"
-                        name="capacidade_total" // ✅ ADICIONAR NAME PARA AUTOCOMPLETE
+                        name="capacidade_total"
                         type="number"
-                        autoComplete="off" // ✅ ADICIONAR AUTOCOMPLETE
+                        autoComplete="off"
                         value={novoArmazem.capacidade_total}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                         placeholder="Ex: 1000"
