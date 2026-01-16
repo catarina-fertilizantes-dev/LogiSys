@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Warehouse, Plus, Filter as FilterIcon, Key, Loader2 } from "lucide-react";
@@ -24,40 +24,50 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
-// Helpers de máscara e formatação
-function maskPhoneInput(value: string): string {
-  const cleaned = value.replace(/\D/g, "").slice(0, 11);
-  if (cleaned.length === 11)
-    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length === 10)
-    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length > 6)
-    return cleaned.replace(/^(\d{2})(\d{0,5})(\d{0,4})$/, "($1) $2-$3");
-  if (cleaned.length > 2)
-    return cleaned.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-  if (cleaned.length > 0)
-    return cleaned.replace(/^(\d{0,2})/, "($1");
-  return "";
-}
-function formatPhone(phone: string): string {
-  let cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length === 11)
-    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-  if (cleaned.length === 10)
-    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-  return phone;
-}
-function maskCEPInput(value: string): string {
-  const cleaned = value.replace(/\D/g, "").slice(0, 8);
-  if (cleaned.length > 5)
-    return cleaned.replace(/^(\d{5})(\d{0,3})$/, "$1-$2");
-  return cleaned;
-}
-function formatCEP(cep: string): string {
-  const cleaned = cep.replace(/\D/g, "").slice(0, 8);
-  if (cleaned.length === 8)
-    return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
-  return cep;
+const estadosBrasil = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
+type Armazem = {
+  id: string;
+  nome: string;
+  cidade: string;
+  estado: string;
+  email: string;
+  telefone?: string | null;
+  endereco?: string | null;
+  capacidade_total?: number | null;
+  capacidade_disponivel?: number | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at?: string | null;
+  cep?: string | null;
+  cnpj_cpf?: string | null;
+  user_id?: string | null;
+  temp_password?: string | null;
+};
+
+// Helpers de formatação
+const formatCPF = (cpf: string) =>
+  cpf.replace(/\D/g, "")
+    .padStart(11, "0")
+    .slice(0, 11)
+    .replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+
+const formatCNPJ = (cnpj: string) =>
+  cnpj.replace(/\D/g, "")
+    .padStart(14, "0")
+    .slice(0, 14)
+    .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+
+function formatCpfCnpj(v: string): string {
+  const onlyDigits = v.replace(/\D/g, "");
+  if (onlyDigits.length <= 11) {
+    return formatCPF(onlyDigits);
+  }
+  return formatCNPJ(onlyDigits);
 }
 function maskCpfCnpjInput(value: string): string {
   const digits = value.replace(/\D/g, "");
@@ -85,48 +95,47 @@ function maskCpfCnpjInput(value: string): string {
     return cnpj;
   }
 }
-function formatCpfCnpj(v: string): string {
-  const onlyDigits = v.replace(/\D/g, "");
-  if (onlyDigits.length <= 11) {
-    return onlyDigits.padStart(11, "0").replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-  }
-  return onlyDigits.padStart(14, "0").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+function formatPhone(phone: string): string {
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  return phone;
+}
+function maskPhoneInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length === 11)
+    return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length === 10)
+    return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  if (cleaned.length > 6)
+    return cleaned.replace(/^(\d{2})(\d{0,5})(\d{0,4})$/, "($1) $2-$3");
+  if (cleaned.length > 2)
+    return cleaned.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  if (cleaned.length > 0)
+    return cleaned.replace(/^(\d{0,2})/, "($1");
+  return "";
+}
+function formatCEP(cep: string): string {
+  const cleaned = cep.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length === 8)
+    return cleaned.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+  return cep;
+}
+function maskCEPInput(value: string): string {
+  const cleaned = value.replace(/\D/g, "").slice(0, 8);
+  if (cleaned.length > 5)
+    return cleaned.replace(/^(\d{5})(\d{0,3})$/, "$1-$2");
+  return cleaned;
 }
 
-const estadosBrasil = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-];
-
-type Armazem = {
-  id: string;
-  nome: string;
-  cidade: string;
-  estado: string;
-  email: string;
-  telefone?: string | null;
-  endereco?: string | null;
-  capacidade_total?: number | null;
-  capacidade_disponivel?: number | null;
-  ativo: boolean;
-  created_at: string;
-  updated_at?: string | null;
-  cep?: string | null;
-  cnpj_cpf?: string | null;
-  user_id?: string | null;
-  temp_password?: string | null;
-};
-
 const Armazens = () => {
-  console.log('🏗️ [ARMAZENS] Componente inicializando...');
-  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
 
   if (!permissionsLoading && !(hasRole("admin") || hasRole("logistica"))) {
-    console.log('🚫 [ARMAZENS] Acesso negado - redirecionando');
     return <Navigate to="/" replace />;
   }
 
@@ -138,14 +147,14 @@ const Armazens = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoArmazem, setNovoArmazem] = useState({
     nome: "",
-    cidade: "",
-    estado: "",
+    cnpj_cpf: "",
     email: "",
     telefone: "",
     endereco: "",
-    capacidade_total: "",
+    cidade: "",
+    estado: "",
     cep: "",
-    cnpj_cpf: "",
+    capacidade_total: "",
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -163,59 +172,41 @@ const Armazens = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
-  // 🔍 LOG DOS ESTADOS DOS FILTROS
-  console.log('🔍 [ARMAZENS] Estados dos filtros:', { 
-    filterStatus, 
-    searchTerm, 
-    searchTermLength: searchTerm.length,
-    searchTermTrimmed: searchTerm.trim().length
-  });
-
   const resetForm = () => {
-    console.log('🔄 [ARMAZENS] Resetando formulário');
     setNovoArmazem({
       nome: "",
-      cidade: "",
-      estado: "",
+      cnpj_cpf: "",
       email: "",
       telefone: "",
       endereco: "",
-      capacidade_total: "",
+      cidade: "",
+      estado: "",
       cep: "",
-      cnpj_cpf: "",
+      capacidade_total: "",
     });
   };
 
   const fetchArmazens = async () => {
-    console.log('📡 [ARMAZENS] Iniciando fetchArmazens...');
     setLoading(true);
     setError(null);
-    
     try {
       const { data, error } = await supabase
         .from("armazens")
         .select("*, temp_password")
-        .order("cidade", { ascending: true });
-        
-      console.log('📡 [ARMAZENS] Resposta do Supabase:', { data, error });
-      
+        .order("nome", { ascending: true });
       if (error) {
-        console.error('❌ [ARMAZENS] Erro no Supabase:', error);
         setError(error.message);
         toast({
           variant: "destructive",
           title: "Erro ao carregar armazéns",
-          description: "Não foi possível carregar os armazéns.",
+          description: "Não foi possível carregar a lista de armazéns.",
         });
         setLoading(false);
         return;
       }
-      
-      console.log(`✅ [ARMAZENS] ${data?.length || 0} armazéns carregados:`, data?.map(a => ({ id: a.id, nome: a.nome })));
       setArmazens(data as Armazem[]);
       setLoading(false);
     } catch (err) {
-      console.error('❌ [ARMAZENS] Exceção no fetchArmazens:', err);
       setError("Erro desconhecido");
       toast({
         variant: "destructive",
@@ -226,32 +217,24 @@ const Armazens = () => {
     }
   };
 
-  const canCreate = hasRole("admin") || hasRole("logistica");
-
   useEffect(() => {
-    console.log('🔍 [ARMAZENS] useEffect 1 - Verificando parâmetros URL');
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
-      console.log('🔍 [ARMAZENS] Abrindo modal automaticamente');
       setDialogOpen(true);
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [canCreate]);
-
+  }, []);
+  
   useEffect(() => {
-    console.log('🔍 [ARMAZENS] useEffect 2 - Fazendo fetch inicial');
     fetchArmazens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreateArmazem = async () => {
-    console.log('🚀 [ARMAZENS] Iniciando criação de armazém...');
-    
-    const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep, cnpj_cpf } = novoArmazem;
-    if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim() || !cnpj_cpf.trim()) {
-      console.log('❌ [ARMAZENS] Campos obrigatórios não preenchidos');
+    const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep, capacidade_total } = novoArmazem;
+    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
@@ -260,7 +243,6 @@ const Armazens = () => {
     }
 
     // 🚀 ATIVAR LOADING STATE
-    console.log('🔄 [ARMAZENS] Ativando loading state');
     setIsCreating(true);
 
     try {
@@ -268,7 +250,6 @@ const Armazens = () => {
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
-        console.log('❌ [ARMAZENS] Variáveis de ambiente não configuradas');
         toast({
           variant: "destructive",
           title: "Erro de configuração",
@@ -279,7 +260,6 @@ const Armazens = () => {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log('❌ [ARMAZENS] Sessão não encontrada');
         toast({
           variant: "destructive",
           title: "Não autenticado",
@@ -287,12 +267,16 @@ const Armazens = () => {
         });
         return;
       }
+
+      // Salva SEM formatação
+      const cleanCnpjCpf = novoArmazem.cnpj_cpf.replace(/\D/g, "");
+      const cleanTelefone = novoArmazem.telefone ? novoArmazem.telefone.replace(/\D/g, "") : null;
+      const cleanCep = novoArmazem.cep ? novoArmazem.cep.replace(/\D/g, "") : null;
       
       let capacidadeTotalNumber: number | undefined = undefined;
       if (capacidade_total && capacidade_total.trim()) {
         capacidadeTotalNumber = parseFloat(capacidade_total);
         if (isNaN(capacidadeTotalNumber) || capacidadeTotalNumber < 0) {
-          console.log('❌ [ARMAZENS] Capacidade inválida:', capacidade_total);
           toast({
             variant: "destructive",
             title: "Capacidade inválida",
@@ -302,25 +286,6 @@ const Armazens = () => {
         }
       }
 
-      // ✅ LIMPEZA DE DADOS - IGUAL AOS CLIENTES
-      const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
-      const cleanCep = cep ? cep.replace(/\D/g, "") : null;
-      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
-
-      const payload = {
-        nome: nome.trim(),
-        email: email.trim(),
-        cidade: cidade.trim(),
-        estado: estado.trim(),
-        telefone: cleanTelefone,
-        endereco: endereco?.trim() || null,
-        capacidade_total: capacidadeTotalNumber,
-        cep: cleanCep,
-        cnpj_cpf: cleanCnpjCpf,
-      };
-      
-      console.log('📡 [ARMAZENS] Enviando payload para Edge Function:', payload);
-
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -328,25 +293,28 @@ const Armazens = () => {
           Authorization: `Bearer ${session.access_token}`,
           apikey: supabaseAnonKey,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          nome: nome.trim(),
+          cnpj_cpf: cleanCnpjCpf,
+          email: email.trim(),
+          telefone: cleanTelefone,
+          endereco: endereco?.trim() || null,
+          cidade: cidade?.trim() || null,
+          estado: estado || null,
+          cep: cleanCep,
+          capacidade_total: capacidadeTotalNumber,
+        }),
       });
 
-      console.log('📡 [ARMAZENS] Resposta da Edge Function - Status:', response.status);
-
       let textBody = await response.text();
-      console.log('📡 [ARMAZENS] Resposta da Edge Function - Body:', textBody);
-      
       let data: any = null;
       try {
         data = JSON.parse(textBody);
-        console.log('📡 [ARMAZENS] Resposta da Edge Function - Parsed:', data);
       } catch {
-        console.log('❌ [ARMAZENS] Falha ao fazer parse da resposta');
         data = null;
       }
 
       if (!response.ok) {
-        console.log('❌ [ARMAZENS] Edge Function retornou erro');
         let errorMessage = "Erro ao criar armazém";
         if (data) {
           if (
@@ -360,8 +328,8 @@ const Armazens = () => {
                 msg === "Invalid email" ? "Email inválido"
                   : msg === "Required" ? "Campo obrigatório"
                     : msg.includes("at least") ? msg.replace("String must contain at least", "Mínimo de").replace("character(s)", "caracteres")
-                      : msg)
-              .join(" | ");
+                      : msg
+              ).join(" | ");
           } else if (typeof data.details === "string") {
             errorMessage = data.details;
           } else if (data.error) {
@@ -379,16 +347,11 @@ const Armazens = () => {
       }
 
       if (data && data.success) {
-        console.log('✅ [ARMAZENS] Armazém criado com sucesso!');
-        console.log('📊 [ARMAZENS] Estado atual dos armazéns ANTES da atualização:', armazens.length, 'registros');
-        
         toast({
           title: "Armazém criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
         });
 
-        // ✅ SEQUÊNCIA EXATA DOS CLIENTES
-        console.log('🔄 [ARMAZENS] Configurando modal de credenciais');
         setCredenciaisModal({
           show: true,
           email: email.trim(),
@@ -396,22 +359,10 @@ const Armazens = () => {
           nome: nome.trim(),
         });
 
-        console.log('🔄 [ARMAZENS] Resetando formulário');
         resetForm();
-        
-        console.log('🔄 [ARMAZENS] Fechando dialog');
         setDialogOpen(false);
-        
-        // ✅ AGUARDAR UM POUCO E ENTÃO FAZER FETCH
-        console.log('⏳ [ARMAZENS] Aguardando 500ms antes do fetch...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('📡 [ARMAZENS] Fazendo fetch após criação...');
-        await fetchArmazens();
-        
-        console.log('📊 [ARMAZENS] Estado dos armazéns APÓS fetchArmazens:', armazens.length, 'registros');
+        fetchArmazens();
       } else {
-        console.log('❌ [ARMAZENS] Edge Function não retornou success');
         toast({
           variant: "destructive",
           title: "Erro ao criar armazém",
@@ -419,7 +370,6 @@ const Armazens = () => {
         });
       }
     } catch (err) {
-      console.error('❌ [ARMAZENS] Exceção durante criação:', err);
       toast({
         variant: "destructive",
         title: "Erro de conexão/fetch",
@@ -427,15 +377,12 @@ const Armazens = () => {
       });
     } finally {
       // 🚀 DESATIVAR LOADING STATE
-      console.log('🔄 [ARMAZENS] Desativando loading state');
       setIsCreating(false);
     }
   };
 
   // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
-    console.log(`🔄 [ARMAZENS] Toggle status para armazém ${id}: ${ativoAtual} -> ${!ativoAtual}`);
-    
     // Ativar loading para este armazém específico
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
 
@@ -445,14 +392,11 @@ const Armazens = () => {
         .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
-      
-      console.log(`✅ [ARMAZENS] Status alterado com sucesso para armazém ${id}`);
       toast({
         title: `Armazém ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
       });
       fetchArmazens();
     } catch (err) {
-      console.error(`❌ [ARMAZENS] Erro ao alterar status do armazém ${id}:`, err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
@@ -464,8 +408,6 @@ const Armazens = () => {
   };
 
   const handleShowCredentials = (armazem: Armazem) => {
-    console.log('🔑 [ARMAZENS] Mostrando credenciais para:', armazem.nome);
-    
     if (!armazem.temp_password) {
       toast({
         variant: "destructive",
@@ -483,62 +425,27 @@ const Armazens = () => {
     });
   };
 
-  // 🔧 FILTRO CORRIGIDO COM LOGS DETALHADOS
   const filteredArmazens = useMemo(() => {
-    console.log('🔍 [ARMAZENS] Filtrando armazéns - Total:', armazens.length);
-    console.log('🔍 [ARMAZENS] Filtros aplicados:', { filterStatus, searchTerm });
-    console.log('🔍 [ARMAZENS] Lista completa de armazéns:', armazens.map(a => ({ id: a.id, nome: a.nome, ativo: a.ativo })));
-    
-    if (!armazens || armazens.length === 0) return [];
-    
-    const filtered = armazens.filter((armazem) => {
-      // Log detalhado de cada filtro
-      const statusMatch = filterStatus === "all" || 
-                         (filterStatus === "ativo" && armazem.ativo) || 
-                         (filterStatus === "inativo" && !armazem.ativo);
-      
-      let searchMatch = true;
+    if (!armazens) return [];
+    return armazens.filter((armazem) => {
+      if (filterStatus === "ativo" && !armazem.ativo) return false;
+      if (filterStatus === "inativo" && armazem.ativo) return false;
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
-        searchMatch = 
+        const matches =
           armazem.nome?.toLowerCase().includes(term) ||
-          armazem.cidade?.toLowerCase().includes(term) ||
-          armazem.estado?.toLowerCase().includes(term) ||
           armazem.email?.toLowerCase().includes(term) ||
-          (armazem.cnpj_cpf && armazem.cnpj_cpf.toLowerCase().includes(term));
+          armazem.cnpj_cpf?.toLowerCase().includes(term) ||
+          (armazem.cidade && armazem.cidade.toLowerCase().includes(term));
+        if (!matches) return false;
       }
-      
-      const finalMatch = statusMatch && searchMatch;
-      
-      // Log detalhado para debug
-      if (!finalMatch) {
-        console.log(`🔍 [ARMAZENS] Armazém ${armazem.nome} filtrado:`, { 
-          statusMatch, 
-          searchMatch, 
-          filterStatus, 
-          searchTerm,
-          armazemAtivo: armazem.ativo 
-        });
-      }
-      
-      return finalMatch;
+      return true;
     });
-    
-    console.log('🔍 [ARMAZENS] Armazéns filtrados:', filtered.length, 'registros');
-    console.log('🔍 [ARMAZENS] Lista filtrada:', filtered.map(a => ({ id: a.id, nome: a.nome })));
-    
-    return filtered;
   }, [armazens, filterStatus, searchTerm]);
 
-  console.log('🎨 [ARMAZENS] Renderizando - Estados:', { 
-    loading, 
-    error, 
-    armazensCount: armazens.length, 
-    filteredCount: filteredArmazens.length 
-  });
+  const canCreate = hasRole("logistica") || hasRole("admin");
 
   if (loading) {
-    console.log('⏳ [ARMAZENS] Renderizando loading state');
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -550,7 +457,6 @@ const Armazens = () => {
   }
 
   if (error) {
-    console.log('❌ [ARMAZENS] Renderizando error state:', error);
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -559,8 +465,6 @@ const Armazens = () => {
       </div>
     );
   }
-
-  console.log('🎨 [ARMAZENS] Renderizando página principal');
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
@@ -571,7 +475,6 @@ const Armazens = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              console.log('🔄 [ARMAZENS] Dialog onOpenChange:', { open, isCreating });
               // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
               if (!open && isCreating) return;
               setDialogOpen(open);
@@ -595,28 +498,87 @@ const Armazens = () => {
                       <Label htmlFor="nome">Nome *</Label>
                       <Input
                         id="nome"
-                        name="nome"
-                        autoComplete="organization"
                         value={novoArmazem.nome}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
-                        placeholder="Nome do armazém"
+                        placeholder="Nome completo"
                         disabled={isCreating}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="cidade">Cidade *</Label>
+                      <Label htmlFor="cnpj_cpf">CNPJ/CPF *</Label>
+                      <Input
+                        id="cnpj_cpf"
+                        value={novoArmazem.cnpj_cpf}
+                        onChange={(e) =>
+                          setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
+                        }
+                        placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                        maxLength={18}
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={novoArmazem.email}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="telefone">Telefone</Label>
+                      <Input
+                        id="telefone"
+                        value={novoArmazem.telefone}
+                        onChange={e =>
+                          setNovoArmazem({
+                            ...novoArmazem,
+                            telefone: maskPhoneInput(e.target.value),
+                          })
+                        }
+                        placeholder="(00) 00000-0000"
+                        maxLength={15}
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cep">CEP</Label>
+                      <Input
+                        id="cep"
+                        value={novoArmazem.cep}
+                        onChange={e =>
+                          setNovoArmazem({ ...novoArmazem, cep: maskCEPInput(e.target.value) })
+                        }
+                        placeholder="00000-000"
+                        maxLength={9}
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        value={novoArmazem.endereco}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
+                        placeholder="Rua, número, complemento"
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cidade">Cidade</Label>
                       <Input
                         id="cidade"
-                        name="cidade"
-                        autoComplete="address-level2"
                         value={novoArmazem.cidade}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
-                        placeholder="Cidade"
+                        placeholder="Nome da cidade"
                         disabled={isCreating}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="estado">Estado (UF) *</Label>
+                      <Label htmlFor="estado">Estado (UF)</Label>
                       <Select
                         value={novoArmazem.estado}
                         onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
@@ -634,89 +596,11 @@ const Armazens = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        value={novoArmazem.email}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
-                        placeholder="email@exemplo.com"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cnpj_cpf">CNPJ/CPF *</Label>
-                      <Input
-                        id="cnpj_cpf"
-                        name="cnpj_cpf"
-                        autoComplete="off"
-                        value={novoArmazem.cnpj_cpf}
-                        onChange={(e) =>
-                          setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
-                        }
-                        placeholder="00.000.000/0000-00 ou 000.000.000-00"
-                        maxLength={18}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="telefone">Telefone</Label>
-                      <Input
-                        id="telefone"
-                        name="telefone"
-                        autoComplete="tel"
-                        value={novoArmazem.telefone}
-                        onChange={(e) =>
-                          setNovoArmazem({
-                            ...novoArmazem,
-                            telefone: maskPhoneInput(e.target.value),
-                          })
-                        }
-                        placeholder="(00) 00000-0000"
-                        maxLength={15}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="endereco">Endereço</Label>
-                      <Input
-                        id="endereco"
-                        name="endereco"
-                        autoComplete="street-address"
-                        value={novoArmazem.endereco}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
-                        placeholder="Rua, número, complemento"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cep">CEP</Label>
-                      <Input
-                        id="cep"
-                        name="cep"
-                        autoComplete="postal-code"
-                        value={novoArmazem.cep}
-                        onChange={(e) =>
-                          setNovoArmazem({
-                            ...novoArmazem,
-                            cep: maskCEPInput(e.target.value),
-                          })
-                        }
-                        placeholder="00000-000"
-                        maxLength={9}
-                        disabled={isCreating}
-                      />
-                    </div>
                     <div className="col-span-2">
                       <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
                       <Input
                         id="capacidade_total"
-                        name="capacidade_total"
                         type="number"
-                        autoComplete="off"
                         value={novoArmazem.capacidade_total}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                         placeholder="Ex: 1000"
@@ -777,7 +661,7 @@ const Armazens = () => {
             </Select>
           </div>
           <Input
-            placeholder="Buscar por nome, cidade, estado, email ou CNPJ/CPF..."
+            placeholder="Buscar por nome, email, CNPJ/CPF..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -785,17 +669,16 @@ const Armazens = () => {
         </div>
       </div>
 
-      {/* Modal de credenciais temporárias do Armazém */}
+      {/* Modal credenciais temporárias do Armazém */}
       <Dialog
         open={credenciaisModal.show}
-        onOpenChange={(open) => {
-          console.log('🔑 [ARMAZENS] Modal credenciais onOpenChange:', open);
+        onOpenChange={(open) =>
           setCredenciaisModal(
             open
               ? credenciaisModal
               : { show: false, email: "", senha: "", nome: "" }
-          );
-        }}
+          )
+        }
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -842,10 +725,7 @@ const Armazens = () => {
             >
               📋 Copiar credenciais
             </Button>
-            <Button onClick={() => {
-              console.log('🔑 [ARMAZENS] Fechando modal de credenciais');
-              setCredenciaisModal({ show: false, email: "", senha: "", nome: "" });
-            }}>
+            <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
               Fechar
             </Button>
           </DialogFooter>
@@ -859,7 +739,7 @@ const Armazens = () => {
             <DialogTitle>{detalhesArmazem?.nome}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-4">
-            <p><b>Email:</b> {detalhesArmazem?.email ?? "—"}</p>
+            <p><b>Email:</b> {detalhesArmazem?.email}</p>
             <p><b>Telefone:</b> {detalhesArmazem?.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
             <p><b>CEP:</b> {detalhesArmazem?.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
             <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
@@ -888,8 +768,8 @@ const Armazens = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Grid de armazéns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+      {/* Lista de armazéns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredArmazens.map((armazem) => (
           <Card
             key={armazem.id}
@@ -900,7 +780,7 @@ const Armazens = () => {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{armazem.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
+                  <p className="text-sm text-muted-foreground">{armazem.email}</p>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge variant={armazem.ativo ? "default" : "secondary"}>
@@ -924,22 +804,13 @@ const Armazens = () => {
               </div>
               <div className="space-y-1 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Email:</span> {armazem.email ?? "—"}
+                  <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(armazem.cnpj_cpf)}
                 </p>
-                {armazem.telefone && (
-                  <p>
-                    <span className="text-muted-foreground">Telefone:</span> {formatPhone(armazem.telefone)}
-                  </p>
-                )}
-                {armazem.cep && (
-                  <p>
-                    <span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}
-                  </p>
-                )}
-                {armazem.cnpj_cpf && (
-                  <p>
-                    <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(armazem.cnpj_cpf)}
-                  </p>
+                {(armazem.telefone || armazem.cep) && (
+                  <>
+                    {armazem.telefone && <p><span className="text-muted-foreground">Telefone:</span> {formatPhone(armazem.telefone)}</p>}
+                    {armazem.cep && <p><span className="text-muted-foreground">CEP:</span> {formatCEP(armazem.cep)}</p>}
+                  </>
                 )}
               </div>
               {canCreate && (
