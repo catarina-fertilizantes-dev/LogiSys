@@ -225,7 +225,7 @@ const Armazens = () => {
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [canCreate]); // 🚀 DEPENDÊNCIA ADICIONADA
   
   useEffect(() => {
     fetchArmazens();
@@ -507,6 +507,9 @@ const Armazens = () => {
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
                         placeholder="Nome do armazém"
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -517,6 +520,9 @@ const Armazens = () => {
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
                         placeholder="Nome da cidade"
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -547,6 +553,9 @@ const Armazens = () => {
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
                         placeholder="email@exemplo.com"
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -554,12 +563,13 @@ const Armazens = () => {
                       <Input
                         id="cnpj_cpf"
                         value={novoArmazem.cnpj_cpf}
-                        onChange={(e) =>
-                          setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
-                        }
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })}
                         placeholder="00.000.000/0000-00 ou 000.000.000-00"
                         maxLength={18}
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -567,15 +577,13 @@ const Armazens = () => {
                       <Input
                         id="telefone"
                         value={novoArmazem.telefone}
-                        onChange={e =>
-                          setNovoArmazem({
-                            ...novoArmazem,
-                            telefone: maskPhoneInput(e.target.value),
-                          })
-                        }
+                        onChange={e => setNovoArmazem({ ...novoArmazem, telefone: maskPhoneInput(e.target.value) })}
                         placeholder="(00) 00000-0000"
                         maxLength={15}
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div className="col-span-2">
@@ -586,6 +594,9 @@ const Armazens = () => {
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -593,12 +604,13 @@ const Armazens = () => {
                       <Input
                         id="cep"
                         value={novoArmazem.cep}
-                        onChange={e =>
-                          setNovoArmazem({ ...novoArmazem, cep: maskCEPInput(e.target.value) })
-                        }
+                        onChange={e => setNovoArmazem({ ...novoArmazem, cep: maskCEPInput(e.target.value) })}
                         placeholder="00000-000"
                         maxLength={9}
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -610,6 +622,9 @@ const Armazens = () => {
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                         placeholder="Ex: 1000"
                         disabled={isCreating}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                     </div>
                   </div>
