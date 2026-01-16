@@ -52,6 +52,14 @@ const upperMenuItems = [
     icon: Truck,
     resource: "carregamentos" as const,
   },
+  // 🆕 ESTOQUE NO MENU PRINCIPAL APENAS PARA ARMAZÉM
+  {
+    title: "Estoque",
+    url: "/estoque",
+    icon: Package,
+    resource: "estoque" as const,
+    requiresRole: ["armazem"] as const,
+  },
 ];
 
 const lowerMenuItems = [
@@ -80,12 +88,13 @@ const lowerMenuItems = [
     icon: Tag,
     resource: "produtos" as const,
   },
+  // 🆕 ESTOQUE EM CADASTROS APENAS PARA ADMIN/LOGÍSTICA
   {
     title: "Estoque",
     url: "/estoque",
     icon: Package,
     resource: "estoque" as const,
-    // ✅ MODIFICAÇÃO: Removido qualquer restrição - agora armazém pode acessar
+    requiresRole: ["admin", "logistica"] as const,
   },
 ];
 
@@ -143,9 +152,8 @@ export function AppSidebar() {
     ? []
     : filterMenuItems(lowerMenuItems);
 
-  // ✅ MODIFICAÇÃO: Incluir armazém para poder ver a seção Cadastros (especificamente Estoque)
-  const showCadastros =
-    userRole === "admin" || userRole === "logistica" || userRole === "armazem";
+  // 🔧 MODIFICAÇÃO: Mostrar Cadastros apenas se houver itens visíveis
+  const showCadastros = visibleLowerMenuItems.length > 0;
 
   return (
     <Sidebar 
