@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2, FileText, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -235,9 +235,13 @@ const Estoque = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // 🚀 NOVOS ESTADOS DE LOADING
+  // 🚀 ESTADOS DE LOADING
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+
+  // 🆕 NOVOS ESTADOS PARA DOCUMENTOS
+  const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
+  const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
 
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
@@ -297,7 +301,6 @@ const Estoque = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING PARA ESTE PRODUTO ESPECÍFICO
     setIsUpdating(prev => ({ ...prev, [produtoId]: true }));
 
     try {
@@ -327,7 +330,6 @@ const Estoque = () => {
       });
       console.error("❌ [ERROR]", err);
     } finally {
-      // 🚀 DESATIVAR LOADING PARA ESTE PRODUTO
       setIsUpdating(prev => ({ ...prev, [produtoId]: false }));
     }
   };
@@ -349,7 +351,6 @@ const Estoque = () => {
     unidade: "t" as Unidade,
   });
 
-  // 🆕 EFFECT PARA PRÉ-SELEÇÃO ROBUSTA COM PARÂMETROS DA URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const modal = urlParams.get('modal');
@@ -359,13 +360,9 @@ const Estoque = () => {
     if (modal === 'novo' && (hasRole("logistica") || hasRole("admin"))) {
       setDialogOpen(true);
       
-      // SÓ PROCESSAR E LIMPAR URL QUANDO DADOS ESTIVEREM CARREGADOS
       if (produtosCadastrados && armazensAtivos) {
-        // PRÉ-SELECIONAR CAMPOS SE HOUVER PARÂMETROS
         if (produtoParam || armazemParam) {
-          // Validar se o produto existe na lista e está ativo
           const produtoValido = produtoParam && produtosCadastrados.some(p => p.id === produtoParam && p.ativo);
-          // Validar se o armazém existe na lista e está ativo
           const armazemValido = armazemParam && armazensAtivos.some(a => a.id === armazemParam);
           
           if (produtoValido || armazemValido) {
@@ -377,16 +374,64 @@ const Estoque = () => {
           }
         }
         
-        // LIMPAR URL APENAS APÓS PROCESSAR OS PARÂMETROS
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, [hasRole, produtosCadastrados, armazensAtivos]);
 
-  const resetFormNovoProduto = () =>
+  const resetFormNovoProduto = () => {
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
+    // 🆕 LIMPAR ARQUIVOS
+    setNotaRemessaFile(null);
+    setXmlRemessaFile(null);
+  };
 
-  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
+  // 🆕 FUNÇÃO PARA UPLOAD DE DOCUMENTOS
+  const uploadDocumentos = async (estoqueId: string) => {
+    const uploads = [];
+    
+    // Upload da nota de remessa (PDF)
+    if (notaRemessaFile) {
+      const fileName = `${estoqueId}_nota_remessa_${Date.now()}.pdf`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('estoque-documentos')
+        .upload(fileName, notaRemessaFile);
+
+      if (uploadError) {
+        console.error("❌ [ERROR] Upload nota remessa:", uploadError);
+        throw new Error(`Erro ao fazer upload da nota de remessa: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('estoque-documentos')
+        .getPublicUrl(fileName);
+
+      uploads.push({ campo: 'url_nota_remessa', url: urlData.publicUrl });
+    }
+
+    // Upload do XML
+    if (xmlRemessaFile) {
+      const fileName = `${estoqueId}_xml_remessa_${Date.now()}.xml`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('estoque-documentos')
+        .upload(fileName, xmlRemessaFile);
+
+      if (uploadError) {
+        console.error("❌ [ERROR] Upload XML remessa:", uploadError);
+        throw new Error(`Erro ao fazer upload do XML: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('estoque-documentos')
+        .getPublicUrl(fileName);
+
+      uploads.push({ campo: 'url_xml_remessa', url: urlData.publicUrl });
+    }
+
+    return uploads;
+  };
+
+  // 🚀 FUNÇÃO DE CRIAÇÃO MODIFICADA COM DOCUMENTOS OBRIGATÓRIOS
   const handleCreateProduto = async () => {
     const { produtoId, armazem, quantidade, unidade } = novoProduto;
     const qtdNum = Number(quantidade);
@@ -395,6 +440,29 @@ const Estoque = () => {
       toast({ variant: "destructive", title: "Preencha todos os campos obrigatórios" });
       return;
     }
+
+    // 🆕 VALIDAÇÃO DE DOCUMENTOS OBRIGATÓRIOS
+    if (!notaRemessaFile) {
+      toast({ variant: "destructive", title: "Documento obrigatório", description: "Anexe a nota de remessa em PDF." });
+      return;
+    }
+
+    if (!xmlRemessaFile) {
+      toast({ variant: "destructive", title: "Documento obrigatório", description: "Anexe o arquivo XML da remessa." });
+      return;
+    }
+
+    // 🆕 VALIDAÇÃO DE TIPOS DE ARQUIVO
+    if (notaRemessaFile.type !== 'application/pdf') {
+      toast({ variant: "destructive", title: "Tipo de arquivo inválido", description: "A nota de remessa deve ser um arquivo PDF." });
+      return;
+    }
+
+    if (!xmlRemessaFile.name.toLowerCase().endsWith('.xml')) {
+      toast({ variant: "destructive", title: "Tipo de arquivo inválido", description: "O arquivo XML deve ter extensão .xml." });
+      return;
+    }
+
     if (
       Number.isNaN(qtdNum) ||
       qtdNum <= 0 ||
@@ -430,7 +498,7 @@ const Estoque = () => {
       }
       const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
         .from("estoque")
-        .select("quantidade")
+        .select("id, quantidade")
         .eq("produto_id", produtoId)
         .eq("armazem_id", armazemData.id)
         .maybeSingle();
@@ -439,39 +507,82 @@ const Estoque = () => {
         toast({ variant: "destructive", title: "Erro ao buscar estoque", description: errBuscaEstoque.message });
         return;
       }
+
       const estoqueAnterior = estoqueAtual?.quantidade || 0;
       const novaQuantidade = estoqueAnterior + qtdNum;
+      const { data: userData } = await supabase.auth.getUser();
 
-      if (!produtoId || !armazemData.id) {
-        toast({ variant: "destructive", title: "Produto ou armazém inválido", description: "Impossível registrar estoque. Confira os campos." });
-        return;
+      let estoqueId: string;
+
+      if (estoqueAtual?.id) {
+        // 🆕 ATUALIZAR ESTOQUE EXISTENTE COM DOCUMENTOS
+        const { error: errEstoque } = await supabase
+          .from("estoque")
+          .update({
+            quantidade: novaQuantidade,
+            updated_by: userData.user?.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", estoqueAtual.id);
+
+        if (errEstoque) {
+          toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: errEstoque.message });
+          return;
+        }
+
+        estoqueId = estoqueAtual.id;
+      } else {
+        // 🆕 CRIAR NOVO REGISTRO DE ESTOQUE
+        const { data: novoEstoque, error: errEstoque } = await supabase
+          .from("estoque")
+          .insert({
+            produto_id: produtoId,
+            armazem_id: armazemData.id,
+            quantidade: novaQuantidade,
+            updated_by: userData.user?.id,
+            updated_at: new Date().toISOString(),
+            documentos_obrigatorios: true
+          })
+          .select('id')
+          .single();
+
+        if (errEstoque) {
+          let msg = errEstoque.message || "";
+          if (msg.includes("stack depth limit")) {
+            msg = "Erro interno no banco de dados. Produto ou armazém inexistente, ou existe trigger/FK inconsistente.";
+          }
+          toast({ variant: "destructive", title: "Erro ao criar estoque", description: msg });
+          return;
+        }
+
+        estoqueId = novoEstoque.id;
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      const { error: errEstoque } = await supabase
-        .from("estoque")
-        .upsert({
-          produto_id: produtoId,
-          armazem_id: armazemData.id,
-          quantidade: novaQuantidade,
-          updated_by: userData.user?.id,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: "produto_id,armazem_id"
+      // 🆕 FAZER UPLOAD DOS DOCUMENTOS
+      console.log("🔍 [DEBUG] Fazendo upload dos documentos para estoque ID:", estoqueId);
+      const uploads = await uploadDocumentos(estoqueId);
+
+      // 🆕 ATUALIZAR URLS DOS DOCUMENTOS NO BANCO
+      if (uploads.length > 0) {
+        const updateData: any = {};
+        uploads.forEach(upload => {
+          updateData[upload.campo] = upload.url;
         });
 
-      if (errEstoque) {
-        let msg = errEstoque.message || "";
-        if (msg.includes("stack depth limit")) {
-          msg = "Erro interno no banco de dados. Produto ou armazém inexistente, ou existe trigger/FK inconsistente.";
+        const { error: errUpdateDocs } = await supabase
+          .from("estoque")
+          .update(updateData)
+          .eq("id", estoqueId);
+
+        if (errUpdateDocs) {
+          toast({ variant: "destructive", title: "Erro ao salvar documentos", description: errUpdateDocs.message });
+          return;
         }
-        toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: msg });
-        return;
       }
 
       toast({
-        title: "Entrada registrada!",
-        description: `+${qtdNum}${unidade} de ${produtoSelecionado.nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}`
+        title: "Entrada registrada com sucesso!",
+        description: `+${qtdNum}${unidade} de ${produtoSelecionado.nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}. Documentos anexados.`
       });
 
       resetFormNovoProduto();
@@ -541,18 +652,18 @@ const Estoque = () => {
                 Entrada de Estoque
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Registrar Entrada de Estoque</DialogTitle>
               </DialogHeader>
-              <div className="space-y-3 py-1">
+              <div className="space-y-4 py-1">
                 <div className="space-y-2">
                   <Label htmlFor="produto">Produto *</Label>
                   {temProdutosDisponiveis ? (
                     <Select
                       value={novoProduto.produtoId}
                       onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isCreating}
                     >
                       <SelectTrigger id="produto">
                         <SelectValue placeholder="Selecione o produto" />
@@ -581,7 +692,7 @@ const Estoque = () => {
                     <Select 
                       value={novoProduto.armazem} 
                       onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isCreating}
                     >
                       <SelectTrigger id="armazem">
                         <SelectValue placeholder="Selecione o armazém" />
@@ -605,50 +716,149 @@ const Estoque = () => {
                 </div>
                 
                 {temProdutosDisponiveis && temArmazensDisponiveis && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
-                      <Input
-                        id="quantidade"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Ex: 20500.50"
-                        value={novoProduto.quantidade}
-                        onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
-                        style={{ width: "120px", maxWidth: "100%" }}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
-                      />
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
+                        <Input
+                          id="quantidade"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Ex: 20500.50"
+                          value={novoProduto.quantidade}
+                          onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
+                          style={{ width: "120px", maxWidth: "100%" }}
+                          disabled={isCreating}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unidade">Unidade</Label>
+                        <Select 
+                          value={novoProduto.unidade} 
+                          onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
+                          disabled={isCreating}
+                        >
+                          <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="t">Toneladas (t)</SelectItem>
+                            <SelectItem value="kg">Quilos (kg)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="unidade">Unidade</Label>
-                      <Select 
-                        value={novoProduto.unidade} 
-                        onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
-                      >
-                        <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="t">Toneladas (t)</SelectItem>
-                          <SelectItem value="kg">Quilos (kg)</SelectItem>
-                        </SelectContent>
-                      </Select>
+
+                    {/* 🆕 SEÇÃO DE DOCUMENTOS OBRIGATÓRIOS */}
+                    <div className="border-t pt-4 space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-base">Documentos Obrigatórios</h3>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Upload da Nota de Remessa */}
+                        <div className="space-y-2">
+                          <Label htmlFor="nota-remessa" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Nota de Remessa (PDF) *
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="nota-remessa"
+                              type="file"
+                              accept=".pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] ?? null;
+                                setNotaRemessaFile(file);
+                                if (file && file.type !== 'application/pdf') {
+                                  toast({ 
+                                    variant: "destructive", 
+                                    title: "Tipo de arquivo inválido", 
+                                    description: "Selecione apenas arquivos PDF." 
+                                  });
+                                  e.target.value = '';
+                                  setNotaRemessaFile(null);
+                                }
+                              }}
+                              className="flex-1"
+                              disabled={isCreating}
+                            />
+                            {notaRemessaFile && (
+                              <Badge variant="secondary" className="text-xs">
+                                ✓ {notaRemessaFile.name}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Upload do XML */}
+                        <div className="space-y-2">
+                          <Label htmlFor="xml-remessa" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Arquivo XML da Remessa *
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="xml-remessa"
+                              type="file"
+                              accept=".xml"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] ?? null;
+                                setXmlRemessaFile(file);
+                                if (file && !file.name.toLowerCase().endsWith('.xml')) {
+                                  toast({ 
+                                    variant: "destructive", 
+                                    title: "Tipo de arquivo inválido", 
+                                    description: "Selecione apenas arquivos XML." 
+                                  });
+                                  e.target.value = '';
+                                  setXmlRemessaFile(null);
+                                }
+                              }}
+                              className="flex-1"
+                              disabled={isCreating}
+                            />
+                            {xmlRemessaFile && (
+                              <Badge variant="secondary" className="text-xs">
+                                ✓ {xmlRemessaFile.name}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Aviso sobre obrigatoriedade */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 text-amber-800">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-sm font-medium">Documentos Obrigatórios</span>
+                          </div>
+                          <p className="text-xs text-amber-700 mt-1">
+                            Ambos os documentos (PDF e XML) são obrigatórios para registrar a entrada de estoque.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
               <DialogFooter>
                 <Button 
                   variant="outline" 
                   onClick={() => setDialogOpen(false)}
-                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  disabled={isCreating}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   className="bg-gradient-primary" 
                   onClick={handleCreateProduto}
-                  disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  disabled={
+                    !temProdutosDisponiveis || 
+                    !temArmazensDisponiveis || 
+                    !notaRemessaFile || 
+                    !xmlRemessaFile || 
+                    isCreating
+                  }
                 >
                   {isCreating ? (
                     <>
@@ -816,7 +1026,7 @@ const Estoque = () => {
                                 style={{ width: "110px", minWidth: "100px" }}
                                 className="h-8"
                                 onClick={e => e.stopPropagation()}
-                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
+                                disabled={isUpdating[produto.id]}
                               />
                               <Button
                                 variant="default"
@@ -825,7 +1035,7 @@ const Estoque = () => {
                                   e.stopPropagation();
                                   handleUpdateQuantity(produto.id, editQuantity);
                                 }}
-                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
+                                disabled={isUpdating[produto.id]}
                               >
                                 {isUpdating[produto.id] ? (
                                   <>
@@ -843,7 +1053,7 @@ const Estoque = () => {
                                   e.stopPropagation();
                                   setEditingId(null);
                                 }}
-                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
+                                disabled={isUpdating[produto.id]}
                               >
                                 Cancelar
                               </Button>
