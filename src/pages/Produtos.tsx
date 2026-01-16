@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tag, Plus, Filter as FilterIcon } from "lucide-react";
+import { Tag, Plus, Filter as FilterIcon, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +49,10 @@ const Produtos = () => {
 
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // 🚀 NOVOS ESTADOS DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
   const resetForm = () => {
     setNovoProduto({ nome: "", unidade: "" });
@@ -111,6 +115,9 @@ const Produtos = () => {
       return;
     }
 
+    // 🚀 ATIVAR LOADING STATE
+    setIsCreating(true);
+
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -160,11 +167,17 @@ const Produtos = () => {
         title: "Erro ao criar produto",
         description: err instanceof Error ? err.message : "Erro desconhecido",
       });
+    } finally {
+      // 🚀 DESATIVAR LOADING STATE
+      setIsCreating(false);
     }
   };
 
-  // Ativar/desativar produto
+  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
+    // Ativar loading para este produto específico
+    setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
+
     try {
       const { error } = await supabase
         .from("produtos")
@@ -180,6 +193,9 @@ const Produtos = () => {
         variant: "destructive",
         title: "Erro ao alterar status",
       });
+    } finally {
+      // Desativar loading para este produto
+      setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -230,7 +246,11 @@ const Produtos = () => {
         icon={Tag}
         actions={
           canCreate && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+              if (!open && isCreating) return;
+              setDialogOpen(open);
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-primary">
                   <Plus className="mr-2 h-4 w-4" />
@@ -252,6 +272,7 @@ const Produtos = () => {
                       value={novoProduto.nome}
                       onChange={e => setNovoProduto({ ...novoProduto, nome: e.target.value })}
                       placeholder="Nome do produto"
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                     />
                   </div>
                   <div>
@@ -259,6 +280,7 @@ const Produtos = () => {
                     <Select
                       value={novoProduto.unidade}
                       onValueChange={value => setNovoProduto({ ...novoProduto, unidade: value as Unidade })}
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                     >
                       <SelectTrigger id="unidade">
                         <SelectValue placeholder="Selecione a unidade" />
@@ -271,11 +293,29 @@ const Produtos = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(false)}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  >
                     Cancelar
                   </Button>
-                  <Button className="bg-gradient-primary" onClick={handleCreateProduto}>
-                    Criar Produto
+                  <Button 
+                    className="bg-gradient-primary" 
+                    onClick={handleCreateProduto}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Criar Produto
+                      </>
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -359,12 +399,22 @@ const Produtos = () => {
                   <Label htmlFor={`switch-${produto.id}`} className="text-sm">
                     {produto.ativo ? "Ativo" : "Inativo"}
                   </Label>
-                  <Switch
-                    id={`switch-${produto.id}`}
-                    checked={produto.ativo}
-                    onCheckedChange={() => handleToggleAtivo(produto.id, produto.ativo)}
-                    onClick={e => e.stopPropagation()}
-                  />
+                  {/* 🚀 SWITCH COM LOADING STATE */}
+                  <div className="relative">
+                    <Switch
+                      id={`switch-${produto.id}`}
+                      checked={produto.ativo}
+                      onCheckedChange={() => handleToggleAtivo(produto.id, produto.ativo)}
+                      onClick={e => e.stopPropagation()}
+                      disabled={isTogglingStatus[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
+                    />
+                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
+                    {isTogglingStatus[produto.id] && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
