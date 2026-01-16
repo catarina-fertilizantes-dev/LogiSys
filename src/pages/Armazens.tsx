@@ -163,6 +163,14 @@ const Armazens = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
+  // 🔍 LOG DOS ESTADOS DOS FILTROS
+  console.log('🔍 [ARMAZENS] Estados dos filtros:', { 
+    filterStatus, 
+    searchTerm, 
+    searchTermLength: searchTerm.length,
+    searchTermTrimmed: searchTerm.trim().length
+  });
+
   const resetForm = () => {
     console.log('🔄 [ARMAZENS] Resetando formulário');
     setNovoArmazem({
@@ -475,25 +483,45 @@ const Armazens = () => {
     });
   };
 
+  // 🔧 FILTRO CORRIGIDO COM LOGS DETALHADOS
   const filteredArmazens = useMemo(() => {
     console.log('🔍 [ARMAZENS] Filtrando armazéns - Total:', armazens.length);
     console.log('🔍 [ARMAZENS] Filtros aplicados:', { filterStatus, searchTerm });
+    console.log('🔍 [ARMAZENS] Lista completa de armazéns:', armazens.map(a => ({ id: a.id, nome: a.nome, ativo: a.ativo })));
     
-    if (!armazens) return [];
+    if (!armazens || armazens.length === 0) return [];
+    
     const filtered = armazens.filter((armazem) => {
-      if (filterStatus === "ativo" && !armazem.ativo) return false;
-      if (filterStatus === "inativo" && armazem.ativo) return false;
+      // Log detalhado de cada filtro
+      const statusMatch = filterStatus === "all" || 
+                         (filterStatus === "ativo" && armazem.ativo) || 
+                         (filterStatus === "inativo" && !armazem.ativo);
+      
+      let searchMatch = true;
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
-        const matches =
+        searchMatch = 
           armazem.nome?.toLowerCase().includes(term) ||
           armazem.cidade?.toLowerCase().includes(term) ||
           armazem.estado?.toLowerCase().includes(term) ||
           armazem.email?.toLowerCase().includes(term) ||
           (armazem.cnpj_cpf && armazem.cnpj_cpf.toLowerCase().includes(term));
-        if (!matches) return false;
       }
-      return true;
+      
+      const finalMatch = statusMatch && searchMatch;
+      
+      // Log detalhado para debug
+      if (!finalMatch) {
+        console.log(`🔍 [ARMAZENS] Armazém ${armazem.nome} filtrado:`, { 
+          statusMatch, 
+          searchMatch, 
+          filterStatus, 
+          searchTerm,
+          armazemAtivo: armazem.ativo 
+        });
+      }
+      
+      return finalMatch;
     });
     
     console.log('🔍 [ARMAZENS] Armazéns filtrados:', filtered.length, 'registros');
