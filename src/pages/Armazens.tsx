@@ -143,16 +143,16 @@ const Armazens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Formulário Novo Armazém
+  // ✅ FORMULÁRIO COM ORDEM CORRETA DOS CAMPOS
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoArmazem, setNovoArmazem] = useState({
     nome: "",
-    cnpj_cpf: "",
-    email: "",
-    telefone: "",
-    endereco: "",
     cidade: "",
     estado: "",
+    email: "",
+    cnpj_cpf: "",
+    telefone: "",
+    endereco: "",
     cep: "",
     capacidade_total: "",
   });
@@ -175,12 +175,12 @@ const Armazens = () => {
   const resetForm = () => {
     setNovoArmazem({
       nome: "",
-      cnpj_cpf: "",
-      email: "",
-      telefone: "",
-      endereco: "",
       cidade: "",
       estado: "",
+      email: "",
+      cnpj_cpf: "",
+      telefone: "",
+      endereco: "",
       cep: "",
       capacidade_total: "",
     });
@@ -233,11 +233,14 @@ const Armazens = () => {
   }, []);
 
   const handleCreateArmazem = async () => {
-    const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep, capacidade_total } = novoArmazem;
-    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
+    const { nome, cidade, estado, email, cnpj_cpf, telefone, endereco, cep, capacidade_total } = novoArmazem;
+    
+    // ✅ VALIDAÇÃO CORRIGIDA - CAMPOS OBRIGATÓRIOS CONFORME EDGE FUNCTION
+    if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim() || !cnpj_cpf.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
+        description: "Nome, Cidade, Estado, Email e CNPJ/CPF são obrigatórios.",
       });
       return;
     }
@@ -269,9 +272,9 @@ const Armazens = () => {
       }
 
       // Salva SEM formatação
-      const cleanCnpjCpf = novoArmazem.cnpj_cpf.replace(/\D/g, "");
-      const cleanTelefone = novoArmazem.telefone ? novoArmazem.telefone.replace(/\D/g, "") : null;
-      const cleanCep = novoArmazem.cep ? novoArmazem.cep.replace(/\D/g, "") : null;
+      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
+      const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
+      const cleanCep = cep ? cep.replace(/\D/g, "") : null;
       
       let capacidadeTotalNumber: number | undefined = undefined;
       if (capacidade_total && capacidade_total.trim()) {
@@ -286,6 +289,7 @@ const Armazens = () => {
         }
       }
 
+      // ✅ PAYLOAD CORRIGIDO - GARANTIR QUE CAMPOS OBRIGATÓRIOS SEJAM STRINGS
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -294,15 +298,15 @@ const Armazens = () => {
           apikey: supabaseAnonKey,
         },
         body: JSON.stringify({
-          nome: nome.trim(),
-          cnpj_cpf: cleanCnpjCpf,
-          email: email.trim(),
-          telefone: cleanTelefone,
-          endereco: endereco?.trim() || null,
-          cidade: cidade?.trim() || null,
-          estado: estado || null,
-          cep: cleanCep,
-          capacidade_total: capacidadeTotalNumber,
+          nome: nome.trim(),                    // ✅ string obrigatória
+          cidade: cidade.trim(),                // ✅ string obrigatória
+          estado: estado.trim(),                // ✅ string obrigatória (2 chars)
+          email: email.trim(),                  // ✅ string obrigatória
+          cnpj_cpf: cleanCnpjCpf,              // ✅ string obrigatória
+          telefone: cleanTelefone,              // ✅ string opcional (pode ser null)
+          endereco: endereco?.trim() || null,   // ✅ string opcional (pode ser null)
+          cep: cleanCep,                       // ✅ string opcional (pode ser null)
+          capacidade_total: capacidadeTotalNumber, // ✅ number opcional (pode ser null)
         }),
       });
 
@@ -493,6 +497,7 @@ const Armazens = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  {/* ✅ FORMULÁRIO COM ORDEM CORRETA E ASTERISCOS */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                       <Label htmlFor="nome">Nome *</Label>
@@ -500,7 +505,47 @@ const Armazens = () => {
                         id="nome"
                         value={novoArmazem.nome}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
-                        placeholder="Nome completo"
+                        placeholder="Nome do armazém"
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cidade">Cidade *</Label>
+                      <Input
+                        id="cidade"
+                        value={novoArmazem.cidade}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
+                        placeholder="Nome da cidade"
+                        disabled={isCreating}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="estado">Estado (UF) *</Label>
+                      <Select
+                        value={novoArmazem.estado}
+                        onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger id="estado">
+                          <SelectValue placeholder="Selecione o estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {estadosBrasil.map((uf) => (
+                            <SelectItem key={uf} value={uf}>
+                              {uf}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={novoArmazem.email}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
+                        placeholder="email@exemplo.com"
                         disabled={isCreating}
                       />
                     </div>
@@ -514,17 +559,6 @@ const Armazens = () => {
                         }
                         placeholder="00.000.000/0000-00 ou 000.000.000-00"
                         maxLength={18}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={novoArmazem.email}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
-                        placeholder="email@exemplo.com"
                         disabled={isCreating}
                       />
                     </div>
@@ -544,6 +578,16 @@ const Armazens = () => {
                         disabled={isCreating}
                       />
                     </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input
+                        id="endereco"
+                        value={novoArmazem.endereco}
+                        onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
+                        placeholder="Rua, número, complemento"
+                        disabled={isCreating}
+                      />
+                    </div>
                     <div>
                       <Label htmlFor="cep">CEP</Label>
                       <Input
@@ -557,46 +601,7 @@ const Armazens = () => {
                         disabled={isCreating}
                       />
                     </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="endereco">Endereço</Label>
-                      <Input
-                        id="endereco"
-                        value={novoArmazem.endereco}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
-                        placeholder="Rua, número, complemento"
-                        disabled={isCreating}
-                      />
-                    </div>
                     <div>
-                      <Label htmlFor="cidade">Cidade</Label>
-                      <Input
-                        id="cidade"
-                        value={novoArmazem.cidade}
-                        onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
-                        placeholder="Nome da cidade"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="estado">Estado (UF)</Label>
-                      <Select
-                        value={novoArmazem.estado}
-                        onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
-                        disabled={isCreating}
-                      >
-                        <SelectTrigger id="estado">
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {estadosBrasil.map((uf) => (
-                            <SelectItem key={uf} value={uf}>
-                              {uf}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
                       <Label htmlFor="capacidade_total">Capacidade Total (toneladas)</Label>
                       <Input
                         id="capacidade_total"
