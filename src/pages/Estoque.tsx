@@ -687,7 +687,7 @@ const Estoque = () => {
         </div>
       );
     }
-
+  
     const armazem = filteredArmazens[0]; // Só há um armazém para usuário armazém
     
     if (!armazem || armazem.produtos.length === 0) {
@@ -700,54 +700,32 @@ const Estoque = () => {
         </div>
       );
     }
-
+  
+    // 🎯 APENAS LISTA DE PRODUTOS (SEM CARD DO ARMAZÉM)
     return (
-      <div className="space-y-4">
-        {/* Header do armazém */}
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-primary">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">{armazem.nome}</h2>
-                <p className="text-muted-foreground">
-                  {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {armazem.produtos.length} produto{armazem.produtos.length !== 1 && 's'} em estoque
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lista de produtos */}
-        <div className="grid gap-3">
-          {armazem.produtos.map((produto) => (
-            <Card key={produto.id} className="transition-all hover:shadow-md">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{produto.produto}</h3>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-2xl font-bold text-primary">
-                        {produto.quantidade.toLocaleString('pt-BR')} {produto.unidade}
-                      </span>
-                      <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
-                        {produto.status === "baixo" ? "Estoque Baixo" : "Normal"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Última atualização: {produto.data}
-                    </p>
+      <div className="grid gap-3">
+        {armazem.produtos.map((produto) => (
+          <Card key={produto.id} className="transition-all hover:shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">{produto.produto}</h3>
+                  <div className="flex items-center gap-4 mt-1">
+                    <span className="text-2xl font-bold text-primary">
+                      {produto.quantidade.toLocaleString('pt-BR')} {produto.unidade}
+                    </span>
+                    <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
+                      {produto.status === "baixo" ? "Estoque Baixo" : "Normal"}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Última atualização: {produto.data}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   };
