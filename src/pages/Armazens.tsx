@@ -222,10 +222,7 @@ const Armazens = () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-    }
-    
-    // 🚀 LIMPAR TODOS OS PARÂMETROS DA URL (não apenas 'modal')
-    if (urlParams.toString()) {
+      // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [canCreate]);
