@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Warehouse, Plus, Filter as FilterIcon, Key } from "lucide-react";
+import { Warehouse, Plus, Filter as FilterIcon, Key, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -156,6 +156,10 @@ const Armazens = () => {
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // 🚀 NOVOS ESTADOS DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
+
   const resetForm = () => {
     setNovoArmazem({
       nome: "",
@@ -227,6 +231,9 @@ const Armazens = () => {
       });
       return;
     }
+
+    // 🚀 ATIVAR LOADING STATE
+    setIsCreating(true);
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -358,10 +365,17 @@ const Armazens = () => {
         title: "Erro de conexão/fetch",
         description: err instanceof Error ? err.message : JSON.stringify(err),
       });
+    } finally {
+      // 🚀 DESATIVAR LOADING STATE
+      setIsCreating(false);
     }
   };
 
+  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
+    // Ativar loading para este armazém específico
+    setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
+
     try {
       const { error } = await supabase
         .from("armazens")
@@ -377,6 +391,9 @@ const Armazens = () => {
         variant: "destructive",
         title: "Erro ao alterar status",
       });
+    } finally {
+      // Desativar loading para este armazém
+      setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -446,7 +463,11 @@ const Armazens = () => {
         icon={Warehouse}
         actions={
           canCreate && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+              if (!open && isCreating) return;
+              setDialogOpen(open);
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-gradient-primary">
                   <Plus className="mr-2 h-4 w-4" />
@@ -469,6 +490,7 @@ const Armazens = () => {
                         value={novoArmazem.nome}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
                         placeholder="Nome do armazém"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -478,6 +500,7 @@ const Armazens = () => {
                         value={novoArmazem.cidade}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
                         placeholder="Cidade"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -485,6 +508,7 @@ const Armazens = () => {
                       <Select
                         value={novoArmazem.estado}
                         onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       >
                         <SelectTrigger id="estado">
                           <SelectValue placeholder="Selecione o estado" />
@@ -506,6 +530,7 @@ const Armazens = () => {
                         value={novoArmazem.email}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
                         placeholder="email@exemplo.com"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -518,6 +543,7 @@ const Armazens = () => {
                         }
                         placeholder="00.000.000/0000-00 ou 000.000.000-00"
                         maxLength={18}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -533,6 +559,7 @@ const Armazens = () => {
                         }
                         placeholder="(00) 00000-0000"
                         maxLength={15}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div className="col-span-2">
@@ -542,6 +569,7 @@ const Armazens = () => {
                         value={novoArmazem.endereco}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div>
@@ -557,6 +585,7 @@ const Armazens = () => {
                         }
                         placeholder="00000-000"
                         maxLength={9}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div className="col-span-2">
@@ -567,6 +596,7 @@ const Armazens = () => {
                         value={novoArmazem.capacidade_total}
                         onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
                         placeholder="Ex: 1000"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                   </div>
@@ -575,11 +605,29 @@ const Armazens = () => {
                   </p>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(false)}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  >
                     Cancelar
                   </Button>
-                  <Button className="bg-gradient-primary" onClick={handleCreateArmazem}>
-                    Criar Armazém
+                  <Button 
+                    className="bg-gradient-primary" 
+                    onClick={handleCreateArmazem}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Criar Armazém
+                      </>
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -771,12 +819,22 @@ const Armazens = () => {
                   <Label htmlFor={`switch-${armazem.id}`} className="text-sm">
                     {armazem.ativo ? "Ativo" : "Inativo"}
                   </Label>
-                  <Switch
-                    id={`switch-${armazem.id}`}
-                    checked={armazem.ativo}
-                    onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
-                    onClick={e => e.stopPropagation()}
-                  />
+                  {/* 🚀 SWITCH COM LOADING STATE */}
+                  <div className="relative">
+                    <Switch
+                      id={`switch-${armazem.id}`}
+                      checked={armazem.ativo}
+                      onCheckedChange={() => handleToggleAtivo(armazem.id, armazem.ativo)}
+                      onClick={e => e.stopPropagation()}
+                      disabled={isTogglingStatus[armazem.id]} // 🚀 DESABILITAR DURANTE LOADING
+                    />
+                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
+                    {isTogglingStatus[armazem.id] && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
