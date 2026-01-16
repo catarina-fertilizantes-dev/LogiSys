@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Users, UserPlus, Shield, BadgeCheck } from "lucide-react";
+import { Users, UserPlus, Shield, BadgeCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,6 +71,12 @@ const Colaboradores = () => {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState<UserRole>("logistica");
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // 🚀 NOVOS ESTADOS DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState<Record<string, boolean>>({});
+  const [isRetrying, setIsRetrying] = useState(false);
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
 
@@ -104,6 +110,13 @@ const Colaboradores = () => {
     }
   };
 
+  // 🚀 FUNÇÃO DE RETRY COM LOADING
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    await fetchUsers();
+    setIsRetrying(false);
+  };
+
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,6 +144,9 @@ const handleCreateUser = async () => {
     });
     return;
   }
+
+  // 🚀 ATIVAR LOADING STATE
+  setIsCreating(true);
 
   try {
     console.log('🔍 [DEBUG] Tentando criar colaborador:', { email: newUserEmail, nome: newUserNome, role: newUserRole });
@@ -287,24 +303,36 @@ const handleCreateUser = async () => {
       title: "Erro ao criar colaborador",
       description: errorMessage
     });
+  } finally {
+    // 🚀 DESATIVAR LOADING STATE
+    setIsCreating(false);
   }
 };
 
+  // 🚀 FUNÇÃO DE UPDATE ROLE COM LOADING
   const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
-    const { error } = await supabase.rpc('update_user_role', { _user_id: userId, _role: newRole }) as { error: Error | null };
+    // Ativar loading para este usuário específico
+    setIsUpdatingRole(prev => ({ ...prev, [userId]: true }));
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar role",
-        description: error.message
-      });
-    } else {
-      toast({
-        title: "Role atualizada! ",
-        description: "Permissões do usuário foram atualizadas"
-      });
-      fetchUsers();
+    try {
+      const { error } = await supabase.rpc('update_user_role', { _user_id: userId, _role: newRole }) as { error: Error | null };
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao atualizar role",
+          description: error.message
+        });
+      } else {
+        toast({
+          title: "Role atualizada! ",
+          description: "Permissões do usuário foram atualizadas"
+        });
+        fetchUsers();
+      }
+    } finally {
+      // Desativar loading para este usuário
+      setIsUpdatingRole(prev => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -344,7 +372,11 @@ const handleCreateUser = async () => {
         subtitle="Gerencie colaboradores do sistema (Admin e Logística)"
         icon={BadgeCheck}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+            if (!open && isCreating) return;
+            setDialogOpen(open);
+          }}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-primary">
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -366,6 +398,7 @@ const handleCreateUser = async () => {
                     value={newUserNome}
                     onChange={(e) => setNewUserNome(e.target.value)}
                     placeholder="Nome do usuário"
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                   />
                 </div>
                 <div className="space-y-2">
@@ -376,6 +409,7 @@ const handleCreateUser = async () => {
                     value={newUserEmail}
                     onChange={(e) => setNewUserEmail(e.target.value)}
                     placeholder="email@exemplo.com"
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                   />
                 </div>
                 <div className="space-y-2">
@@ -386,6 +420,7 @@ const handleCreateUser = async () => {
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     placeholder="Senha segura"
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                   />
                   <p className="text-xs text-muted-foreground">
                     Mínimo 6 caracteres.  Evite senhas comuns como '123456' ou 'senha123'.
@@ -393,7 +428,11 @@ const handleCreateUser = async () => {
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as UserRole)}>
+                  <Select 
+                    value={newUserRole} 
+                    onValueChange={(v) => setNewUserRole(v as UserRole)}
+                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -408,11 +447,29 @@ const handleCreateUser = async () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleCreateUser} className="bg-gradient-primary">
-                  Criar Colaborador
+                <Button 
+                  onClick={handleCreateUser} 
+                  className="bg-gradient-primary"
+                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Criar Colaborador
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -445,8 +502,20 @@ const handleCreateUser = async () => {
                 <p className="text-xs text-muted-foreground mb-4">
                   Execute a migration: <code className="bg-muted px-2 py-1 rounded">20251120_update_get_users_function.sql</code>
                 </p>
-                <Button onClick={fetchUsers} variant="outline">
-                  Tentar Novamente
+                {/* 🚀 BOTÃO DE RETRY COM LOADING */}
+                <Button 
+                  onClick={handleRetry} 
+                  variant="outline"
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Tentando...
+                    </>
+                  ) : (
+                    'Tentar Novamente'
+                  )}
                 </Button>
               </div>
             </div>
@@ -478,21 +547,31 @@ const handleCreateUser = async () => {
                     )}
                   </div>
 
-                  <Select
-                    value={user.role || ''}
-                    onValueChange={(value) => handleUpdateUserRole(user.id, value as UserRole)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {! user.role && <SelectItem value="">Selecione uma role</SelectItem>}
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="logistica">Logística</SelectItem>
-                      <SelectItem value="armazem">Armazém</SelectItem>
-                      <SelectItem value="cliente">Cliente</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {/* 🚀 SELECT COM LOADING STATE */}
+                  <div className="relative">
+                    <Select
+                      value={user.role || ''}
+                      onValueChange={(value) => handleUpdateUserRole(user.id, value as UserRole)}
+                      disabled={isUpdatingRole[user.id]} // 🚀 DESABILITAR DURANTE LOADING
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {! user.role && <SelectItem value="">Selecione uma role</SelectItem>}
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="logistica">Logística</SelectItem>
+                        <SelectItem value="armazem">Armazém</SelectItem>
+                        <SelectItem value="cliente">Cliente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
+                    {isUpdatingRole[user.id] && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
