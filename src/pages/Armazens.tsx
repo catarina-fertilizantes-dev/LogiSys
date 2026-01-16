@@ -119,11 +119,14 @@ type Armazem = {
 };
 
 const Armazens = () => {
+  console.log('🏗️ [ARMAZENS] Componente inicializando...');
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
 
   if (!permissionsLoading && !(hasRole("admin") || hasRole("logistica"))) {
+    console.log('🚫 [ARMAZENS] Acesso negado - redirecionando');
     return <Navigate to="/" replace />;
   }
 
@@ -161,6 +164,7 @@ const Armazens = () => {
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
   const resetForm = () => {
+    console.log('🔄 [ARMAZENS] Resetando formulário');
     setNovoArmazem({
       nome: "",
       cidade: "",
@@ -175,14 +179,20 @@ const Armazens = () => {
   };
 
   const fetchArmazens = async () => {
+    console.log('📡 [ARMAZENS] Iniciando fetchArmazens...');
     setLoading(true);
     setError(null);
+    
     try {
       const { data, error } = await supabase
         .from("armazens")
         .select("*, temp_password")
         .order("cidade", { ascending: true });
+        
+      console.log('📡 [ARMAZENS] Resposta do Supabase:', { data, error });
+      
       if (error) {
+        console.error('❌ [ARMAZENS] Erro no Supabase:', error);
         setError(error.message);
         toast({
           variant: "destructive",
@@ -192,9 +202,12 @@ const Armazens = () => {
         setLoading(false);
         return;
       }
+      
+      console.log(`✅ [ARMAZENS] ${data?.length || 0} armazéns carregados:`, data?.map(a => ({ id: a.id, nome: a.nome })));
       setArmazens(data as Armazem[]);
       setLoading(false);
     } catch (err) {
+      console.error('❌ [ARMAZENS] Exceção no fetchArmazens:', err);
       setError("Erro desconhecido");
       toast({
         variant: "destructive",
@@ -208,9 +221,11 @@ const Armazens = () => {
   const canCreate = hasRole("admin") || hasRole("logistica");
 
   useEffect(() => {
+    console.log('🔍 [ARMAZENS] useEffect 1 - Verificando parâmetros URL');
     // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
+      console.log('🔍 [ARMAZENS] Abrindo modal automaticamente');
       setDialogOpen(true);
       // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -218,13 +233,17 @@ const Armazens = () => {
   }, [canCreate]);
 
   useEffect(() => {
+    console.log('🔍 [ARMAZENS] useEffect 2 - Fazendo fetch inicial');
     fetchArmazens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreateArmazem = async () => {
+    console.log('🚀 [ARMAZENS] Iniciando criação de armazém...');
+    
     const { nome, cidade, estado, email, telefone, endereco, capacidade_total, cep, cnpj_cpf } = novoArmazem;
     if (!nome.trim() || !cidade.trim() || !estado.trim() || !email.trim() || !cnpj_cpf.trim()) {
+      console.log('❌ [ARMAZENS] Campos obrigatórios não preenchidos');
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
@@ -233,6 +252,7 @@ const Armazens = () => {
     }
 
     // 🚀 ATIVAR LOADING STATE
+    console.log('🔄 [ARMAZENS] Ativando loading state');
     setIsCreating(true);
 
     try {
@@ -240,6 +260,7 @@ const Armazens = () => {
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
+        console.log('❌ [ARMAZENS] Variáveis de ambiente não configuradas');
         toast({
           variant: "destructive",
           title: "Erro de configuração",
@@ -250,6 +271,7 @@ const Armazens = () => {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('❌ [ARMAZENS] Sessão não encontrada');
         toast({
           variant: "destructive",
           title: "Não autenticado",
@@ -262,6 +284,7 @@ const Armazens = () => {
       if (capacidade_total && capacidade_total.trim()) {
         capacidadeTotalNumber = parseFloat(capacidade_total);
         if (isNaN(capacidadeTotalNumber) || capacidadeTotalNumber < 0) {
+          console.log('❌ [ARMAZENS] Capacidade inválida:', capacidade_total);
           toast({
             variant: "destructive",
             title: "Capacidade inválida",
@@ -276,6 +299,20 @@ const Armazens = () => {
       const cleanCep = cep ? cep.replace(/\D/g, "") : null;
       const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
 
+      const payload = {
+        nome: nome.trim(),
+        email: email.trim(),
+        cidade: cidade.trim(),
+        estado: estado.trim(),
+        telefone: cleanTelefone,
+        endereco: endereco?.trim() || null,
+        capacidade_total: capacidadeTotalNumber,
+        cep: cleanCep,
+        cnpj_cpf: cleanCnpjCpf,
+      };
+      
+      console.log('📡 [ARMAZENS] Enviando payload para Edge Function:', payload);
+
       const response = await fetch(`${supabaseUrl}/functions/v1/create-armazem-user`, {
         method: "POST",
         headers: {
@@ -283,28 +320,25 @@ const Armazens = () => {
           Authorization: `Bearer ${session.access_token}`,
           apikey: supabaseAnonKey,
         },
-        body: JSON.stringify({
-          nome: nome.trim(),
-          email: email.trim(),
-          cidade: cidade.trim(),
-          estado: estado.trim(),
-          telefone: cleanTelefone,
-          endereco: endereco?.trim() || null,
-          capacidade_total: capacidadeTotalNumber,
-          cep: cleanCep,
-          cnpj_cpf: cleanCnpjCpf,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      console.log('📡 [ARMAZENS] Resposta da Edge Function - Status:', response.status);
+
       let textBody = await response.text();
+      console.log('📡 [ARMAZENS] Resposta da Edge Function - Body:', textBody);
+      
       let data: any = null;
       try {
         data = JSON.parse(textBody);
+        console.log('📡 [ARMAZENS] Resposta da Edge Function - Parsed:', data);
       } catch {
+        console.log('❌ [ARMAZENS] Falha ao fazer parse da resposta');
         data = null;
       }
 
       if (!response.ok) {
+        console.log('❌ [ARMAZENS] Edge Function retornou erro');
         let errorMessage = "Erro ao criar armazém";
         if (data) {
           if (
@@ -337,12 +371,16 @@ const Armazens = () => {
       }
 
       if (data && data.success) {
+        console.log('✅ [ARMAZENS] Armazém criado com sucesso!');
+        console.log('📊 [ARMAZENS] Estado atual dos armazéns ANTES da atualização:', armazens.length, 'registros');
+        
         toast({
           title: "Armazém criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
         });
 
         // ✅ SEQUÊNCIA EXATA DOS CLIENTES
+        console.log('🔄 [ARMAZENS] Configurando modal de credenciais');
         setCredenciaisModal({
           show: true,
           email: email.trim(),
@@ -350,13 +388,22 @@ const Armazens = () => {
           nome: nome.trim(),
         });
 
+        console.log('🔄 [ARMAZENS] Resetando formulário');
         resetForm();
+        
+        console.log('🔄 [ARMAZENS] Fechando dialog');
         setDialogOpen(false);
         
         // ✅ AGUARDAR UM POUCO E ENTÃO FAZER FETCH
+        console.log('⏳ [ARMAZENS] Aguardando 500ms antes do fetch...');
         await new Promise(resolve => setTimeout(resolve, 500));
-        fetchArmazens();
+        
+        console.log('📡 [ARMAZENS] Fazendo fetch após criação...');
+        await fetchArmazens();
+        
+        console.log('📊 [ARMAZENS] Estado dos armazéns APÓS fetchArmazens:', armazens.length, 'registros');
       } else {
+        console.log('❌ [ARMAZENS] Edge Function não retornou success');
         toast({
           variant: "destructive",
           title: "Erro ao criar armazém",
@@ -364,6 +411,7 @@ const Armazens = () => {
         });
       }
     } catch (err) {
+      console.error('❌ [ARMAZENS] Exceção durante criação:', err);
       toast({
         variant: "destructive",
         title: "Erro de conexão/fetch",
@@ -371,12 +419,15 @@ const Armazens = () => {
       });
     } finally {
       // 🚀 DESATIVAR LOADING STATE
+      console.log('🔄 [ARMAZENS] Desativando loading state');
       setIsCreating(false);
     }
   };
 
   // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
+    console.log(`🔄 [ARMAZENS] Toggle status para armazém ${id}: ${ativoAtual} -> ${!ativoAtual}`);
+    
     // Ativar loading para este armazém específico
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
 
@@ -386,11 +437,14 @@ const Armazens = () => {
         .update({ ativo: !ativoAtual, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
+      
+      console.log(`✅ [ARMAZENS] Status alterado com sucesso para armazém ${id}`);
       toast({
         title: `Armazém ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
       });
       fetchArmazens();
     } catch (err) {
+      console.error(`❌ [ARMAZENS] Erro ao alterar status do armazém ${id}:`, err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
@@ -402,6 +456,8 @@ const Armazens = () => {
   };
 
   const handleShowCredentials = (armazem: Armazem) => {
+    console.log('🔑 [ARMAZENS] Mostrando credenciais para:', armazem.nome);
+    
     if (!armazem.temp_password) {
       toast({
         variant: "destructive",
@@ -420,8 +476,11 @@ const Armazens = () => {
   };
 
   const filteredArmazens = useMemo(() => {
+    console.log('🔍 [ARMAZENS] Filtrando armazéns - Total:', armazens.length);
+    console.log('🔍 [ARMAZENS] Filtros aplicados:', { filterStatus, searchTerm });
+    
     if (!armazens) return [];
-    return armazens.filter((armazem) => {
+    const filtered = armazens.filter((armazem) => {
       if (filterStatus === "ativo" && !armazem.ativo) return false;
       if (filterStatus === "inativo" && armazem.ativo) return false;
       if (searchTerm.trim()) {
@@ -436,9 +495,22 @@ const Armazens = () => {
       }
       return true;
     });
+    
+    console.log('🔍 [ARMAZENS] Armazéns filtrados:', filtered.length, 'registros');
+    console.log('🔍 [ARMAZENS] Lista filtrada:', filtered.map(a => ({ id: a.id, nome: a.nome })));
+    
+    return filtered;
   }, [armazens, filterStatus, searchTerm]);
 
+  console.log('🎨 [ARMAZENS] Renderizando - Estados:', { 
+    loading, 
+    error, 
+    armazensCount: armazens.length, 
+    filteredCount: filteredArmazens.length 
+  });
+
   if (loading) {
+    console.log('⏳ [ARMAZENS] Renderizando loading state');
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -450,6 +522,7 @@ const Armazens = () => {
   }
 
   if (error) {
+    console.log('❌ [ARMAZENS] Renderizando error state:', error);
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -458,6 +531,8 @@ const Armazens = () => {
       </div>
     );
   }
+
+  console.log('🎨 [ARMAZENS] Renderizando página principal');
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
@@ -468,6 +543,7 @@ const Armazens = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
+              console.log('🔄 [ARMAZENS] Dialog onOpenChange:', { open, isCreating });
               // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
               if (!open && isCreating) return;
               setDialogOpen(open);
@@ -684,13 +760,14 @@ const Armazens = () => {
       {/* Modal de credenciais temporárias do Armazém */}
       <Dialog
         open={credenciaisModal.show}
-        onOpenChange={(open) =>
+        onOpenChange={(open) => {
+          console.log('🔑 [ARMAZENS] Modal credenciais onOpenChange:', open);
           setCredenciaisModal(
             open
               ? credenciaisModal
               : { show: false, email: "", senha: "", nome: "" }
-          )
-        }
+          );
+        }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -737,7 +814,10 @@ const Armazens = () => {
             >
               📋 Copiar credenciais
             </Button>
-            <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
+            <Button onClick={() => {
+              console.log('🔑 [ARMAZENS] Fechando modal de credenciais');
+              setCredenciaisModal({ show: false, email: "", senha: "", nome: "" });
+            }}>
               Fechar
             </Button>
           </DialogFooter>
