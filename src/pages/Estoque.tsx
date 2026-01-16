@@ -239,7 +239,7 @@ const Estoque = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
-  // 🆕 ESTADOS PARA DOCUMENTOS
+  // Estados para documentos
   const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
   const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
   const [numeroRemessa, setNumeroRemessa] = useState("");
@@ -382,14 +382,47 @@ const Estoque = () => {
 
   const resetFormNovoProduto = () => {
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
-    // 🆕 LIMPAR CAMPOS DE REMESSA
     setNotaRemessaFile(null);
     setXmlRemessaFile(null);
     setNumeroRemessa("");
     setObservacoesRemessa("");
   };
 
-  // 🆕 FUNÇÃO PARA UPLOAD DE DOCUMENTOS
+  // 🆕 FUNÇÃO MELHORADA PARA VALIDAÇÃO DE ARQUIVO
+  const handleFileChange = (
+    file: File | null, 
+    allowedTypes: string[], 
+    allowedExtensions: string[], 
+    setterFunction: (file: File | null) => void,
+    inputElement: HTMLInputElement
+  ) => {
+    if (!file) {
+      setterFunction(null);
+      return;
+    }
+
+    // Verificar extensão do arquivo
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    const isValidExtension = allowedExtensions.includes(`.${fileExtension}`);
+    
+    // Verificar tipo MIME
+    const isValidMimeType = allowedTypes.includes(file.type);
+
+    if (!isValidExtension || !isValidMimeType) {
+      toast({ 
+        variant: "destructive", 
+        title: "Tipo de arquivo inválido", 
+        description: `Selecione apenas arquivos ${allowedExtensions.join(' ou ')}.` 
+      });
+      inputElement.value = '';
+      setterFunction(null);
+      return;
+    }
+
+    setterFunction(file);
+  };
+
+  // Função para upload de documentos
   const uploadDocumentos = async (produtoId: string, armazemId: string) => {
     const uploads = [];
     
@@ -434,7 +467,7 @@ const Estoque = () => {
     return uploads;
   };
 
-  // 🆕 FUNÇÃO DE CRIAÇÃO MODIFICADA PARA TRABALHAR COM REMESSAS
+  // Função de criação modificada para trabalhar com remessas
   const handleCreateProduto = async () => {
     const { produtoId, armazem, quantidade, unidade } = novoProduto;
     const qtdNum = Number(quantidade);
@@ -444,7 +477,7 @@ const Estoque = () => {
       return;
     }
 
-    // 🆕 VALIDAÇÃO DE DOCUMENTOS OBRIGATÓRIOS
+    // Validação de documentos obrigatórios
     if (!notaRemessaFile) {
       toast({ variant: "destructive", title: "Documento obrigatório", description: "Anexe a nota de remessa em PDF." });
       return;
@@ -455,22 +488,11 @@ const Estoque = () => {
       return;
     }
 
-    // 🆕 VALIDAÇÃO DE TIPOS DE ARQUIVO
-    if (notaRemessaFile.type !== 'application/pdf') {
-      toast({ variant: "destructive", title: "Tipo de arquivo inválido", description: "A nota de remessa deve ser um arquivo PDF." });
-      return;
-    }
-
-    if (!xmlRemessaFile.name.toLowerCase().endsWith('.xml')) {
-      toast({ variant: "destructive", title: "Tipo de arquivo inválido", description: "O arquivo XML deve ter extensão .xml." });
-      return;
-    }
-
     if (
       Number.isNaN(qtdNum) ||
       qtdNum <= 0 ||
       quantidade.trim() === "" ||
-      !/^\d+(\.\d+)?$/.test(quantidade)
+      !/^\\d+(\\.\\d+)?$/.test(quantidade)
     ) {
       toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior que zero." });
       return;
@@ -502,7 +524,7 @@ const Estoque = () => {
         return;
       }
 
-      // 🆕 FAZER UPLOAD DOS DOCUMENTOS PRIMEIRO
+      // Fazer upload dos documentos primeiro
       console.log("🔍 [DEBUG] Fazendo upload dos documentos...");
       const uploads = await uploadDocumentos(produtoId, armazemData.id);
 
@@ -512,7 +534,7 @@ const Estoque = () => {
 
       const { data: userData } = await supabase.auth.getUser();
 
-      // 🆕 CRIAR REGISTRO NA TABELA ESTOQUE_REMESSAS
+      // Criar registro na tabela estoque_remessas
       const { data: novaRemessa, error: errRemessa } = await supabase
         .from("estoque_remessas")
         .insert({
@@ -535,7 +557,7 @@ const Estoque = () => {
 
       console.log("✅ [SUCCESS] Remessa criada:", novaRemessa.id);
 
-      // 🆕 ATUALIZAR/CRIAR ESTOQUE TOTAL
+      // Atualizar/criar estoque total
       const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
         .from("estoque")
         .select("id, quantidade")
@@ -662,7 +684,7 @@ const Estoque = () => {
               <DialogHeader>
                 <DialogTitle>Registrar Entrada de Estoque</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-1">
+              <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="produto">Produto *</Label>
                   {temProdutosDisponiveis ? (
@@ -754,31 +776,31 @@ const Estoque = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 CAMPOS ADICIONAIS DA REMESSA */}
-                    <div className="grid grid-cols-1 gap-3">
+                    {/* 🆕 CAMPOS ADICIONAIS DA REMESSA - LAYOUT RESPONSIVO */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="numero-remessa">Número da Remessa (opcional)</Label>
+                        <Label htmlFor="numero-remessa">Número da Remessa</Label>
                         <Input
                           id="numero-remessa"
                           type="text"
-                          placeholder="Ex: REM-2024-001"
+                          placeholder="Ex: REM-001"
                           value={numeroRemessa}
                           onChange={(e) => setNumeroRemessa(e.target.value)}
                           disabled={isCreating}
+                          className="w-full"
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="observacoes">Observações (opcional)</Label>
-                      <Input
-                        id="observacoes"
-                        type="text"
-                        placeholder="Observações sobre esta remessa..."
-                        value={observacoesRemessa}
-                        onChange={(e) => setObservacoesRemessa(e.target.value)}
-                        disabled={isCreating}
-                      />
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="observacoes">Observações</Label>
+                        <Input
+                          id="observacoes"
+                          type="text"
+                          placeholder="Observações sobre esta remessa..."
+                          value={observacoesRemessa}
+                          onChange={(e) => setObservacoesRemessa(e.target.value)}
+                          disabled={isCreating}
+                        />
+                      </div>
                     </div>
 
                     {/* 🆕 SEÇÃO DE DOCUMENTOS OBRIGATÓRIOS */}
@@ -802,16 +824,13 @@ const Estoque = () => {
                               accept=".pdf"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] ?? null;
-                                setNotaRemessaFile(file);
-                                if (file && file.type !== 'application/pdf') {
-                                  toast({ 
-                                    variant: "destructive", 
-                                    title: "Tipo de arquivo inválido", 
-                                    description: "Selecione apenas arquivos PDF." 
-                                  });
-                                  e.target.value = '';
-                                  setNotaRemessaFile(null);
-                                }
+                                handleFileChange(
+                                  file,
+                                  ['application/pdf'],
+                                  ['.pdf'],
+                                  setNotaRemessaFile,
+                                  e.target
+                                );
                               }}
                               className="flex-1"
                               disabled={isCreating}
@@ -837,16 +856,13 @@ const Estoque = () => {
                               accept=".xml"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] ?? null;
-                                setXmlRemessaFile(file);
-                                if (file && !file.name.toLowerCase().endsWith('.xml')) {
-                                  toast({ 
-                                    variant: "destructive", 
-                                    title: "Tipo de arquivo inválido", 
-                                    description: "Selecione apenas arquivos XML." 
-                                  });
-                                  e.target.value = '';
-                                  setXmlRemessaFile(null);
-                                }
+                                handleFileChange(
+                                  file,
+                                  ['application/xml', 'text/xml'],
+                                  ['.xml'],
+                                  setXmlRemessaFile,
+                                  e.target
+                                );
                               }}
                               className="flex-1"
                               disabled={isCreating}
@@ -858,21 +874,15 @@ const Estoque = () => {
                             )}
                           </div>
                         </div>
-
-                        {/* Aviso sobre obrigatoriedade */}
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <div className="flex items-center gap-2 text-amber-800">
-                            <AlertCircle className="h-4 w-4" />
-                            <span className="text-sm font-medium">Documentos Obrigatórios</span>
-                          </div>
-                          <p className="text-xs text-amber-700 mt-1">
-                            Ambos os documentos (PDF e XML) são obrigatórios para registrar a entrada de estoque.
-                          </p>
-                        </div>
                       </div>
                     </div>
                   </>
                 )}
+                
+                {/* 🆕 LEGENDA SIMPLES PARA CAMPOS OBRIGATÓRIOS */}
+                <p className="text-xs text-muted-foreground">
+                  * Campos obrigatórios
+                </p>
               </div>
               <DialogFooter>
                 <Button 
