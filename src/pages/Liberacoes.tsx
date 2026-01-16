@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +123,9 @@ const Liberacoes = () => {
   const canCreate = hasRole("logistica") || hasRole("admin");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // 🚀 NOVO ESTADO DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
 
   // 🆕 ESTADO PARA MODAL DE DETALHES
   const [detalhesLiberacao, setDetalhesLiberacao] = useState<LiberacaoItem | null>(null);
@@ -432,7 +435,7 @@ const Liberacoes = () => {
     setValidandoEstoque(false);
   };
 
-  // 🔄 FUNÇÃO DE CRIAÇÃO ATUALIZADA COM VALIDAÇÃO DE ESTOQUE
+  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
   const handleCreateLiberacao = async () => {
     const { produto, armazem, cliente_id, pedido, quantidade } = novaLiberacao;
 
@@ -470,6 +473,9 @@ const Liberacoes = () => {
       toast({ variant: "destructive", title: "Cliente inválido" });
       return;
     }
+
+    // 🚀 ATIVAR LOADING STATE
+    setIsCreating(true);
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -509,6 +515,9 @@ const Liberacoes = () => {
         title: "Erro ao criar liberação",
         description: err instanceof Error ? err.message : "Erro desconhecido"
       });
+    } finally {
+      // 🚀 DESATIVAR LOADING STATE
+      setIsCreating(false);
     }
   };
 
@@ -576,7 +585,11 @@ const Liberacoes = () => {
           icon={ClipboardList}
           actions={
             canCreate ? (
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+                if (!open && isCreating) return;
+                setDialogOpen(open);
+              }}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-primary">
                     <Plus className="mr-2 h-4 w-4" />
@@ -595,6 +608,7 @@ const Liberacoes = () => {
                         value={novaLiberacao.pedido}
                         onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
                         placeholder="Ex: PED-2024-001"
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     
@@ -604,6 +618,7 @@ const Liberacoes = () => {
                         <Select 
                           value={novaLiberacao.produto} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }))}
+                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                         >
                           <SelectTrigger id="produto">
                             <SelectValue placeholder="Selecione o produto" />
@@ -630,6 +645,7 @@ const Liberacoes = () => {
                         <Select 
                           value={novaLiberacao.armazem} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }))}
+                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                         >
                           <SelectTrigger id="armazem">
                             <SelectValue placeholder="Selecione o armazém" />
@@ -655,7 +671,11 @@ const Liberacoes = () => {
                     <div className="space-y-2">
                       <Label htmlFor="cliente">Cliente *</Label>
                       {temClientesDisponiveis ? (
-                        <Select value={novaLiberacao.cliente_id} onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}>
+                        <Select 
+                          value={novaLiberacao.cliente_id} 
+                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}
+                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        >
                           <SelectTrigger id="cliente">
                             <SelectValue placeholder="Selecione o cliente" />
                           </SelectTrigger>
@@ -720,6 +740,7 @@ const Liberacoes = () => {
                               ? "border-green-500 focus:border-green-500"
                               : ""
                           }
+                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                         />
                         {novaLiberacao.quantidade && !quantidadeValida && (
                           <p className="text-xs text-red-600">
@@ -733,7 +754,13 @@ const Liberacoes = () => {
                     )}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    >
+                      Cancelar
+                    </Button>
                     <Button 
                       className="bg-gradient-primary" 
                       onClick={handleCreateLiberacao}
@@ -743,10 +770,18 @@ const Liberacoes = () => {
                         !temClientesDisponiveis || 
                         !temEstoqueCadastrado || 
                         !quantidadeValida || 
-                        validandoEstoque
+                        validandoEstoque ||
+                        isCreating // 🚀 DESABILITAR DURANTE LOADING
                       }
                     >
-                      Criar Liberação
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        "Criar Liberação"
+                      )}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
