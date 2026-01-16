@@ -224,7 +224,7 @@ const CarregamentoDetalhe = () => {
         (roles.includes("armazem") && armazemId !== null)),
   });
 
-  // Mutation para avançar etapa
+  // 🚀 MUTATION COM LOADING STATES MELHORADOS
   const proximaEtapaMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEtapa || !carregamento) {
@@ -484,7 +484,8 @@ const CarregamentoDetalhe = () => {
             const isFinalizada = etapaIndex < etapaAtual;
             const isAtual = etapaIndex === etapaAtual;
             const isSelected = selectedEtapa === etapaIndex;
-            const podeClicar = true;
+            // 🚀 DESABILITAR CLIQUES DURANTE LOADING
+            const podeClicar = !proximaEtapaMutation.isPending;
             
             // Lógica visual melhorada - prioriza seleção sobre estado atual
             let circleClasses = "rounded-full flex items-center justify-center transition-all";
@@ -503,6 +504,8 @@ const CarregamentoDetalhe = () => {
             
             if (podeClicar) {
               circleClasses += " cursor-pointer hover:scale-105";
+            } else {
+              circleClasses += " cursor-not-allowed opacity-70";
             }
                   // Obter data da etapa
             const getDataEtapa = () => {
@@ -559,7 +562,7 @@ const CarregamentoDetalhe = () => {
                   className={
                     "text-xs text-center leading-tight " +
                     (isSelected ? "text-primary font-bold" : "text-foreground") +
-                    (podeClicar ? " cursor-pointer" : "")
+                    (podeClicar ? " cursor-pointer" : " cursor-not-allowed opacity-70")
                   }
                   style={{
                     minHeight: 32,
@@ -681,9 +684,13 @@ const CarregamentoDetalhe = () => {
                 }}
               >
                 {proximaEtapaMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                {selectedEtapa === 5 ? "Finalizar" : "Próxima"}
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Processando...
+                  </>
+                ) : (
+                  selectedEtapa === 5 ? "Finalizar" : "Próxima"
+                )}
               </Button>
             )}
           </div>
@@ -783,7 +790,7 @@ const CarregamentoDetalhe = () => {
                     setStageFile(file);
                   }}
                   className="w-full text-sm"
-                  disabled={proximaEtapaMutation.isPending}
+                  disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
                 />
               </div>
 
@@ -801,7 +808,7 @@ const CarregamentoDetalhe = () => {
                       setStageFileXml(file);
                     }}
                     className="w-full text-sm"
-                    disabled={proximaEtapaMutation.isPending}
+                    disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
                   />
                 </div>
               )}
@@ -816,7 +823,7 @@ const CarregamentoDetalhe = () => {
                   onChange={e => setStageObs(e.target.value)}
                   rows={2}
                   className="text-sm"
-                  disabled={proximaEtapaMutation.isPending}
+                  disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
                 />
               </div>
             </div>
