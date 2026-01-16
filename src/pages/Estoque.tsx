@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink } from "lucide-react";
+import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -235,6 +235,10 @@ const Estoque = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  // 🚀 NOVOS ESTADOS DE LOADING
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
       .filter((armazem) => {
@@ -285,12 +289,17 @@ const Estoque = () => {
       });
   }, [estoquePorArmazem, search, selectedProdutos, selectedWarehouses, selectedStatuses, dateFrom, dateTo]);
 
+  // 🚀 FUNÇÃO DE UPDATE COM LOADING STATE
   const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
     const newQty = Number(newQtyStr);
     if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr)) {
       toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior ou igual a zero." });
       return;
     }
+
+    // 🚀 ATIVAR LOADING PARA ESTE PRODUTO ESPECÍFICO
+    setIsUpdating(prev => ({ ...prev, [produtoId]: true }));
+
     try {
       const { data: userData } = await supabase.auth.getUser();
       const { error } = await supabase
@@ -317,6 +326,9 @@ const Estoque = () => {
         description: err instanceof Error ? err.message : String(err)
       });
       console.error("❌ [ERROR]", err);
+    } finally {
+      // 🚀 DESATIVAR LOADING PARA ESTE PRODUTO
+      setIsUpdating(prev => ({ ...prev, [produtoId]: false }));
     }
   };
 
@@ -374,6 +386,7 @@ const Estoque = () => {
   const resetFormNovoProduto = () =>
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
 
+  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
   const handleCreateProduto = async () => {
     const { produtoId, armazem, quantidade, unidade } = novoProduto;
     const qtdNum = Number(quantidade);
@@ -391,74 +404,90 @@ const Estoque = () => {
       toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior que zero." });
       return;
     }
-    const produtoSelecionado = produtosCadastrados?.find(p => p.id === produtoId && p.ativo);
-    if (!produtoSelecionado) {
-      toast({ variant: "destructive", title: "Produto não encontrado ou inativo", description: "Selecione um produto ativo." });
-      return;
-    }
-    const { data: armazemData, error: errArmazem } = await supabase
-      .from("armazens")
-      .select("id, nome, cidade, estado, capacidade_total, ativo")
-      .eq("id", armazem)
-      .eq("ativo", true)
-      .maybeSingle();
-    if (errArmazem) {
-      toast({ variant: "destructive", title: "Erro ao buscar armazém", description: errArmazem.message });
-      return;
-    }
-    if (!armazemData?.id) {
-      toast({ variant: "destructive", title: "Armazém não encontrado ou inativo", description: "Selecione um armazém ativo válido." });
-      return;
-    }
-    const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
-      .from("estoque")
-      .select("quantidade")
-      .eq("produto_id", produtoId)
-      .eq("armazem_id", armazemData.id)
-      .maybeSingle();
 
-    if (errBuscaEstoque) {
-      toast({ variant: "destructive", title: "Erro ao buscar estoque", description: errBuscaEstoque.message });
-      return;
-    }
-    const estoqueAnterior = estoqueAtual?.quantidade || 0;
-    const novaQuantidade = estoqueAnterior + qtdNum;
+    // 🚀 ATIVAR LOADING STATE
+    setIsCreating(true);
 
-    if (!produtoId || !armazemData.id) {
-      toast({ variant: "destructive", title: "Produto ou armazém inválido", description: "Impossível registrar estoque. Confira os campos." });
-      return;
-    }
+    try {
+      const produtoSelecionado = produtosCadastrados?.find(p => p.id === produtoId && p.ativo);
+      if (!produtoSelecionado) {
+        toast({ variant: "destructive", title: "Produto não encontrado ou inativo", description: "Selecione um produto ativo." });
+        return;
+      }
+      const { data: armazemData, error: errArmazem } = await supabase
+        .from("armazens")
+        .select("id, nome, cidade, estado, capacidade_total, ativo")
+        .eq("id", armazem)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (errArmazem) {
+        toast({ variant: "destructive", title: "Erro ao buscar armazém", description: errArmazem.message });
+        return;
+      }
+      if (!armazemData?.id) {
+        toast({ variant: "destructive", title: "Armazém não encontrado ou inativo", description: "Selecione um armazém ativo válido." });
+        return;
+      }
+      const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
+        .from("estoque")
+        .select("quantidade")
+        .eq("produto_id", produtoId)
+        .eq("armazem_id", armazemData.id)
+        .maybeSingle();
 
-    const { data: userData } = await supabase.auth.getUser();
-    const { error: errEstoque } = await supabase
-      .from("estoque")
-      .upsert({
-        produto_id: produtoId,
-        armazem_id: armazemData.id,
-        quantidade: novaQuantidade,
-        updated_by: userData.user?.id,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: "produto_id,armazem_id"
+      if (errBuscaEstoque) {
+        toast({ variant: "destructive", title: "Erro ao buscar estoque", description: errBuscaEstoque.message });
+        return;
+      }
+      const estoqueAnterior = estoqueAtual?.quantidade || 0;
+      const novaQuantidade = estoqueAnterior + qtdNum;
+
+      if (!produtoId || !armazemData.id) {
+        toast({ variant: "destructive", title: "Produto ou armazém inválido", description: "Impossível registrar estoque. Confira os campos." });
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const { error: errEstoque } = await supabase
+        .from("estoque")
+        .upsert({
+          produto_id: produtoId,
+          armazem_id: armazemData.id,
+          quantidade: novaQuantidade,
+          updated_by: userData.user?.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "produto_id,armazem_id"
+        });
+
+      if (errEstoque) {
+        let msg = errEstoque.message || "";
+        if (msg.includes("stack depth limit")) {
+          msg = "Erro interno no banco de dados. Produto ou armazém inexistente, ou existe trigger/FK inconsistente.";
+        }
+        toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: msg });
+        return;
+      }
+
+      toast({
+        title: "Entrada registrada!",
+        description: `+${qtdNum}${unidade} de ${produtoSelecionado.nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}`
       });
 
-    if (errEstoque) {
-      let msg = errEstoque.message || "";
-      if (msg.includes("stack depth limit")) {
-        msg = "Erro interno no banco de dados. Produto ou armazém inexistente, ou existe trigger/FK inconsistente.";
-      }
-      toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: msg });
-      return;
+      resetFormNovoProduto();
+      setDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["estoque"] });
+    } catch (err: unknown) {
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: err instanceof Error ? err.message : String(err)
+      });
+      console.error("❌ [ERROR]", err);
+    } finally {
+      // 🚀 DESATIVAR LOADING STATE
+      setIsCreating(false);
     }
-
-    toast({
-      title: "Entrada registrada!",
-      description: `+${qtdNum}${unidade} de ${produtoSelecionado.nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}`
-    });
-
-    resetFormNovoProduto();
-    setDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: ["estoque"] });
   };
 
   // Verificar se há produtos e armazéns ativos disponíveis
@@ -498,7 +527,11 @@ const Estoque = () => {
         subtitle="Gerencie o estoque de produtos por armazém"
         icon={Package}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
+            if (!open && isCreating) return;
+            setDialogOpen(open);
+          }}>
             <DialogTrigger asChild>
               <Button
                 className="bg-gradient-primary"
@@ -519,6 +552,7 @@ const Estoque = () => {
                     <Select
                       value={novoProduto.produtoId}
                       onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                     >
                       <SelectTrigger id="produto">
                         <SelectValue placeholder="Selecione o produto" />
@@ -547,6 +581,7 @@ const Estoque = () => {
                     <Select 
                       value={novoProduto.armazem} 
                       onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}
+                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                     >
                       <SelectTrigger id="armazem">
                         <SelectValue placeholder="Selecione o armazém" />
@@ -582,11 +617,16 @@ const Estoque = () => {
                         value={novoProduto.quantidade}
                         onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
                         style={{ width: "120px", maxWidth: "100%" }}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="unidade">Unidade</Label>
-                      <Select value={novoProduto.unidade} onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}>
+                      <Select 
+                        value={novoProduto.unidade} 
+                        onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
+                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      >
                         <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="t">Toneladas (t)</SelectItem>
@@ -598,13 +638,26 @@ const Estoque = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                >
+                  Cancelar
+                </Button>
                 <Button 
                   className="bg-gradient-primary" 
                   onClick={handleCreateProduto}
-                  disabled={!temProdutosDisponiveis || !temArmazensDisponiveis}
+                  disabled={!temProdutosDisponiveis || !temArmazensDisponiveis || isCreating} // 🚀 DESABILITAR DURANTE LOADING
                 >
-                  Salvar
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -763,6 +816,7 @@ const Estoque = () => {
                                 style={{ width: "110px", minWidth: "100px" }}
                                 className="h-8"
                                 onClick={e => e.stopPropagation()}
+                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
                               />
                               <Button
                                 variant="default"
@@ -771,8 +825,16 @@ const Estoque = () => {
                                   e.stopPropagation();
                                   handleUpdateQuantity(produto.id, editQuantity);
                                 }}
+                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
                               >
-                                Salvar
+                                {isUpdating[produto.id] ? (
+                                  <>
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                    Salvando...
+                                  </>
+                                ) : (
+                                  "Salvar"
+                                )}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -781,6 +843,7 @@ const Estoque = () => {
                                   e.stopPropagation();
                                   setEditingId(null);
                                 }}
+                                disabled={isUpdating[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
                               >
                                 Cancelar
                               </Button>
