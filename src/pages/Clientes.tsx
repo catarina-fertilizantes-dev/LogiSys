@@ -352,42 +352,37 @@ const Clientes = () => {
 
   // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING - CORRIGIDA
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
-    // Ativar loading para este cliente específico
+    console.log('🔄 Iniciando toggle:', { id, ativoAtual, novoValor: !ativoAtual });
+    
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
   
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("clientes")
         .update({ 
           ativo: !ativoAtual, 
           updated_at: new Date().toISOString() 
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select(); // Adicionar select para ver o resultado
+  
+      console.log('📊 Resultado do update:', { data, error });
       
-      if (error) {
-        console.error('Erro no toggle:', error);
-        throw error;
-      }
+      if (error) throw error;
   
       toast({
         title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
       });
   
-      // Aguardar um pouco antes de recarregar para garantir que a atualização foi processada
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Recarregar dados
       await fetchClientes();
       
     } catch (err) {
-      console.error('Erro completo:', err);
+      console.error('❌ Erro no toggle:', err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
-        description: err instanceof Error ? err.message : "Erro desconhecido",
       });
     } finally {
-      // Desativar loading para este cliente
       setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
