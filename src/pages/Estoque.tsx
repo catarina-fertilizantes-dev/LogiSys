@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2, FileText, Upload } from "lucide-react";
+import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -235,13 +235,15 @@ const Estoque = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // 🚀 ESTADOS DE LOADING
+  // Estados de loading
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
-  // 🆕 NOVOS ESTADOS PARA DOCUMENTOS
+  // 🆕 ESTADOS PARA DOCUMENTOS
   const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
   const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
+  const [numeroRemessa, setNumeroRemessa] = useState("");
+  const [observacoesRemessa, setObservacoesRemessa] = useState("");
 
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
@@ -293,7 +295,6 @@ const Estoque = () => {
       });
   }, [estoquePorArmazem, search, selectedProdutos, selectedWarehouses, selectedStatuses, dateFrom, dateTo]);
 
-  // 🚀 FUNÇÃO DE UPDATE COM LOADING STATE
   const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
     const newQty = Number(newQtyStr);
     if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr)) {
@@ -381,18 +382,20 @@ const Estoque = () => {
 
   const resetFormNovoProduto = () => {
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
-    // 🆕 LIMPAR ARQUIVOS
+    // 🆕 LIMPAR CAMPOS DE REMESSA
     setNotaRemessaFile(null);
     setXmlRemessaFile(null);
+    setNumeroRemessa("");
+    setObservacoesRemessa("");
   };
 
   // 🆕 FUNÇÃO PARA UPLOAD DE DOCUMENTOS
-  const uploadDocumentos = async (estoqueId: string) => {
+  const uploadDocumentos = async (produtoId: string, armazemId: string) => {
     const uploads = [];
     
     // Upload da nota de remessa (PDF)
     if (notaRemessaFile) {
-      const fileName = `${estoqueId}_nota_remessa_${Date.now()}.pdf`;
+      const fileName = `${produtoId}_${armazemId}_nota_remessa_${Date.now()}.pdf`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('estoque-documentos')
         .upload(fileName, notaRemessaFile);
@@ -411,7 +414,7 @@ const Estoque = () => {
 
     // Upload do XML
     if (xmlRemessaFile) {
-      const fileName = `${estoqueId}_xml_remessa_${Date.now()}.xml`;
+      const fileName = `${produtoId}_${armazemId}_xml_remessa_${Date.now()}.xml`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('estoque-documentos')
         .upload(fileName, xmlRemessaFile);
@@ -431,7 +434,7 @@ const Estoque = () => {
     return uploads;
   };
 
-  // 🚀 FUNÇÃO DE CRIAÇÃO MODIFICADA COM DOCUMENTOS OBRIGATÓRIOS
+  // 🆕 FUNÇÃO DE CRIAÇÃO MODIFICADA PARA TRABALHAR COM REMESSAS
   const handleCreateProduto = async () => {
     const { produtoId, armazem, quantidade, unidade } = novoProduto;
     const qtdNum = Number(quantidade);
@@ -473,7 +476,6 @@ const Estoque = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING STATE
     setIsCreating(true);
 
     try {
@@ -482,20 +484,58 @@ const Estoque = () => {
         toast({ variant: "destructive", title: "Produto não encontrado ou inativo", description: "Selecione um produto ativo." });
         return;
       }
+
       const { data: armazemData, error: errArmazem } = await supabase
         .from("armazens")
         .select("id, nome, cidade, estado, capacidade_total, ativo")
         .eq("id", armazem)
         .eq("ativo", true)
         .maybeSingle();
+
       if (errArmazem) {
         toast({ variant: "destructive", title: "Erro ao buscar armazém", description: errArmazem.message });
         return;
       }
+
       if (!armazemData?.id) {
         toast({ variant: "destructive", title: "Armazém não encontrado ou inativo", description: "Selecione um armazém ativo válido." });
         return;
       }
+
+      // 🆕 FAZER UPLOAD DOS DOCUMENTOS PRIMEIRO
+      console.log("🔍 [DEBUG] Fazendo upload dos documentos...");
+      const uploads = await uploadDocumentos(produtoId, armazemData.id);
+
+      // Preparar URLs dos documentos
+      const urlNotaRemessa = uploads.find(u => u.campo === 'url_nota_remessa')?.url || null;
+      const urlXmlRemessa = uploads.find(u => u.campo === 'url_xml_remessa')?.url || null;
+
+      const { data: userData } = await supabase.auth.getUser();
+
+      // 🆕 CRIAR REGISTRO NA TABELA ESTOQUE_REMESSAS
+      const { data: novaRemessa, error: errRemessa } = await supabase
+        .from("estoque_remessas")
+        .insert({
+          produto_id: produtoId,
+          armazem_id: armazemData.id,
+          quantidade_original: qtdNum,
+          url_nota_remessa: urlNotaRemessa,
+          url_xml_remessa: urlXmlRemessa,
+          numero_remessa: numeroRemessa.trim() || null,
+          observacoes: observacoesRemessa.trim() || null,
+          created_by: userData.user?.id
+        })
+        .select('id')
+        .single();
+
+      if (errRemessa) {
+        toast({ variant: "destructive", title: "Erro ao registrar remessa", description: errRemessa.message });
+        return;
+      }
+
+      console.log("✅ [SUCCESS] Remessa criada:", novaRemessa.id);
+
+      // 🆕 ATUALIZAR/CRIAR ESTOQUE TOTAL
       const { data: estoqueAtual, error: errBuscaEstoque } = await supabase
         .from("estoque")
         .select("id, quantidade")
@@ -510,12 +550,9 @@ const Estoque = () => {
 
       const estoqueAnterior = estoqueAtual?.quantidade || 0;
       const novaQuantidade = estoqueAnterior + qtdNum;
-      const { data: userData } = await supabase.auth.getUser();
-
-      let estoqueId: string;
 
       if (estoqueAtual?.id) {
-        // 🆕 ATUALIZAR ESTOQUE EXISTENTE COM DOCUMENTOS
+        // Atualizar estoque existente
         const { error: errEstoque } = await supabase
           .from("estoque")
           .update({
@@ -529,11 +566,9 @@ const Estoque = () => {
           toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: errEstoque.message });
           return;
         }
-
-        estoqueId = estoqueAtual.id;
       } else {
-        // 🆕 CRIAR NOVO REGISTRO DE ESTOQUE
-        const { data: novoEstoque, error: errEstoque } = await supabase
+        // Criar novo registro de estoque
+        const { error: errEstoque } = await supabase
           .from("estoque")
           .insert({
             produto_id: produtoId,
@@ -541,10 +576,7 @@ const Estoque = () => {
             quantidade: novaQuantidade,
             updated_by: userData.user?.id,
             updated_at: new Date().toISOString(),
-            documentos_obrigatorios: true
-          })
-          .select('id')
-          .single();
+          });
 
         if (errEstoque) {
           let msg = errEstoque.message || "";
@@ -552,30 +584,6 @@ const Estoque = () => {
             msg = "Erro interno no banco de dados. Produto ou armazém inexistente, ou existe trigger/FK inconsistente.";
           }
           toast({ variant: "destructive", title: "Erro ao criar estoque", description: msg });
-          return;
-        }
-
-        estoqueId = novoEstoque.id;
-      }
-
-      // 🆕 FAZER UPLOAD DOS DOCUMENTOS
-      console.log("🔍 [DEBUG] Fazendo upload dos documentos para estoque ID:", estoqueId);
-      const uploads = await uploadDocumentos(estoqueId);
-
-      // 🆕 ATUALIZAR URLS DOS DOCUMENTOS NO BANCO
-      if (uploads.length > 0) {
-        const updateData: any = {};
-        uploads.forEach(upload => {
-          updateData[upload.campo] = upload.url;
-        });
-
-        const { error: errUpdateDocs } = await supabase
-          .from("estoque")
-          .update(updateData)
-          .eq("id", estoqueId);
-
-        if (errUpdateDocs) {
-          toast({ variant: "destructive", title: "Erro ao salvar documentos", description: errUpdateDocs.message });
           return;
         }
       }
@@ -596,7 +604,6 @@ const Estoque = () => {
       });
       console.error("❌ [ERROR]", err);
     } finally {
-      // 🚀 DESATIVAR LOADING STATE
       setIsCreating(false);
     }
   };
@@ -639,7 +646,6 @@ const Estoque = () => {
         icon={Package}
         actions={
           <Dialog open={dialogOpen} onOpenChange={(open) => {
-            // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
             if (!open && isCreating) return;
             setDialogOpen(open);
           }}>
@@ -652,7 +658,7 @@ const Estoque = () => {
                 Entrada de Estoque
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Registrar Entrada de Estoque</DialogTitle>
               </DialogHeader>
@@ -746,6 +752,33 @@ const Estoque = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    {/* 🆕 CAMPOS ADICIONAIS DA REMESSA */}
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="numero-remessa">Número da Remessa (opcional)</Label>
+                        <Input
+                          id="numero-remessa"
+                          type="text"
+                          placeholder="Ex: REM-2024-001"
+                          value={numeroRemessa}
+                          onChange={(e) => setNumeroRemessa(e.target.value)}
+                          disabled={isCreating}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="observacoes">Observações (opcional)</Label>
+                      <Input
+                        id="observacoes"
+                        type="text"
+                        placeholder="Observações sobre esta remessa..."
+                        value={observacoesRemessa}
+                        onChange={(e) => setObservacoesRemessa(e.target.value)}
+                        disabled={isCreating}
+                      />
                     </div>
 
                     {/* 🆕 SEÇÃO DE DOCUMENTOS OBRIGATÓRIOS */}
