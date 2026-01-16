@@ -97,12 +97,33 @@ const parseDate = (d: string) => {
 const Estoque = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { hasRole } = useAuth();
+  const { hasRole, userRole, user } = useAuth();
 
-  const { data: estoqueData, isLoading, error } = useQuery({
-    queryKey: ["estoque"],
+  // 🎯 CONTROLE DE PERMISSÕES BASEADO NO ROLE
+  const canCreate = hasRole("admin") || hasRole("logistica");
+
+  // 🆕 BUSCAR ARMAZÉM DO USUÁRIO LOGADO (SIMILAR À PÁGINA AGENDAMENTOS)
+  const { data: currentArmazem } = useQuery({
+    queryKey: ["current-armazem", user?.id],
     queryFn: async () => {
+      if (!user || userRole !== "armazem") return null;
       const { data, error } = await supabase
+        .from("armazens")
+        .select("id, nome, cidade, estado")
+        .eq("user_id", user.id)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && userRole === "armazem",
+  });
+
+  // 🔄 QUERY PRINCIPAL MODIFICADA PARA FILTRAR POR PERFIL
+  const { data: estoqueData, isLoading, error } = useQuery({
+    queryKey: ["estoque", currentArmazem?.id],
+    queryFn: async () => {
+      let query = supabase
         .from("estoque")
         .select(`
           id,
@@ -112,6 +133,13 @@ const Estoque = () => {
           armazem:armazens(id, nome, cidade, estado, capacidade_total, ativo)
         `)
         .order("updated_at", { ascending: false });
+
+      // 🎯 FILTRAR POR ARMAZÉM PARA USUÁRIO ARMAZÉM
+      if (userRole === "armazem" && currentArmazem?.id) {
+        query = query.eq("armazem_id", currentArmazem.id);
+      }
+
+      const { data, error } = await query;
       if (error) {
         toast({ variant: "destructive", title: "Erro ao buscar estoque", description: error.message });
         throw error;
@@ -119,6 +147,7 @@ const Estoque = () => {
       return data;
     },
     refetchInterval: 30000,
+    enabled: (userRole !== "armazem" || !!currentArmazem?.id),
   });
 
   const { data: produtosCadastrados } = useQuery({
@@ -152,11 +181,19 @@ const Estoque = () => {
       return data || [];
     },
     refetchInterval: 30000,
+    enabled: canCreate, // Só busca se pode criar (admin/logística)
   });
 
+  // 🆕 QUERY PARA FILTROS ADAPTADA POR PERFIL
   const { data: armazensParaFiltro } = useQuery({
     queryKey: ["armazens-filtro"],
     queryFn: async () => {
+      // Para usuário armazém, retorna apenas seu armazém
+      if (userRole === "armazem" && currentArmazem) {
+        return [currentArmazem];
+      }
+      
+      // Para admin/logística, retorna todos
       const { data, error } = await supabase
         .from("armazens")
         .select("id, nome, cidade, estado, ativo")
@@ -169,6 +206,7 @@ const Estoque = () => {
       return data || [];
     },
     refetchInterval: 10000,
+    enabled: !!user,
   });
 
   const estoquePorArmazem: ArmazemEstoque[] = useMemo(() => {
@@ -340,7 +378,7 @@ const Estoque = () => {
 
   const activeAdvancedCount =
     (selectedProdutos.length ? 1 : 0) +
-    (selectedWarehouses.length ? 1 : 0) +
+    (selectedWarehouses.length && userRole !== "armazem" ? 1 : 0) + // Não conta filtro de armazém para usuário armazém
     (selectedStatuses.length ? 1 : 0) +
     ((dateFrom || dateTo) ? 1 : 0);
 
@@ -358,7 +396,7 @@ const Estoque = () => {
     const produtoParam = urlParams.get('produto');
     const armazemParam = urlParams.get('armazem');
     
-    if (modal === 'novo' && (hasRole("logistica") || hasRole("admin"))) {
+    if (modal === 'novo' && canCreate) {
       setDialogOpen(true);
       
       if (produtosCadastrados && armazensAtivos) {
@@ -378,7 +416,7 @@ const Estoque = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
-  }, [hasRole, produtosCadastrados, armazensAtivos]);
+  }, [canCreate, produtosCadastrados, armazensAtivos]);
 
   const resetFormNovoProduto = () => {
     setNovoProduto({ produtoId: "", armazem: "", quantidade: "", unidade: "t" });
@@ -637,6 +675,83 @@ const Estoque = () => {
   const temProdutosDisponiveis = produtosAtivos.length > 0;
   const temArmazensDisponiveis = armazensDisponiveis.length > 0;
 
+  // 🆕 RENDERIZAÇÃO CONDICIONAL PARA INTERFACE SIMPLIFICADA (ARMAZÉM)
+  const renderInterfaceSimplificada = () => {
+    if (!currentArmazem) {
+      return (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            Carregando informações do armazém...
+          </p>
+        </div>
+      );
+    }
+
+    const armazem = filteredArmazens[0]; // Só há um armazém para usuário armazém
+    
+    if (!armazem || armazem.produtos.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            Nenhum produto em estoque encontrado
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Header do armazém */}
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-primary">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">{armazem.nome}</h2>
+                <p className="text-muted-foreground">
+                  {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {armazem.produtos.length} produto{armazem.produtos.length !== 1 && 's'} em estoque
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lista de produtos */}
+        <div className="grid gap-3">
+          {armazem.produtos.map((produto) => (
+            <Card key={produto.id} className="transition-all hover:shadow-md">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">{produto.produto}</h3>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className="text-2xl font-bold text-primary">
+                        {produto.quantidade.toLocaleString('pt-BR')} {produto.unidade}
+                      </span>
+                      <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
+                        {produto.status === "baixo" ? "Estoque Baixo" : "Normal"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Última atualização: {produto.data}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -664,477 +779,564 @@ const Estoque = () => {
     <div className="min-h-screen bg-background p-6 space-y-6">
       <PageHeader
         title="Controle de Estoque"
-        subtitle="Gerencie o estoque de produtos por armazém"
+        subtitle={
+          userRole === "armazem" && currentArmazem
+            ? `Estoque do ${currentArmazem.nome} - ${currentArmazem.cidade}/${currentArmazem.estado}`
+            : "Gerencie o estoque de produtos por armazém"
+        }
         icon={Package}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            if (!open && isCreating) return;
-            setDialogOpen(open);
-          }}>
-            <DialogTrigger asChild>
-              <Button
-                className="bg-gradient-primary"
-                disabled={!hasRole("logistica") && !hasRole("admin")}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Entrada de Estoque
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Registrar Entrada de Estoque</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="produto">Produto *</Label>
-                  {temProdutosDisponiveis ? (
-                    <Select
-                      value={novoProduto.produtoId}
-                      onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
-                      disabled={isCreating}
-                    >
-                      <SelectTrigger id="produto">
-                        <SelectValue placeholder="Selecione o produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {produtosAtivos.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.nome} ({p.unidade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <EmptyStateCard
-                      title="Nenhum produto cadastrado"
-                      description="Para registrar estoque, você precisa cadastrar produtos primeiro."
-                      actionText="Cadastrar Produto"
-                      actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
-                    />
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="armazem">Armazém *</Label>
-                  {temArmazensDisponiveis ? (
-                    <Select 
-                      value={novoProduto.armazem} 
-                      onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}
-                      disabled={isCreating}
-                    >
-                      <SelectTrigger id="armazem">
-                        <SelectValue placeholder="Selecione o armazém" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {armazensDisponiveis.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <EmptyStateCard
-                      title="Nenhum armazém cadastrado"
-                      description="Para registrar estoque, você precisa cadastrar armazéns primeiro."
-                      actionText="Cadastrar Armazém"
-                      actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
-                    />
-                  )}
-                </div>
-                
-                {temProdutosDisponiveis && temArmazensDisponiveis && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
-                        <Input
-                          id="quantidade"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Ex: 20500.50"
-                          value={novoProduto.quantidade}
-                          onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
-                          style={{ width: "120px", maxWidth: "100%" }}
-                          disabled={isCreating}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="unidade">Unidade</Label>
-                        <Select 
-                          value={novoProduto.unidade} 
-                          onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
-                          disabled={isCreating}
-                        >
-                          <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="t">Toneladas (t)</SelectItem>
-                            <SelectItem value="kg">Quilos (kg)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Campos adicionais da remessa - layout responsivo */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="numero-remessa">Número da Remessa</Label>
-                        <Input
-                          id="numero-remessa"
-                          type="text"
-                          placeholder="Ex: REM-001"
-                          value={numeroRemessa}
-                          onChange={(e) => setNumeroRemessa(e.target.value)}
-                          disabled={isCreating}
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="md:col-span-2 space-y-2">
-                        <Label htmlFor="observacoes">Observações</Label>
-                        <Input
-                          id="observacoes"
-                          type="text"
-                          placeholder="Observações sobre esta remessa..."
-                          value={observacoesRemessa}
-                          onChange={(e) => setObservacoesRemessa(e.target.value)}
-                          disabled={isCreating}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Seção de documentos obrigatórios */}
-                    <div className="border-t pt-4 space-y-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-5 w-5 text-primary" />
-                        <h3 className="font-semibold text-base">Documentos Obrigatórios</h3>
-                      </div>
-
-                      <div className="space-y-3">
-                        {/* Upload da Nota de Remessa */}
-                        <div className="space-y-2">
-                          <Label htmlFor="nota-remessa" className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Nota de Remessa (PDF) *
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              id="nota-remessa"
-                              type="file"
-                              accept=".pdf"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0] ?? null;
-                                handleFileChange(
-                                  file,
-                                  ['application/pdf'],
-                                  ['.pdf'],
-                                  setNotaRemessaFile,
-                                  e.target
-                                );
-                              }}
-                              className="flex-1"
-                              disabled={isCreating}
-                            />
-                            {notaRemessaFile && (
-                              <Badge variant="secondary" className="text-xs">
-                                ✓ {notaRemessaFile.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Upload do XML */}
-                        <div className="space-y-2">
-                          <Label htmlFor="xml-remessa" className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Arquivo XML da Remessa *
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              id="xml-remessa"
-                              type="file"
-                              accept=".xml"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0] ?? null;
-                                handleFileChange(
-                                  file,
-                                  ['application/xml', 'text/xml'],
-                                  ['.xml'],
-                                  setXmlRemessaFile,
-                                  e.target
-                                );
-                              }}
-                              className="flex-1"
-                              disabled={isCreating}
-                            />
-                            {xmlRemessaFile && (
-                              <Badge variant="secondary" className="text-xs">
-                                ✓ {xmlRemessaFile.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-                
-                {/* Legenda simples para campos obrigatórios */}
-                <p className="text-xs text-muted-foreground">
-                  * Campos obrigatórios
-                </p>
-              </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)}
-                  disabled={isCreating}
-                >
-                  Cancelar
+          canCreate ? (
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              if (!open && isCreating) return;
+              setDialogOpen(open);
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Entrada de Estoque
                 </Button>
-                <Button 
-                  className="bg-gradient-primary" 
-                  onClick={handleCreateProduto}
-                  disabled={
-                    !temProdutosDisponiveis || 
-                    !temArmazensDisponiveis || 
-                    !notaRemessaFile || 
-                    !xmlRemessaFile || 
-                    isCreating
-                  }
-                >
-                  {isCreating ? (
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Registrar Entrada de Estoque</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="produto">Produto *</Label>
+                    {temProdutosDisponiveis ? (
+                      <Select
+                        value={novoProduto.produtoId}
+                        onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger id="produto">
+                          <SelectValue placeholder="Selecione o produto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {produtosAtivos.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome} ({p.unidade})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <EmptyStateCard
+                        title="Nenhum produto cadastrado"
+                        description="Para registrar estoque, você precisa cadastrar produtos primeiro."
+                        actionText="Cadastrar Produto"
+                        actionUrl="https://logi-sys-shiy.vercel.app/produtos?modal=novo"
+                      />
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="armazem">Armazém *</Label>
+                    {temArmazensDisponiveis ? (
+                      <Select 
+                        value={novoProduto.armazem} 
+                        onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger id="armazem">
+                          <SelectValue placeholder="Selecione o armazém" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {armazensDisponiveis.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <EmptyStateCard
+                        title="Nenhum armazém cadastrado"
+                        description="Para registrar estoque, você precisa cadastrar armazéns primeiro."
+                        actionText="Cadastrar Armazém"
+                        actionUrl="https://logi-sys-shiy.vercel.app/armazens?modal=novo"
+                      />
+                    )}
+                  </div>
+                  
+                  {temProdutosDisponiveis && temArmazensDisponiveis && (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="quantidade">Quantidade a adicionar *</Label>
+                          <Input
+                            id="quantidade"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Ex: 20500.50"
+                            value={novoProduto.quantidade}
+                            onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
+                            style={{ width: "120px", maxWidth: "100%" }}
+                            disabled={isCreating}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="unidade">Unidade</Label>
+                          <Select 
+                            value={novoProduto.unidade} 
+                            onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
+                            disabled={isCreating}
+                          >
+                            <SelectTrigger id="unidade"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="t">Toneladas (t)</SelectItem>
+                              <SelectItem value="kg">Quilos (kg)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Campos adicionais da remessa - layout responsivo */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="numero-remessa">Número da Remessa</Label>
+                          <Input
+                            id="numero-remessa"
+                            type="text"
+                            placeholder="Ex: REM-001"
+                            value={numeroRemessa}
+                            onChange={(e) => setNumeroRemessa(e.target.value)}
+                            disabled={isCreating}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <Label htmlFor="observacoes">Observações</Label>
+                          <Input
+                            id="observacoes"
+                            type="text"
+                            placeholder="Observações sobre esta remessa..."
+                            value={observacoesRemessa}
+                            onChange={(e) => setObservacoesRemessa(e.target.value)}
+                            disabled={isCreating}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Seção de documentos obrigatórios */}
+                      <div className="border-t pt-4 space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <h3 className="font-semibold text-base">Documentos Obrigatórios</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                          {/* Upload da Nota de Remessa */}
+                          <div className="space-y-2">
+                            <Label htmlFor="nota-remessa" className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Nota de Remessa (PDF) *
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id="nota-remessa"
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] ?? null;
+                                  handleFileChange(
+                                    file,
+                                    ['application/pdf'],
+                                    ['.pdf'],
+                                    setNotaRemessaFile,
+                                    e.target
+                                  );
+                                }}
+                                className="flex-1"
+                                disabled={isCreating}
+                              />
+                              {notaRemessaFile && (
+                                <Badge variant="secondary" className="text-xs">
+                                  ✓ {notaRemessaFile.name}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Upload do XML */}
+                          <div className="space-y-2">
+                            <Label htmlFor="xml-remessa" className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Arquivo XML da Remessa *
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id="xml-remessa"
+                                type="file"
+                                accept=".xml"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] ?? null;
+                                  handleFileChange(
+                                    file,
+                                    ['application/xml', 'text/xml'],
+                                    ['.xml'],
+                                    setXmlRemessaFile,
+                                    e.target
+                                  );
+                                }}
+                                className="flex-1"
+                                disabled={isCreating}
+                              />
+                              {xmlRemessaFile && (
+                                <Badge variant="secondary" className="text-xs">
+                                  ✓ {xmlRemessaFile.name}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </>
-                  ) : (
-                    "Salvar"
                   )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                  
+                  {/* Legenda simples para campos obrigatórios */}
+                  <p className="text-xs text-muted-foreground">
+                    * Campos obrigatórios
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(false)}
+                    disabled={isCreating}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    className="bg-gradient-primary" 
+                    onClick={handleCreateProduto}
+                    disabled={
+                      !temProdutosDisponiveis || 
+                      !temArmazensDisponiveis || 
+                      !notaRemessaFile || 
+                      !xmlRemessaFile || 
+                      isCreating
+                    }
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Salvar"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null
         }
       />
 
-      <div className="flex items-center gap-3">
-        <Input
-          className="h-9 flex-1"
-          placeholder="Buscar por armazém ou produto..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
-          Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
-        </span>
-        <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => setFiltersOpen((v) => !v)}>
-          <FilterIcon className="h-4 w-4 mr-1" />
-          Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-          {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-        </Button>
-      </div>
+      {/* 🎯 INTERFACE CONDICIONAL: SIMPLIFICADA PARA ARMAZÉM, COMPLETA PARA ADMIN/LOGÍSTICA */}
+      {userRole === "armazem" ? (
+        <>
+          {/* Busca simples para armazém */}
+          <div className="flex items-center gap-3">
+            <Input
+              className="h-9 flex-1"
+              placeholder="Buscar produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
+            </span>
+          </div>
 
-      {filtersOpen && (
-        <div className="rounded-md border p-3 space-y-2 relative">
-          <div>
-            <Label className="text-sm mb-1">Produtos</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {produtosUnicos.map((p) => (
-                <Badge
-                  key={p}
-                  onClick={() => setSelectedProdutos((prev) =>
-                    prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
-                  )}
-                  className={`cursor-pointer text-xs px-2 py-1 ${selectedProdutos.includes(p) ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
-                >
-                  {p}
-                </Badge>
-              ))}
+          {/* Filtros simplificados para armazém */}
+          {filtersOpen && (
+            <div className="rounded-md border p-3 space-y-2 relative">
+              <div>
+                <Label className="text-sm mb-1">Produtos</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {produtosUnicos.map((p) => (
+                    <Badge
+                      key={p}
+                      onClick={() => setSelectedProdutos((prev) =>
+                        prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                      )}
+                      className={`cursor-pointer text-xs px-2 py-1 ${selectedProdutos.includes(p) ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {p}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3">
+                <Label className="text-sm mb-1">Status de estoque</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {["normal", "baixo"].map((st) => {
+                    const active = selectedStatuses.includes(st as StockStatus);
+                    return (
+                      <Badge
+                        key={st}
+                        onClick={() => setSelectedStatuses((prev) => (
+                          prev.includes(st as StockStatus)
+                            ? prev.filter(s => s !== st)
+                            : [...prev, st as StockStatus]
+                        ))}
+                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {st === "normal" ? "Normal" : "Baixo"}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="mt-3 flex gap-4 items-center">
+                <Label>Período</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+              </div>
+              <div className="flex justify-end mt-4 absolute right-4 bottom-4">
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setSearch("");
+                  setSelectedProdutos([]);
+                  setSelectedStatuses([]);
+                  setDateFrom("");
+                  setDateTo("");
+                }}>
+                  <X className="h-4 w-4" /> Limpar Filtros
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="mt-3">
-            <Label className="text-sm mb-1">Armazéns</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {armazensUnicos.map((a) => (
-                <Badge
-                  key={a.id}
-                  onClick={() => setSelectedWarehouses((prev) =>
-                    prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id]
-                  )}
-                  className={`cursor-pointer text-xs px-2 py-1 ${selectedWarehouses.includes(a.id) ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
-                >
-                  {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3">
-            <Label className="text-sm mb-1">Status de estoque</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {["normal", "baixo"].map((st) => {
-                const active = selectedStatuses.includes(st as StockStatus);
-                return (
-                  <Badge
-                    key={st}
-                    onClick={() => setSelectedStatuses((prev) => (
-                      prev.includes(st as StockStatus)
-                        ? prev.filter(s => s !== st)
-                        : [...prev, st as StockStatus]
-                    ))}
-                    className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}
-                  >
-                    {st === "normal" ? "Normal" : "Baixo"}
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-          <div className="mt-3 flex gap-4 items-center">
-            <Label>Período</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-          </div>
-          <div className="flex justify-end mt-4 absolute right-4 bottom-4">
-            <Button variant="ghost" size="sm" onClick={() => {
-              setSearch("");
-              setSelectedProdutos([]);
-              setSelectedWarehouses([]);
-              setSelectedStatuses([]);
-              setDateFrom("");
-              setDateTo("");
-            }}>
-              <X className="h-4 w-4" /> Limpar Filtros
+          )}
+
+          {/* Interface simplificada */}
+          {renderInterfaceSimplificada()}
+        </>
+      ) : (
+        <>
+          {/* Interface completa para admin/logística */}
+          <div className="flex items-center gap-3">
+            <Input
+              className="h-9 flex-1"
+              placeholder="Buscar por armazém ou produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
+            </span>
+            <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => setFiltersOpen((v) => !v)}>
+              <FilterIcon className="h-4 w-4 mr-1" />
+              Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+              {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
           </div>
-        </div>
-      )}
 
-      <div className="flex flex-col gap-4">
-        {filteredArmazens.map((armazem) => (
-          <div key={armazem.id}>
-            <Card
-              className={`w-full transition-all hover:shadow-md cursor-pointer flex flex-col ${openArmazemId === armazem.id ? "border-primary" : ""}`}
-            >
-              <CardContent
-                className="px-5 py-3 flex flex-row items-center"
-                onClick={() =>
-                  setOpenArmazemId(openArmazemId === armazem.id ? null : armazem.id)
-                }
-                style={{ cursor: "pointer" }}
-              >
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary mr-4 shrink-0">
-                  <Package className="h-5 w-5 text-white" />
+          {filtersOpen && (
+            <div className="rounded-md border p-3 space-y-2 relative">
+              <div>
+                <Label className="text-sm mb-1">Produtos</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {produtosUnicos.map((p) => (
+                    <Badge
+                      key={p}
+                      onClick={() => setSelectedProdutos((prev) =>
+                        prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                      )}
+                      className={`cursor-pointer text-xs px-2 py-1 ${selectedProdutos.includes(p) ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {p}
+                    </Badge>
+                  ))}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg truncate">{armazem.nome}</h3>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
-                  </p>
-                  <span className="text-xs text-muted-foreground">
-                    {armazem.produtos.length} produto{armazem.produtos.length !== 1 && 's'} atualmente
-                  </span>
-                  {armazem.capacidade_total != null && (
-                    <div className="text-xs text-muted-foreground">Capacidade: {armazem.capacidade_total}t</div>
-                  )}
+              </div>
+              <div className="mt-3">
+                <Label className="text-sm mb-1">Armazéns</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {armazensUnicos.map((a) => (
+                    <Badge
+                      key={a.id}
+                      onClick={() => setSelectedWarehouses((prev) =>
+                        prev.includes(a.id) ? prev.filter(x => x !== a.id) : [...prev, a.id]
+                      )}
+                      className={`cursor-pointer text-xs px-2 py-1 ${selectedWarehouses.includes(a.id) ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
+                    >
+                      {a.nome} — {a.cidade}{a.estado ? `/${a.estado}` : ""}
+                    </Badge>
+                  ))}
                 </div>
-                <Button variant="ghost" size="icon" tabIndex={-1} className="pointer-events-none ml-4">
-                  {openArmazemId === armazem.id ? <ChevronUp /> : <ChevronDown />}
+              </div>
+              <div className="mt-3">
+                <Label className="text-sm mb-1">Status de estoque</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {["normal", "baixo"].map((st) => {
+                    const active = selectedStatuses.includes(st as StockStatus);
+                    return (
+                      <Badge
+                        key={st}
+                        onClick={() => setSelectedStatuses((prev) => (
+                          prev.includes(st as StockStatus)
+                            ? prev.filter(s => s !== st)
+                            : [...prev, st as StockStatus]
+                        ))}
+                        className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {st === "normal" ? "Normal" : "Baixo"}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="mt-3 flex gap-4 items-center">
+                <Label>Período</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
+              </div>
+              <div className="flex justify-end mt-4 absolute right-4 bottom-4">
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setSearch("");
+                  setSelectedProdutos([]);
+                  setSelectedWarehouses([]);
+                  setSelectedStatuses([]);
+                  setDateFrom("");
+                  setDateTo("");
+                }}>
+                  <X className="h-4 w-4" /> Limpar Filtros
                 </Button>
-              </CardContent>
-              {openArmazemId === armazem.id && (
-                <div className="border-t py-3 px-5 bg-muted/50 flex flex-col gap-3">
-                  {armazem.produtos.length > 0 ? (
-                    armazem.produtos.map((produto) => (
-                      <Card key={produto.id} className="w-full flex flex-row items-center bg-muted/30 px-3 py-2" style={{ minHeight: 56 }}>
-                        <CardContent className="w-full py-2 flex flex-row items-center justify-between gap-4">
-                          <div>
-                            <span className="font-medium">{produto.produto}</span>
-                            <span className="ml-2 font-mono text-xs">{produto.quantidade} {produto.unidade}</span>
-                            <div className="flex gap-2 text-xs text-muted-foreground items-center">
-                              <span>{produto.data}</span>
-                              <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
-                                {produto.status === "baixo" ? "Baixo" : "Normal"}
-                              </Badge>
-                            </div>
-                          </div>
-                          {editingId === produto.id ? (
-                            <div className="flex gap-1 ml-auto">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                size="sm"
-                                value={editQuantity}
-                                onChange={(e) => setEditQuantity(e.target.value)}
-                                style={{ width: "110px", minWidth: "100px" }}
-                                className="h-8"
-                                onClick={e => e.stopPropagation()}
-                                disabled={isUpdating[produto.id]}
-                              />
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleUpdateQuantity(produto.id, editQuantity);
-                                }}
-                                disabled={isUpdating[produto.id]}
-                              >
-                                {isUpdating[produto.id] ? (
-                                  <>
-                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                    Salvando...
-                                  </>
-                                ) : (
-                                  "Salvar"
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setEditingId(null);
-                                }}
-                                disabled={isUpdating[produto.id]}
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={e => {
-                                e.stopPropagation();
-                                setEditingId(produto.id);
-                                setEditQuantity(produto.quantidade.toString());
-                              }}
-                              disabled={!hasRole("logistica") && !hasRole("admin")}
-                              className="ml-auto"
-                            >
-                              Atualizar quantidade
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center text-xs text-muted-foreground py-6">
-                      Nenhum produto ativo cadastrado neste armazém
+              </div>
+            </div>
+          )}
+
+          {/* Interface completa com cards expansíveis */}
+          <div className="flex flex-col gap-4">
+            {filteredArmazens.map((armazem) => (
+              <div key={armazem.id}>
+                <Card
+                  className={`w-full transition-all hover:shadow-md cursor-pointer flex flex-col ${openArmazemId === armazem.id ? "border-primary" : ""}`}
+                >
+                  <CardContent
+                    className="px-5 py-3 flex flex-row items-center"
+                    onClick={() =>
+                      setOpenArmazemId(openArmazemId === armazem.id ? null : armazem.id)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary mr-4 shrink-0">
+                      <Package className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg truncate">{armazem.nome}</h3>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        {armazem.produtos.length} produto{armazem.produtos.length !== 1 && 's'} atualmente
+                      </span>
+                      {armazem.capacidade_total != null && (
+                        <div className="text-xs text-muted-foreground">Capacidade: {armazem.capacidade_total}t</div>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" tabIndex={-1} className="pointer-events-none ml-4">
+                      {openArmazemId === armazem.id ? <ChevronUp /> : <ChevronDown />}
+                    </Button>
+                  </CardContent>
+                  {openArmazemId === armazem.id && (
+                    <div className="border-t py-3 px-5 bg-muted/50 flex flex-col gap-3">
+                      {armazem.produtos.length > 0 ? (
+                        armazem.produtos.map((produto) => (
+                          <Card key={produto.id} className="w-full flex flex-row items-center bg-muted/30 px-3 py-2" style={{ minHeight: 56 }}>
+                            <CardContent className="w-full py-2 flex flex-row items-center justify-between gap-4">
+                              <div>
+                                <span className="font-medium">{produto.produto}</span>
+                                <span className="ml-2 font-mono text-xs">{produto.quantidade} {produto.unidade}</span>
+                                <div className="flex gap-2 text-xs text-muted-foreground items-center">
+                                  <span>{produto.data}</span>
+                                  <Badge variant={produto.status === "baixo" ? "destructive" : "secondary"}>
+                                    {produto.status === "baixo" ? "Baixo" : "Normal"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              {editingId === produto.id ? (
+                                <div className="flex gap-1 ml-auto">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    size="sm"
+                                    value={editQuantity}
+                                    onChange={(e) => setEditQuantity(e.target.value)}
+                                    style={{ width: "110px", minWidth: "100px" }}
+                                    className="h-8"
+                                    onClick={e => e.stopPropagation()}
+                                    disabled={isUpdating[produto.id]}
+                                  />
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleUpdateQuantity(produto.id, editQuantity);
+                                    }}
+                                    disabled={isUpdating[produto.id]}
+                                  >
+                                    {isUpdating[produto.id] ? (
+                                      <>
+                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                        Salvando...
+                                      </>
+                                    ) : (
+                                      "Salvar"
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setEditingId(null);
+                                    }}
+                                    disabled={isUpdating[produto.id]}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setEditingId(produto.id);
+                                    setEditQuantity(produto.quantidade.toString());
+                                  }}
+                                  disabled={!canCreate} // Só admin/logística pode editar
+                                  className="ml-auto"
+                                >
+                                  Atualizar quantidade
+                                </Button>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="text-center text-xs text-muted-foreground py-6">
+                          Nenhum produto ativo cadastrado neste armazém
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </Card>
+                </Card>
+              </div>
+            ))}
+            {filteredArmazens.length === 0 && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                Nenhum armazém encontrado com os filtros atuais.
+              </div>
+            )}
           </div>
-        ))}
-        {filteredArmazens.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">
-            Nenhum armazém encontrado com os filtros atuais.
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };
