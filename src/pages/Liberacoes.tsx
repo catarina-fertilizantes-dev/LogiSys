@@ -932,6 +932,10 @@ const Liberacoes = () => {
             Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
         </div>
 
         {filtersOpen && (
@@ -970,7 +974,6 @@ const Liberacoes = () => {
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
               <div className="flex-1"></div>
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1"><X className="h-4 w-4" /> Limpar Filtros</Button>
             </div>
           </div>
         )}
