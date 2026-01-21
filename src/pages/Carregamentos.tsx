@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User } from "lucide-react";
+import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User, ChevronRight } from "lucide-react";
 
 // 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
 const getStatusCarregamento = (etapaAtual: number) => {
@@ -100,6 +100,8 @@ interface CarregamentoItem {
   cor_carregamento: string;
   tooltip_carregamento: string;
   percentual_carregamento: number;
+  // 🆕 CAMPO PARA HISTÓRICO
+  finalizado: boolean;
 }
 
 interface SupabaseCarregamentoItem {
@@ -139,7 +141,7 @@ interface SupabaseCarregamentoItem {
   } | null;
 }
 
-// 🎯 ARRAY DE STATUS PARA FILTROS
+// �� ARRAY DE STATUS PARA FILTROS
 const STATUS_CARREGAMENTO = [
   { id: "Aguardando", nome: "Aguardando", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
   { id: "Em Andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
@@ -151,6 +153,9 @@ const Carregamentos = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [armazemId, setArmazemId] = useState<string | null>(null);
   const [clienteId, setClienteId] = useState<string | null>(null);
+
+  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
+  const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -265,7 +270,7 @@ const Carregamentos = () => {
     refetchInterval: 30000,
   });
 
-  // 🔥 MAPEAMENTO CORRIGIDO COM NOVO SISTEMA DE STATUS
+  // 🔥 MAPEAMENTO CORRIGIDO COM NOVO SISTEMA DE STATUS + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     return carregamentosData.map((item: SupabaseCarregamentoItem) => {
@@ -284,6 +289,9 @@ const Carregamentos = () => {
       
       // 🎯 APLICAR NOVO SISTEMA DE STATUS CORRIGIDO
       const statusInfo = getStatusCarregamento(etapaAtual);
+
+      // 🆕 CRITÉRIO DE FINALIZAÇÃO: etapa_atual === 6
+      const finalizado = etapaAtual === 6;
 
       return {
         id: item.id,
@@ -308,6 +316,7 @@ const Carregamentos = () => {
         cor_carregamento: statusInfo.cor,
         tooltip_carregamento: statusInfo.tooltip,
         percentual_carregamento: statusInfo.percentual,
+        finalizado, // 🆕 CAMPO PARA SEPARAR SEÇÕES
       };
     });
   }, [carregamentosData]);
@@ -329,8 +338,9 @@ const Carregamentos = () => {
     setDateTo("");
   };
 
-  const filteredCarregamentos = useMemo(() => {
-    return carregamentos.filter((c) => {
+  // 🆕 SEPARAÇÃO EM ATIVOS E FINALIZADOS + FILTROS
+  const { carregamentosAtivos, carregamentosFinalizados } = useMemo(() => {
+    const filtered = carregamentos.filter((c) => {
       const term = search.trim().toLowerCase();
       if (term) {
         const hay = `${c.cliente} ${c.motorista} ${c.placa} ${c.pedido}`.toLowerCase();
@@ -349,13 +359,153 @@ const Carregamentos = () => {
       }
       return true;
     });
+
+    const ativos = filtered.filter(c => !c.finalizado);
+    const finalizados = filtered.filter(c => c.finalizado);
+
+    return { carregamentosAtivos: ativos, carregamentosFinalizados: finalizados };
   }, [carregamentos, search, selectedStatus, dateFrom, dateTo]);
 
-  const showingCount = filteredCarregamentos.length;
+  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizados, expandir automaticamente
+  useEffect(() => {
+    if (search.trim() && carregamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
+      setSecaoFinalizadosExpandida(true);
+    }
+  }, [search, carregamentosFinalizados.length, secaoFinalizadosExpandida]);
+
+  const showingCount = carregamentosAtivos.length + carregamentosFinalizados.length;
   const totalCount = carregamentos.length;
   const activeAdvancedCount =
     (selectedStatus.length ? 1 : 0) + 
     ((dateFrom || dateTo) ? 1 : 0);
+
+  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE CARREGAMENTO
+  const renderCarregamentoCard = (carr: CarregamentoItem) => (
+    <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
+      <CardContent className="p-5">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between">
+            <Link 
+              to={`/carregamentos/${carr.id}`} 
+              className="flex items-start gap-4 flex-1 text-inherit no-underline"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                <Truck className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                {/* 🎯 LAYOUT DO CARD */}
+                <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
+                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
+                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
+                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
+                {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
+                <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
+                {carr.numero_nf && (
+                  <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
+                )}
+              </div>
+            </Link>
+            
+            <div className="flex flex-col items-end gap-2">
+              {/* 🎯 BADGE COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                  >
+                    <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
+                      {carr.status_carregamento}
+                    </Badge>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{carr.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+              <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+            </div>
+          </div>
+
+          {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
+          <Link 
+            to={`/carregamentos/${carr.id}`} 
+            className="block text-inherit no-underline"
+            style={{ textDecoration: "none", color: "inherit" }}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span>{formatPlaca(carr.placa)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{carr.motorista}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{formatCPF(carr.documento)}</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <Link 
+                to={`/carregamentos/${carr.id}`} 
+                className="flex items-center gap-2 text-inherit no-underline"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <Truck className="h-4 w-4 text-purple-600" />
+                <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+              </Link>
+              
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                  >
+                    <div 
+                      className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${carr.percentual_carregamento}%` }}
+                    ></div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{carr.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground font-medium w-12">
+                      {carr.percentual_carregamento}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{carr.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isLoading || userId == null || roles.length === 0 ||
     (roles.includes("cliente") && clienteId === null) ||
@@ -458,141 +608,56 @@ const Carregamentos = () => {
           </div>
         )}
 
-        <div className="grid gap-4">
-          {filteredCarregamentos.map((carr) => {
-            return (
-              <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
-                <CardContent className="p-5">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <Link 
-                        to={`/carregamentos/${carr.id}`} 
-                        className="flex items-start gap-4 flex-1 text-inherit no-underline"
-                        style={{ textDecoration: "none", color: "inherit" }}
-                      >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                          <Truck className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          {/* 🎯 LAYOUT DO CARD */}
-                          <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
-                          <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
-                          <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
-                          <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
-                          {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
-                          <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
-                          {carr.numero_nf && (
-                            <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
-                          )}
-                        </div>
-                      </Link>
-                      
-                      <div className="flex flex-col items-end gap-2">
-                        {/* 🎯 BADGE COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger asChild>
-                            <div 
-                              className="flex items-center gap-1 cursor-help"
-                              onClick={(e) => e.stopPropagation()} // Impede navegação
-                            >
-                              <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
-                                {carr.status_carregamento}
-                              </Badge>
-                              <Info className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm">{carr.tooltip_carregamento}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
-                      </div>
-                    </div>
+        {/* 🆕 SEÇÃO DE CARREGAMENTOS ATIVOS */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Carregamentos Ativos ({carregamentosAtivos.length})</h2>
+          </div>
           
-                    {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
-                    <Link 
-                      to={`/carregamentos/${carr.id}`} 
-                      className="block text-inherit no-underline"
-                      style={{ textDecoration: "none", color: "inherit" }}
-                    >
-                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-muted-foreground" />
-                          <span>{formatPlaca(carr.placa)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="truncate">{carr.motorista}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{formatCPF(carr.documento)}</span>
-                        </div>
-                      </div>
-                    </Link>
-          
-                    {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center gap-2">
-                        <Link 
-                          to={`/carregamentos/${carr.id}`} 
-                          className="flex items-center gap-2 text-inherit no-underline"
-                          style={{ textDecoration: "none", color: "inherit" }}
-                        >
-                          <Truck className="h-4 w-4 text-purple-600" />
-                          <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
-                        </Link>
-                        
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger asChild>
-                            <div 
-                              className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
-                              onClick={(e) => e.stopPropagation()} // Impede navegação
-                            >
-                              <div 
-                                className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                                style={{ width: `${carr.percentual_carregamento}%` }}
-                              ></div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm">{carr.tooltip_carregamento}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger asChild>
-                            <div 
-                              className="flex items-center gap-1 cursor-help"
-                              onClick={(e) => e.stopPropagation()} // Impede navegação
-                            >
-                              <Info className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground font-medium w-12">
-                                {carr.percentual_carregamento}%
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm">{carr.tooltip_carregamento}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-          {filteredCarregamentos.length === 0 && (
-            <div className="text-sm text-muted-foreground py-8 text-center">
-              Nenhum carregamento encontrado.
-            </div>
-          )}
+          <div className="grid gap-4">
+            {carregamentosAtivos.map(renderCarregamentoCard)}
+            {carregamentosAtivos.length === 0 && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                {search.trim() ? "Nenhum carregamento ativo encontrado." : "Nenhum carregamento ativo no momento."}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* 🆕 SEÇÃO DE CARREGAMENTOS FINALIZADOS (COLAPSÁVEL) */}
+        {carregamentosFinalizados.length > 0 && (
+          <div className="space-y-4">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent"
+              onClick={() => setSecaoFinalizadosExpandida(!secaoFinalizadosExpandida)}
+            >
+              {secaoFinalizadosExpandida ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+              <Truck className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Carregamentos Finalizados ({carregamentosFinalizados.length})
+              </span>
+            </Button>
+            
+            {secaoFinalizadosExpandida && (
+              <div className="grid gap-4 ml-7">
+                {carregamentosFinalizados.map(renderCarregamentoCard)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mensagem quando não há dados */}
+        {carregamentosAtivos.length === 0 && carregamentosFinalizados.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum carregamento encontrado.
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
