@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2 } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,8 @@ interface LiberacaoItem {
   quantidadeAgendada: number;
   percentualRetirado: number;
   percentualAgendado: number;
+  // 🆕 CAMPO PARA HISTÓRICO
+  finalizada: boolean;
 }
 
 // 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE LIBERAÇÃO
@@ -130,6 +132,9 @@ const Liberacoes = () => {
   // 🆕 ESTADO PARA MODAL DE DETALHES
   const [detalhesLiberacao, setDetalhesLiberacao] = useState<LiberacaoItem | null>(null);
 
+  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
+  const [secaoFinalizadasExpandida, setSecaoFinalizadasExpandida] = useState(false);
+
   const { data: currentCliente } = useQuery({
     queryKey: ["current-cliente", user?.id],
     queryFn: async () => {
@@ -221,7 +226,7 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL"
+  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL" + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     return liberacoesData.map((item: any) => {
@@ -236,6 +241,9 @@ const Liberacoes = () => {
       const percentualAgendado = item.quantidade_liberada > 0 
         ? Math.round((quantidadeAgendada / item.quantidade_liberada) * 100) 
         : 0;
+
+      // 🆕 CRITÉRIO DE FINALIZAÇÃO: quantidade_retirada >= quantidade_liberada
+      const finalizada = quantidadeRetirada >= item.quantidade_liberada;
 
       return {
         id: item.id,
@@ -253,6 +261,7 @@ const Liberacoes = () => {
         produto_id: item.produto?.id,
         armazem_id: item.armazem?.id,
         created_at: item.created_at,
+        finalizada, // 🆕 CAMPO PARA SEPARAR SEÇÕES
       };
     });
   }, [liberacoesData, agendamentosData]);
@@ -399,8 +408,9 @@ const Liberacoes = () => {
     setSelectedArmazens([]);
   };
 
-  const filteredLiberacoes = useMemo(() => {
-    return liberacoes.filter((l) => {
+  // 🆕 SEPARAÇÃO EM ATIVAS E FINALIZADAS + FILTROS
+  const { liberacoesAtivas, liberacoesFinalizadas } = useMemo(() => {
+    const filtered = liberacoes.filter((l) => {
       const term = search.trim().toLowerCase();
       if (term) {
         const hay = `${l.produto} ${l.cliente} ${l.pedido}`.toLowerCase();
@@ -419,9 +429,21 @@ const Liberacoes = () => {
       }
       return true;
     });
+
+    const ativas = filtered.filter(l => !l.finalizada);
+    const finalizadas = filtered.filter(l => l.finalizada);
+
+    return { liberacoesAtivas: ativas, liberacoesFinalizadas: finalizadas };
   }, [liberacoes, search, selectedStatuses, selectedArmazens, dateFrom, dateTo]);
 
-  const showingCount = filteredLiberacoes.length;
+  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizadas, expandir automaticamente
+  useEffect(() => {
+    if (search.trim() && liberacoesFinalizadas.length > 0 && !secaoFinalizadasExpandida) {
+      setSecaoFinalizadasExpandida(true);
+    }
+  }, [search, liberacoesFinalizadas.length, secaoFinalizadasExpandida]);
+
+  const showingCount = liberacoesAtivas.length + liberacoesFinalizadas.length;
   const totalCount = liberacoes.length;
   const activeAdvancedCount =
     (selectedStatuses.length ? 1 : 0) +
@@ -547,6 +569,118 @@ const Liberacoes = () => {
         return status;
     }
   };
+
+  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE LIBERAÇÃO
+  const renderLiberacaoCard = (lib: LiberacaoItem) => (
+    <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
+      <CardContent className="p-5">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between">
+            <div 
+              className="flex items-start gap-4 flex-1"
+              onClick={() => setDetalhesLiberacao(lib)}
+            >
+              {/* badge ícone à esquerda com cor do Estoque */}
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                <ClipboardList className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                {/* 🎯 LAYOUT DO CARD */}
+                <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
+                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
+                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
+                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
+                
+                {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <span>
+                      <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
+                    </span>
+                    <span>
+                      <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
+                    </span>
+                    <span>
+                      <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <div 
+                  className="flex items-center gap-1 cursor-help"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Badge className={getStatusColor(lib.status)}>
+                    {getStatusLabel(lib.status)}
+                  </Badge>
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
+          <div 
+            className="pt-2 border-t"
+            onClick={() => setDetalhesLiberacao(lib)}
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
+              <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
+              
+              {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${lib.percentualAgendado}%` }}
+                    ></div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground font-medium w-12">
+                      {lib.percentualAgendado}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <span className="text-xs text-blue-600 font-medium">
+                {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada.toLocaleString('pt-BR')}t agendada` : 'Nenhum agendamento'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   // Verificar se há dados disponíveis
   const temProdutosDisponiveis = produtos && produtos.length > 0;
@@ -919,121 +1053,56 @@ const Liberacoes = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="grid gap-4">
-          {filteredLiberacoes.map((lib) => (
-            <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
-              <CardContent className="p-5">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div 
-                      className="flex items-start gap-4 flex-1"
-                      onClick={() => setDetalhesLiberacao(lib)}
-                    >
-                      {/* badge ícone à esquerda com cor do Estoque */}
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                        <ClipboardList className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        {/* 🎯 LAYOUT DO CARD */}
-                        <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
-                        <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
-                        <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
-                        <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
-                        
-                        {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-4">
-                            <span>
-                              <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
-                            </span>
-                            <span>
-                              <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
-                            </span>
-                            <span>
-                              <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
-                    <Tooltip delayDuration={100}>
-                      <TooltipTrigger asChild>
-                        <div 
-                          className="flex items-center gap-1 cursor-help"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Badge className={getStatusColor(lib.status)}>
-                            {getStatusLabel(lib.status)}
-                          </Badge>
-                          <Info className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
-                  <div 
-                    className="pt-2 border-t"
-                    onClick={() => setDetalhesLiberacao(lib)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
-                      
-                      {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div 
-                              className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${lib.percentualAgendado}%` }}
-                            ></div>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      
-                      {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="flex items-center gap-1 cursor-help"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground font-medium w-12">
-                              {lib.percentualAgendado}%
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      
-                      <span className="text-xs text-blue-600 font-medium">
-                        {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada.toLocaleString('pt-BR')}t agendada` : 'Nenhum agendamento'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredLiberacoes.length === 0 && (
-            <div className="text-sm text-muted-foreground py-8 text-center">Nenhuma liberação encontrada.</div>
-          )}
+        {/* 🆕 SEÇÃO DE LIBERAÇÕES ATIVAS */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Liberações Ativas ({liberacoesAtivas.length})</h2>
+          </div>
+          
+          <div className="grid gap-4">
+            {liberacoesAtivas.map(renderLiberacaoCard)}
+            {liberacoesAtivas.length === 0 && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                {search.trim() ? "Nenhuma liberação ativa encontrada." : "Nenhuma liberação ativa no momento."}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* 🆕 SEÇÃO DE LIBERAÇÕES FINALIZADAS (COLAPSÁVEL) */}
+        {liberacoesFinalizadas.length > 0 && (
+          <div className="space-y-4">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent"
+              onClick={() => setSecaoFinalizadasExpandida(!secaoFinalizadasExpandida)}
+            >
+              {secaoFinalizadasExpandida ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+              <ClipboardList className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Liberações Finalizadas ({liberacoesFinalizadas.length})
+              </span>
+            </Button>
+            
+            {secaoFinalizadasExpandida && (
+              <div className="grid gap-4 ml-7">
+                {liberacoesFinalizadas.map(renderLiberacaoCard)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mensagem quando não há dados */}
+        {liberacoesAtivas.length === 0 && liberacoesFinalizadas.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Nenhuma liberação encontrada.
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
