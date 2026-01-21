@@ -17,6 +17,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
+// 🎨 ARRAY DE STATUS PARA FILTROS COM CORES
+const STATUS_LIBERACAO = [
+  { id: "disponivel", nome: "Disponível", cor: "bg-green-100 text-green-800 hover:bg-green-200" },
+  { id: "parcialmente_agendada", nome: "Parcialmente Agendada", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
+  { id: "totalmente_agendada", nome: "Totalmente Agendada", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
+];
+
 interface LiberacaoItem {
   id: string;
   produto: string;
@@ -941,14 +948,20 @@ const Liberacoes = () => {
         {filtersOpen && (
           <div className="rounded-md border p-3 space-y-6 relative">
             <div>
-              <Label className="text-sm font-semibold mb-1">Status</Label>
+              <Label className="text-sm font-semibold mb-1">Status da Liberação</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {allStatuses.map((st) => {
-                  const active = selectedStatuses.includes(st);
-                  const label = getStatusLabel(st);
+                {STATUS_LIBERACAO.map((status) => {
+                  const active = selectedStatuses.includes(status.id as StatusLiberacao);
                   return (
-                    <Badge key={st} onClick={() => toggleStatus(st)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                      {label}
+                    <Badge
+                      key={status.id}
+                      onClick={() => toggleStatus(status.id as StatusLiberacao)}
+                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
+                        active 
+                          ? "bg-gradient-primary text-white"
+                          : status.cor
+                      }`}>
+                      {status.nome}
                     </Badge>
                   );
                 })}
