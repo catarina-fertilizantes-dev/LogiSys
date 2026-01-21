@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info, Loader2 } from "lucide-react";
+import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info, Loader2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -165,6 +165,34 @@ const parseDate = (d: string) => {
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type AgendamentoStatus = "pendente" | "em_andamento" | "concluido" | "cancelado";
 
+// 🆕 INTERFACE ATUALIZADA COM CAMPO DE FINALIZAÇÃO
+interface AgendamentoItem {
+  id: string;
+  cliente: string;
+  produto: string;
+  quantidade: number;
+  data: string;
+  placa: string;
+  motorista: string;
+  documento: string;
+  pedido: string;
+  status: AgendamentoStatus;
+  armazem: string;
+  produto_id: string | null;
+  armazem_id: string | null;
+  liberacao_id: string | null;
+  updated_at: string;
+  tipo_caminhao: string | null;
+  observacoes: string | null;
+  etapa_carregamento: number;
+  status_carregamento: string;
+  percentual_carregamento: number;
+  cor_carregamento: string;
+  tooltip_carregamento: string;
+  // 🆕 CAMPO PARA HISTÓRICO
+  finalizado: boolean;
+}
+
 // 🔄 VALIDAÇÃO ATUALIZADA
 const validateAgendamento = (ag: any, quantidadeDisponivel: number) => {
   const errors = [];
@@ -202,7 +230,10 @@ const Agendamentos = () => {
   const [isCreating, setIsCreating] = useState(false);
 
   // 🆕 ESTADO PARA MODAL DE DETALHES
-  const [detalhesAgendamento, setDetalhesAgendamento] = useState<any | null>(null);
+  const [detalhesAgendamento, setDetalhesAgendamento] = useState<AgendamentoItem | null>(null);
+
+  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
+  const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
   // Buscar cliente atual vinculado ao usuário logado
   const { data: currentCliente } = useQuery({
@@ -305,14 +336,17 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO CORRIGIDO
+  // 🔄 MAPEAMENTO CORRIGIDO + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
-    return agendamentosData.map((item: any) => {
+    return agendamentosData.map((item: any): AgendamentoItem => {
       // 🎯 AGORA DEVE ACESSAR COMO ARRAY (relacionamento 1:1)
       const carregamento = item.carregamentos?.[0]; // ← MUDANÇA AQUI!
       const etapaAtual = carregamento?.etapa_atual ?? 1;
       const statusInfo = getStatusCarregamento(etapaAtual);
+      
+      // 🆕 CRITÉRIO DE FINALIZAÇÃO: status === 'concluido'
+      const finalizado = item.status === 'concluido';
       
       return {
         id: item.id,
@@ -342,6 +376,7 @@ const Agendamentos = () => {
         percentual_carregamento: statusInfo.percentual,
         cor_carregamento: statusInfo.cor,
         tooltip_carregamento: statusInfo.tooltip,
+        finalizado, // 🆕 CAMPO PARA SEPARAR SEÇÕES
       };
     });
   }, [agendamentosData]);
@@ -626,8 +661,9 @@ const Agendamentos = () => {
   const toggleStatus = (st: AgendamentoStatus) => setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const clearFilters = () => { setSearch(""); setSelectedStatuses([]); setDateFrom(""); setDateTo(""); };
 
-  const filteredAgendamentos = useMemo(() => {
-    return agendamentos.filter((a) => {
+  // 🆕 SEPARAÇÃO EM ATIVOS E FINALIZADOS + FILTROS
+  const { agendamentosAtivos, agendamentosFinalizados } = useMemo(() => {
+    const filtered = agendamentos.filter((a) => {
       const term = search.trim().toLowerCase();
       if (term) {
         const hay = `${a.cliente} ${a.produto} ${a.pedido} ${a.motorista}`.toLowerCase();
@@ -645,9 +681,21 @@ const Agendamentos = () => {
       }
       return true;
     });
+
+    const ativos = filtered.filter(a => !a.finalizado);
+    const finalizados = filtered.filter(a => a.finalizado);
+
+    return { agendamentosAtivos: ativos, agendamentosFinalizados: finalizados };
   }, [agendamentos, search, selectedStatuses, dateFrom, dateTo]);
 
-  const showingCount = filteredAgendamentos.length;
+  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizados, expandir automaticamente
+  useEffect(() => {
+    if (search.trim() && agendamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
+      setSecaoFinalizadosExpandida(true);
+    }
+  }, [search, agendamentosFinalizados.length, secaoFinalizadosExpandida]);
+
+  const showingCount = agendamentosAtivos.length + agendamentosFinalizados.length;
   const totalCount = agendamentos.length;
   const activeAdvancedCount = (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
 
@@ -711,6 +759,122 @@ const Agendamentos = () => {
         return status;
     }
   };
+
+  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE AGENDAMENTO
+  const renderAgendamentoCard = (ag: AgendamentoItem) => (
+    <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
+      <CardContent className="p-5">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between">
+            <div 
+              className="flex items-start gap-4 flex-1"
+              onClick={() => setDetalhesAgendamento(ag)}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                {/* 🎯 LAYOUT DO CARD COM "QUANTIDADE" */}
+                <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
+                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
+                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
+                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
+                <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
+              </div>
+            </div>
+            
+            {/* 🎨 BADGE DE STATUS DO AGENDAMENTO COM TOOLTIP HÍBRIDO */}
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <div 
+                  className="flex items-center gap-1 cursor-help"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Badge className={getStatusColor(ag.status)}>
+                    {getStatusLabel(ag.status)}
+                  </Badge>
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-sm">{getAgendamentoStatusTooltip(ag.status)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* 📋 INFORMAÇÕES DO AGENDAMENTO - CLICÁVEL */}
+          <div 
+            className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2"
+            onClick={() => setDetalhesAgendamento(ag)}
+          >
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>{ag.data}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-muted-foreground" />
+              <span>{formatPlaca(ag.placa)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="truncate">{ag.motorista}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span>{formatCPF(ag.documento)}</span>
+            </div>
+          </div>
+
+          {/* 📊 BARRA DE PROGRESSO CORRIGIDA COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
+          <div className="pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <div 
+                className="flex items-center gap-2"
+                onClick={() => setDetalhesAgendamento(ag)}
+              >
+                <Truck className="h-4 w-4 text-purple-600" />
+                <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+              </div>
+              
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div 
+                      className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${ag.percentual_carregamento}%` }}
+                    ></div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{ag.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground font-medium w-12">
+                      {ag.percentual_carregamento}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{ag.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isLoading) {
     return (
@@ -1092,125 +1256,56 @@ const Agendamentos = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="grid gap-4">
-          {filteredAgendamentos.map((ag) => (
-            <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
-              <CardContent className="p-5">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div 
-                      className="flex items-start gap-4 flex-1"
-                      onClick={() => setDetalhesAgendamento(ag)}
-                    >
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                        <Calendar className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        {/* 🎯 LAYOUT DO CARD COM "QUANTIDADE" */}
-                        <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
-                        <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
-                        <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
-                        <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
-                        <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
-                      </div>
-                    </div>
-                    
-                    {/* 🎨 BADGE DE STATUS DO AGENDAMENTO COM TOOLTIP HÍBRIDO */}
-                    <Tooltip delayDuration={100}>
-                      <TooltipTrigger asChild>
-                        <div 
-                          className="flex items-center gap-1 cursor-help"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Badge className={getStatusColor(ag.status)}>
-                            {getStatusLabel(ag.status)}
-                          </Badge>
-                          <Info className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-sm">{getAgendamentoStatusTooltip(ag.status)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  {/* 📋 INFORMAÇÕES DO AGENDAMENTO - CLICÁVEL */}
-                  <div 
-                    className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2"
-                    onClick={() => setDetalhesAgendamento(ag)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{ag.data}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatPlaca(ag.placa)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">{ag.motorista}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatCPF(ag.documento)}</span>
-                    </div>
-                  </div>
-
-                  {/* 📊 BARRA DE PROGRESSO CORRIGIDA COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="flex items-center gap-2"
-                        onClick={() => setDetalhesAgendamento(ag)}
-                      >
-                        <Truck className="h-4 w-4 text-purple-600" />
-                        <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
-                      </div>
-                      
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div 
-                              className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${ag.percentual_carregamento}%` }}
-                            ></div>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-sm">{ag.tooltip_carregamento}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      
-                      <Tooltip delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="flex items-center gap-1 cursor-help"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground font-medium w-12">
-                              {ag.percentual_carregamento}%
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-sm">{ag.tooltip_carregamento}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredAgendamentos.length === 0 && (
-            <div className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento encontrado.</div>
-          )}
+        {/* 🆕 SEÇÃO DE AGENDAMENTOS ATIVOS */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Agendamentos Ativos ({agendamentosAtivos.length})</h2>
+          </div>
+          
+          <div className="grid gap-4">
+            {agendamentosAtivos.map(renderAgendamentoCard)}
+            {agendamentosAtivos.length === 0 && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                {search.trim() ? "Nenhum agendamento ativo encontrado." : "Nenhum agendamento ativo no momento."}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* 🆕 SEÇÃO DE AGENDAMENTOS FINALIZADOS (COLAPSÁVEL) */}
+        {agendamentosFinalizados.length > 0 && (
+          <div className="space-y-4">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent"
+              onClick={() => setSecaoFinalizadosExpandida(!secaoFinalizadosExpandida)}
+            >
+              {secaoFinalizadosExpandida ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Agendamentos Finalizados ({agendamentosFinalizados.length})
+              </span>
+            </Button>
+            
+            {secaoFinalizadosExpandida && (
+              <div className="grid gap-4 ml-7">
+                {agendamentosFinalizados.map(renderAgendamentoCard)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mensagem quando não há dados */}
+        {agendamentosAtivos.length === 0 && agendamentosFinalizados.length === 0 && (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Nenhum agendamento encontrado.
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
