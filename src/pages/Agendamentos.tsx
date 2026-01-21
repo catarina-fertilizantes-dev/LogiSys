@@ -74,6 +74,13 @@ const getAgendamentoStatusTooltip = (status: string) => {
   }
 };
 
+// 🎨 ARRAY DE STATUS PARA FILTROS COM CORES
+const STATUS_AGENDAMENTO = [
+  { id: "pendente", nome: "Pendente", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
+  { id: "em_andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
+  { id: "concluido", nome: "Concluído", cor: "bg-green-100 text-green-800 hover:bg-green-200" },
+];
+
 // Componente para exibir quando não há dados disponíveis - COM LINK
 const EmptyStateCardWithAction = ({ 
   title, 
@@ -163,7 +170,7 @@ const parseDate = (d: string) => {
 };
 
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
-type AgendamentoStatus = "pendente" | "em_andamento" | "concluido" | "cancelado";
+type AgendamentoStatus = "pendente" | "em_andamento" | "concluido";
 
 // 🆕 INTERFACE ATUALIZADA COM CAMPO DE FINALIZAÇÃO
 interface AgendamentoItem {
@@ -657,7 +664,7 @@ const Agendamentos = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const allStatuses: AgendamentoStatus[] = ["pendente", "em_andamento", "concluido", "cancelado"];
+  const allStatuses: AgendamentoStatus[] = ["pendente", "em_andamento", "concluido"];
   const toggleStatus = (st: AgendamentoStatus) => setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const clearFilters = () => { setSearch(""); setSelectedStatuses([]); setDateFrom(""); setDateTo(""); };
 
@@ -738,8 +745,6 @@ const Agendamentos = () => {
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
       case "concluido":
         return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-      case "cancelado":
-        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
     }
@@ -753,8 +758,6 @@ const Agendamentos = () => {
         return "Em Andamento";
       case "concluido":
         return "Concluído";
-      case "cancelado":
-        return "Cancelado";
       default:
         return status;
     }
@@ -1141,15 +1144,20 @@ const Agendamentos = () => {
         {filtersOpen && (
           <div className="rounded-md border p-3 space-y-6 relative">
             <div>
-              <Label className="text-sm font-semibold mb-1">Status</Label>
+              <Label className="text-sm font-semibold mb-1">Status do Agendamento</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {allStatuses.map((st) => {
-                  const active = selectedStatuses.includes(st);
-                  const label = getStatusLabel(st);
+                {STATUS_AGENDAMENTO.map((status) => {
+                  const active = selectedStatuses.includes(status.id as AgendamentoStatus);
                   return (
-                    <Badge key={st} onClick={() => toggleStatus(st)}
-                      className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
-                      {label}
+                    <Badge
+                      key={status.id}
+                      onClick={() => toggleStatus(status.id as AgendamentoStatus)}
+                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
+                        active 
+                          ? "bg-gradient-primary text-white"
+                          : status.cor
+                      }`}>
+                      {status.nome}
                     </Badge>
                   );
                 })}
