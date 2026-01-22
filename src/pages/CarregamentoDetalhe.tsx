@@ -458,6 +458,48 @@ const CarregamentoDetalhe = () => {
     };
   };
 
+  // 🆕 FUNÇÃO PARA TESTAR ACESSO AO ARQUIVO
+  const testFileAccess = async (url: string, tipo: string) => {
+    console.log(`🔍 [DEBUG] CarregamentoDetalhe - Testando acesso ao ${tipo}:`, url);
+    
+    try {
+      // Extrair nome do arquivo da URL
+      const fileName = url.split('/').pop();
+      console.log(`🔍 [DEBUG] CarregamentoDetalhe - Nome do arquivo extraído:`, fileName);
+      
+      // Determinar bucket baseado no tipo de arquivo
+      let bucket = '';
+      if (tipo === 'PDF' || tipo === 'XML') {
+        bucket = 'carregamento-documentos';
+      } else {
+        bucket = 'carregamento-fotos';
+      }
+      
+      // Tentar gerar URL assinada
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(fileName!, 3600);
+      
+      if (signedError) {
+        console.error(`❌ [ERROR] CarregamentoDetalhe - Erro ao gerar URL assinada para ${tipo}:`, signedError);
+        
+        // Tentar acesso direto
+        console.log(`🔍 [DEBUG] CarregamentoDetalhe - Tentando acesso direto ao ${tipo}`);
+        window.open(url, '_blank');
+      } else {
+        console.log(`✅ [SUCCESS] CarregamentoDetalhe - URL assinada gerada para ${tipo}:`, signedData.signedUrl);
+        window.open(signedData.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error(`❌ [ERROR] CarregamentoDetalhe - Erro inesperado ao acessar ${tipo}:`, error);
+      toast({ 
+        variant: "destructive", 
+        title: `Erro ao acessar ${tipo}`,
+        description: `Não foi possível abrir o ${tipo}. Verifique suas permissões.`
+      });
+    }
+  };
+
   const stats = calcularEstatisticas();
 
   // Função para obter informações da etapa
@@ -726,55 +768,58 @@ const CarregamentoDetalhe = () => {
                   </div>
                 )}
 
-                {/* Mostrar links para arquivos */}
+                {/* 🔄 DOCUMENTOS COM BOTÕES E URLs ASSINADAS */}
                 <div className="space-y-2">
                   {isEtapaDoc ? (
-                    // Etapa de documentação - mostrar PDF e XML
+                    // Etapa de documentação - mostrar PDF e XML com botões
                     <>
                       {etapaData.url_arquivo && (
-                        <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                          <FileText className="w-3 h-3 text-green-600" />
-                          <a 
-                            href={etapaData.url_arquivo} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-green-700 hover:text-green-800 underline text-xs flex-1"
-                          >
-                            Baixar Nota Fiscal (PDF)
-                          </a>
-                          <Download className="w-3 h-3 text-green-600" />
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start h-auto p-3"
+                          onClick={() => testFileAccess(etapaData.url_arquivo!, 'PDF')}
+                        >
+                          <FileText className="h-4 w-4 mr-2 text-red-600" />
+                          <div className="text-left flex-1">
+                            <div className="text-sm font-medium">Nota Fiscal</div>
+                            <div className="text-xs text-muted-foreground">PDF</div>
+                          </div>
+                          <Download className="h-3 w-3" />
+                        </Button>
                       )}
                       {etapaData.url_xml && (
-                        <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                          <FileText className="w-3 h-3 text-green-600" />
-                          <a 
-                            href={etapaData.url_xml} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-green-700 hover:text-green-800 underline text-xs flex-1"
-                          >
-                            Baixar Arquivo XML
-                          </a>
-                          <Download className="w-3 h-3 text-green-600" />
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start h-auto p-3"
+                          onClick={() => testFileAccess(etapaData.url_xml!, 'XML')}
+                        >
+                          <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                          <div className="text-left flex-1">
+                            <div className="text-sm font-medium">Arquivo XML</div>
+                            <div className="text-xs text-muted-foreground">XML</div>
+                          </div>
+                          <Download className="h-3 w-3" />
+                        </Button>
                       )}
                     </>
                   ) : (
-                    // Outras etapas - mostrar foto
+                    // Outras etapas - mostrar foto com botão
                     etapaData.url_arquivo && (
-                      <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                        <Image className="w-3 h-3 text-green-600" />
-                        <a 
-                          href={etapaData.url_arquivo} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-green-700 hover:text-green-800 underline text-xs flex-1"
-                        >
-                          Ver foto - {etapa?.nome}
-                        </a>
-                        <Download className="w-3 h-3 text-green-600" />
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start h-auto p-3"
+                        onClick={() => testFileAccess(etapaData.url_arquivo!, 'Foto')}
+                      >
+                        <Image className="h-4 w-4 mr-2 text-green-600" />
+                        <div className="text-left flex-1">
+                          <div className="text-sm font-medium">Ver foto - {etapa?.nome}</div>
+                          <div className="text-xs text-muted-foreground">Imagem</div>
+                        </div>
+                        <Download className="h-3 w-3" />
+                      </Button>
                     )
                   )}
                 </div>
