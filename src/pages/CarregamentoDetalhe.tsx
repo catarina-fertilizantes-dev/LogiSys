@@ -984,18 +984,20 @@ const CarregamentoDetalhe = () => {
   ) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
-          </Button>
-          <PageHeader title="Detalhes do Carregamento" />
-        </div>
+        <PageHeader 
+          title="Detalhes do Carregamento"
+          backButton={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoBack}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+          }
+        />
         <div className="flex justify-center items-center h-40">
           <Loader2 className="animate-spin h-8 w-8 text-primary" />
         </div>
@@ -1005,18 +1007,20 @@ const CarregamentoDetalhe = () => {
   if (error || !carregamento) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar
-          </Button>
-          <PageHeader title="Detalhes do Carregamento" />
-        </div>
+        <PageHeader 
+          title="Detalhes do Carregamento"
+          backButton={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoBack}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+          }
+        />
         <Card className="border-destructive">
           <CardContent className="p-6">
             <div className="text-center text-destructive">
@@ -1035,18 +1039,20 @@ const CarregamentoDetalhe = () => {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleGoBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Button>
-        <PageHeader title="Detalhes do Carregamento" />
-      </div>
+      <PageHeader 
+        title="Detalhes do Carregamento"
+        backButton={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGoBack}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+        }
+      />
       <div className="max-w-[1050px] mx-auto space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
