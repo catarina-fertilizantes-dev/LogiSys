@@ -104,10 +104,26 @@ const Estoque = () => {
   // 🎯 CONTROLE DE PERMISSÕES BASEADO NO ROLE
   const canCreate = hasRole("admin") || hasRole("logistica");
 
-  // 🆕 BUSCAR ARMAZÉM DO USUÁRIO LOGADO (SIMILAR À PÁGINA AGENDAMENTOS)
+  // Estados de loading
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+
+  // Estados para documentos
+  const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
+  const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
+  const [numeroRemessa, setNumeroRemessa] = useState("");
+  const [observacoesRemessa, setObservacoesRemessa] = useState("");
+
+  // 🔍 DEBUG LOGS - Estoque.tsx
+  console.log("🔍 [DEBUG] Estoque.tsx - Renderização iniciada");
+  console.log("🔍 [DEBUG] Estoque.tsx - userRole:", userRole);
+  console.log("🔍 [DEBUG] Estoque.tsx - user?.id:", user?.id);
+
+  // 🆕 BUSCAR ARMAZÉM DO USUÁRIO LOGADO (OTIMIZADO)
   const { data: currentArmazem } = useQuery({
     queryKey: ["current-armazem", user?.id],
     queryFn: async () => {
+      console.log("🔍 [DEBUG] Estoque.tsx - Buscando currentArmazem para:", user?.id);
       if (!user || userRole !== "armazem") return null;
       const { data, error } = await supabase
         .from("armazens")
@@ -116,14 +132,19 @@ const Estoque = () => {
         .eq("ativo", true)
         .maybeSingle();
       if (error) throw error;
+      console.log("✅ [SUCCESS] Estoque.tsx - currentArmazem encontrado:", data);
       return data;
     },
     enabled: !!user && userRole === "armazem",
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    cacheTime: 10 * 60 * 1000, // 10 minutos
   });
 
-  // 🔄 QUERY PRINCIPAL MODIFICADA PARA FILTRAR POR PERFIL
+  console.log("🔍 [DEBUG] Estoque.tsx - currentArmazem:", currentArmazem);
+
+  // 🔄 QUERY PRINCIPAL MODIFICADA PARA FILTRAR POR PERFIL (OTIMIZADA)
   const { data: estoqueData, isLoading, error } = useQuery({
-    queryKey: ["estoque", currentArmazem?.id],
+    queryKey: ["estoque", currentArmazem?.id, userRole],
     queryFn: async () => {
       console.log("🔍 [DEBUG] Estoque.tsx - queryFn executada");
       console.log("🔍 [DEBUG] Estoque.tsx - Condições queryFn:", {
@@ -154,19 +175,12 @@ const Estoque = () => {
         toast({ variant: "destructive", title: "Erro ao buscar estoque", description: error.message });
         throw error;
       }
+      console.log("✅ [SUCCESS] Estoque.tsx - Dados carregados:", data?.length, "registros");
       return data;
     },
     refetchInterval: 30000,
-    enabled: (() => {
-      const enabled = (userRole !== "armazem" || !!currentArmazem?.id);
-      console.log("�� [DEBUG] Estoque.tsx - Query enabled:", {
-        userRole,
-        currentArmazem: !!currentArmazem,
-        currentArmazemId: currentArmazem?.id,
-        enabled
-      });
-      return enabled;
-    })(),
+    enabled: !!user?.id && (userRole !== "armazem" || !!currentArmazem?.id),
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
   const { data: produtosCadastrados } = useQuery({
@@ -183,6 +197,8 @@ const Estoque = () => {
       return data || [];
     },
     refetchInterval: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    enabled: !!user?.id,
   });
 
   const { data: armazensAtivos } = useQuery({
@@ -200,12 +216,13 @@ const Estoque = () => {
       return data || [];
     },
     refetchInterval: 30000,
-    enabled: canCreate, // Só busca se pode criar (admin/logística)
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    enabled: canCreate && !!user?.id,
   });
 
-  // 🆕 QUERY PARA FILTROS ADAPTADA POR PERFIL
+  // 🆕 QUERY PARA FILTROS ADAPTADA POR PERFIL (OTIMIZADA)
   const { data: armazensParaFiltro } = useQuery({
-    queryKey: ["armazens-filtro"],
+    queryKey: ["armazens-filtro", currentArmazem?.id],
     queryFn: async () => {
       // Para usuário armazém, retorna apenas seu armazém
       if (userRole === "armazem" && currentArmazem) {
@@ -225,7 +242,8 @@ const Estoque = () => {
       return data || [];
     },
     refetchInterval: 10000,
-    enabled: !!user,
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    enabled: !!user?.id,
   });
 
   const estoquePorArmazem: ArmazemEstoque[] = useMemo(() => {
@@ -291,23 +309,6 @@ const Estoque = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<StockStatus[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  // Estados de loading
-  const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
-
-  // Estados para documentos
-  const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
-  const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
-  const [numeroRemessa, setNumeroRemessa] = useState("");
-  const [observacoesRemessa, setObservacoesRemessa] = useState("");
-
-  // 🔍 DEBUG LOGS - Estoque.tsx
-  console.log("🔍 [DEBUG] Estoque.tsx - Renderização iniciada");
-  console.log("🔍 [DEBUG] Estoque.tsx - userRole:", userRole);
-  console.log("�� [DEBUG] Estoque.tsx - currentArmazem:", currentArmazem);
-  console.log("🔍 [DEBUG] Estoque.tsx - user?.id:", user?.id);
-  console.log("🔍 [DEBUG] Estoque.tsx - isLoading:", isLoading);
 
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
