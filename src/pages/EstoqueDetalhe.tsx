@@ -63,6 +63,7 @@ const EstoqueDetalhe = () => {
 
   useEffect(() => {
     if (user?.id) {
+      console.log("🔍 [DEBUG] EstoqueDetalhe - User ID:", user.id);
       setUserId(user.id);
     }
   }, [user]);
@@ -72,6 +73,7 @@ const EstoqueDetalhe = () => {
     const fetchCurrentArmazem = async () => {
       if (!userId || userRole !== "armazem") return;
       
+      console.log("🔍 [DEBUG] EstoqueDetalhe - Buscando armazém do usuário:", userId);
       const { data } = await supabase
         .from("armazens")
         .select("id")
@@ -80,6 +82,7 @@ const EstoqueDetalhe = () => {
         .maybeSingle();
       
       if (data) {
+        console.log("🔍 [DEBUG] EstoqueDetalhe - Armazém encontrado:", data.id);
         setCurrentArmazem(data.id);
       }
     };
@@ -177,6 +180,40 @@ const EstoqueDetalhe = () => {
     }
   }, [isLoading, estoqueDetalhes, userId, userRole, currentArmazem, armazemId, navigate]);
 
+  // 🆕 FUNÇÃO PARA TESTAR ACESSO AO ARQUIVO
+  const testFileAccess = async (url: string, tipo: string) => {
+    console.log(`🔍 [DEBUG] EstoqueDetalhe - Testando acesso ao ${tipo}:`, url);
+    
+    try {
+      // Extrair nome do arquivo da URL
+      const fileName = url.split('/').pop();
+      console.log(`🔍 [DEBUG] EstoqueDetalhe - Nome do arquivo extraído:`, fileName);
+      
+      // Tentar gerar URL assinada
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('estoque-documentos')
+        .createSignedUrl(fileName!, 3600);
+      
+      if (signedError) {
+        console.error(`❌ [ERROR] EstoqueDetalhe - Erro ao gerar URL assinada para ${tipo}:`, signedError);
+        
+        // Tentar acesso direto
+        console.log(`🔍 [DEBUG] EstoqueDetalhe - Tentando acesso direto ao ${tipo}`);
+        window.open(url, '_blank');
+      } else {
+        console.log(`✅ [SUCCESS] EstoqueDetalhe - URL assinada gerada para ${tipo}:`, signedData.signedUrl);
+        window.open(signedData.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error(`❌ [ERROR] EstoqueDetalhe - Erro inesperado ao acessar ${tipo}:`, error);
+      toast({ 
+        variant: "destructive", 
+        title: `Erro ao acessar ${tipo}`,
+        description: `Não foi possível abrir o ${tipo}. Verifique suas permissões.`
+      });
+    }
+  };
+
   // Renderizar card de remessa
   const renderRemessaCard = (remessa: RemessaItem) => (
     <Card key={remessa.id} className="transition-all hover:shadow-md">
@@ -214,47 +251,47 @@ const EstoqueDetalhe = () => {
             </div>
           )}
 
-          {/* Documentos */}
+          {/* 🆕 DOCUMENTOS COM LOGS DETALHADOS */}
           <div className="pt-2 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-2">Documentos:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {/* Nota de Remessa */}
               {remessa.url_nota_remessa ? (
-                <a
-                  href={remessa.url_nota_remessa}
-                  
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors text-inherit no-underline"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start h-auto p-3"
+                  onClick={() => testFileAccess(remessa.url_nota_remessa!, 'PDF')}
                 >
-                  <FileText className="h-4 w-4 text-red-600" />
-                  <div className="text-left flex-1">
+                  <FileText className="h-4 w-4 mr-2 text-red-600" />
+                  <div className="text-left">
                     <div className="text-sm font-medium">Nota de Remessa</div>
                     <div className="text-xs text-muted-foreground">PDF</div>
                   </div>
-                  <Download className="h-3 w-3" />
-                </a>
+                  <Download className="h-3 w-3 ml-auto" />
+                </Button>
               ) : (
                 <div className="p-3 border border-dashed rounded-md text-center">
                   <FileText className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                   <div className="text-xs text-muted-foreground">Nota não disponível</div>
                 </div>
               )}
-          
+
               {/* XML da Remessa */}
               {remessa.url_xml_remessa ? (
-                <a
-                  href={remessa.url_xml_remessa}
-                  
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors text-inherit no-underline"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start h-auto p-3"
+                  onClick={() => testFileAccess(remessa.url_xml_remessa!, 'XML')}
                 >
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  <div className="text-left flex-1">
+                  <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                  <div className="text-left">
                     <div className="text-sm font-medium">Arquivo XML</div>
                     <div className="text-xs text-muted-foreground">XML</div>
                   </div>
-                  <Download className="h-3 w-3" />
-                </a>
+                  <Download className="h-3 w-3 ml-auto" />
+                </Button>
               ) : (
                 <div className="p-3 border border-dashed rounded-md text-center">
                   <FileText className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
