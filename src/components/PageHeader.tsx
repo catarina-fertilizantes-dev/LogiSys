@@ -6,14 +6,21 @@ interface PageHeaderProps {
   subtitle?: string;
   icon?: LucideIcon;
   actions?: ReactNode;
+  backButton?: ReactNode; // 🆕 Nova prop para botão voltar
 }
 
-export const PageHeader = ({ title, subtitle, icon: Icon, actions }: PageHeaderProps) => {
+export const PageHeader = ({ title, subtitle, icon: Icon, actions, backButton }: PageHeaderProps) => {
   return (
     <div className="border-b border-border bg-card">
       <div className="px-6 py-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-3">
+            {/* 🆕 Botão Voltar à esquerda */}
+            {backButton && (
+              <div className="flex items-center mt-1">
+                {backButton}
+              </div>
+            )}
             {Icon && (
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                 <Icon className="h-5 w-5 text-primary" />
