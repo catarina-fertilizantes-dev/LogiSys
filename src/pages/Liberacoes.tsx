@@ -679,9 +679,7 @@ const Liberacoes = () => {
                 </TooltipContent>
               </Tooltip>
               
-              <span className="text-xs text-blue-600 font-medium">
-                {lib.quantidadeAgendada > 0 ? `${lib.quantidadeAgendada.toLocaleString('pt-BR')}t agendada` : 'Nenhum agendamento'}
-              </span>
+              {/* ✅ ITEM 5.3: REMOVIDO O TEXTO "Xt agendada" */}
             </div>
           </div>
         </div>
@@ -991,7 +989,7 @@ const Liberacoes = () => {
           </div>
         )}
 
-        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO - SEM "DISPONÍVEL" */}
+        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO - ITEM 5.5: LAYOUT COMPACTADO */}
         <Dialog open={!!detalhesLiberacao} onOpenChange={open => !open && setDetalhesLiberacao(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1003,59 +1001,57 @@ const Liberacoes = () => {
             <div className="space-y-4 py-4">
               {detalhesLiberacao && (
                 <>
-                  {/* Informações Básicas */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Número do Pedido:</Label>
-                      <p className="font-semibold">{detalhesLiberacao.pedido}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Status da Liberação:</Label>
-                      <Badge className={getStatusColor(detalhesLiberacao.status)}>
-                        {getStatusLabel(detalhesLiberacao.status)}
-                      </Badge>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Produto:</Label>
-                      <p className="font-semibold">{detalhesLiberacao.produto}</p>
-                    </div>
+                  {/* ✅ ITEM 5.5: LAYOUT COMPACTADO CONFORME ESPECIFICAÇÃO */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Data de Criação:</Label>
                       <p className="font-semibold">{detalhesLiberacao.data}</p>
                     </div>
-                  </div>
-
-                  {/* Cliente e Armazém */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Cliente e Armazém</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Cliente:</Label>
-                        <p className="font-semibold">{detalhesLiberacao.cliente}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Armazém:</Label>
-                        <p className="font-semibold">{detalhesLiberacao.armazem}</p>
-                      </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status:</Label>
+                      <Badge className={getStatusColor(detalhesLiberacao.status)}>
+                        {getStatusLabel(detalhesLiberacao.status)}
+                      </Badge>
                     </div>
                   </div>
 
-                  {/* Quantidades - SEM "DISPONÍVEL" */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Informações de Quantidade</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
-                        <p className="font-semibold text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
-                        <p className="font-semibold text-lg text-blue-600">{detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Quantidade Retirada:</Label>
-                        <p className="font-semibold text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
-                      </div>
+                  {/* Separador */}
+                  <div className="border-t"></div>
+
+                  {/* Cliente e Armazém */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cliente:</Label>
+                      <p className="font-semibold">{detalhesLiberacao.cliente}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Armazém:</Label>
+                      <p className="font-semibold">{detalhesLiberacao.armazem}</p>
+                    </div>
+                  </div>
+
+                  {/* Separador */}
+                  <div className="border-t"></div>
+
+                  {/* Produto */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Produto:</Label>
+                    <p className="font-semibold">{detalhesLiberacao.produto}</p>
+                  </div>
+
+                  {/* Quantidades em linha */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
+                      <p className="font-semibold text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
+                      <p className="font-semibold text-lg text-blue-600">{detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Quantidade Retirada:</Label>
+                      <p className="font-semibold text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
                     </div>
                   </div>
                 </>
