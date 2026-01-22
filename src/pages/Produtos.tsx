@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tag, Plus, Filter as FilterIcon, Loader2 } from "lucide-react";
+import { Tag, Plus, Filter as FilterIcon, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -346,6 +346,18 @@ const Produtos = () => {
             onChange={e => setSearchTerm(e.target.value)}
             className="max-w-md"
           />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              setSearchTerm("");
+              setFilterStatus("all");
+            }}
+            className="gap-1"
+          >
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
         </div>
       </div>
 
