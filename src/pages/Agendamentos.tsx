@@ -1172,7 +1172,7 @@ const Agendamentos = () => {
           </div>
         )}
 
-        {/* 🆕 MODAL DE DETALHES DO AGENDAMENTO (SEM PROGRESSO DO CARREGAMENTO) */}
+        {/* ✅ ITEM 5.6: MODAL DE DETALHES DO AGENDAMENTO COMPACTADO */}
         <Dialog open={!!detalhesAgendamento} onOpenChange={open => !open && setDetalhesAgendamento(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1184,19 +1184,43 @@ const Agendamentos = () => {
             <div className="space-y-4 py-4">
               {detalhesAgendamento && (
                 <>
-                  {/* Informações do Cliente e Produto */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* ✅ ITEM 5.6: LAYOUT COMPACTADO CONFORME ESPECIFICAÇÃO */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Data de Retirada:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.data}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status:</Label>
+                      <Badge className={getStatusColor(detalhesAgendamento.status)}>
+                        {getStatusLabel(detalhesAgendamento.status)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Separador */}
+                  <div className="border-t"></div>
+
+                  {/* Cliente e Armazém */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente:</Label>
                       <p className="font-semibold">{detalhesAgendamento.cliente}</p>
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Produto:</Label>
-                      <p className="font-semibold">{detalhesAgendamento.produto}</p>
-                    </div>
-                    <div>
                       <Label className="text-xs text-muted-foreground">Armazém:</Label>
                       <p className="font-semibold">{detalhesAgendamento.armazem}</p>
+                    </div>
+                  </div>
+
+                  {/* Separador */}
+                  <div className="border-t"></div>
+
+                  {/* Produto e Quantidade */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Produto:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.produto}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade:</Label>
@@ -1204,54 +1228,40 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Informações do Agendamento */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Informações do Agendamento</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Data de Retirada:</Label>
-                        <p className="font-semibold">{detalhesAgendamento.data}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Status:</Label>
-                        <Badge className={getStatusColor(detalhesAgendamento.status)}>
-                          {getStatusLabel(detalhesAgendamento.status)}
-                        </Badge>
-                      </div>
+                  {/* Separador */}
+                  <div className="border-t"></div>
+
+                  {/* Informações do Motorista e Veículo */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Nome do Motorista:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.motorista}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CPF do Motorista:</Label>
+                      <p className="font-semibold">{formatCPF(detalhesAgendamento.documento)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Placa do Veículo:</Label>
+                      <p className="font-semibold">{formatPlaca(detalhesAgendamento.placa)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Tipo de Caminhão:</Label>
+                      <p className="font-semibold">{detalhesAgendamento.tipo_caminhao || "—"}</p>
                     </div>
                   </div>
 
-                  {/* Informações do Veículo e Motorista */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">Veículo e Motorista</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Placa do Veículo:</Label>
-                        <p className="font-semibold">{formatPlaca(detalhesAgendamento.placa)}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Tipo de Caminhão:</Label>
-                        <p className="font-semibold">{detalhesAgendamento.tipo_caminhao || "—"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Nome do Motorista:</Label>
-                        <p className="font-semibold">{detalhesAgendamento.motorista}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">CPF do Motorista:</Label>
-                        <p className="font-semibold">{formatCPF(detalhesAgendamento.documento)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Observações */}
+                  {/* Observações (se houver) */}
                   {detalhesAgendamento.observacoes && (
-                    <div className="border-t pt-4">
-                      <h4 className="font-semibold mb-3">Observações</h4>
-                      <p className="text-sm bg-muted p-3 rounded-md">
-                        {detalhesAgendamento.observacoes}
-                      </p>
-                    </div>
+                    <>
+                      <div className="border-t"></div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Observações:</Label>
+                        <p className="text-sm bg-muted p-3 rounded-md mt-1">
+                          {detalhesAgendamento.observacoes}
+                        </p>
+                      </div>
+                    </>
                   )}
                 </>
               )}
