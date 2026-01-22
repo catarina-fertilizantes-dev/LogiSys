@@ -748,10 +748,10 @@ const Clientes = () => {
             {detalhesCliente && (
               <>
                 {/* Informações Básicas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Nome:</Label>
-                    <p className="font-semibold">{detalhesCliente.nome}</p>
+                    <Label className="text-xs text-muted-foreground">Email:</Label>
+                    <p className="font-semibold">{detalhesCliente.email}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Status:</Label>
@@ -760,46 +760,35 @@ const Clientes = () => {
                     </Badge>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Email:</Label>
-                    <p className="font-semibold">{detalhesCliente.email}</p>
-                  </div>
-                  <div>
                     <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
                     <p className="font-semibold">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
                   </div>
-                </div>
-      
-                {/* Contato */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Contato</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                      <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">CEP:</Label>
-                      <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
-                    </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Telefone:</Label>
+                    <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
                   </div>
                 </div>
       
+                {/* Separador */}
+                <div className="border-t"></div>
+      
                 {/* Endereço */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Endereço</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Endereço:</Label>
-                      <p className="font-semibold">{detalhesCliente.endereco || "—"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Cidade:</Label>
-                      <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Estado:</Label>
-                      <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Endereço:</Label>
+                    <p className="font-semibold">{detalhesCliente.endereco || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Cidade:</Label>
+                    <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Estado:</Label>
+                    <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CEP:</Label>
+                    <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
                   </div>
                 </div>
               </>
