@@ -847,116 +847,99 @@ const CarregamentoDetalhe = () => {
     const agendamento = carregamento?.agendamento;
     const etapaAtual = carregamento?.etapa_atual ?? 1;
     const etapaInfo = getEtapaInfo(etapaAtual);
-
+  
     return (
       <Card className="shadow-sm">
         <CardContent className="p-4">
           <h2 className="text-base font-semibold mb-4">Informações do Carregamento</h2>
           
-          {/* Layout compacto para mobile */}
           <div className="space-y-4">
-            {/* Linha 1: Cliente e Quantidade */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Cliente</span>
-                  <span className="text-sm font-medium truncate block">{agendamento?.cliente?.nome || "N/A"}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Hash className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Quantidade</span>
-                  <span className="text-sm font-medium">{agendamento?.quantidade ?? "N/A"} ton</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Linha 2: Placa e Motorista */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Placa</span>
-                  <span className="text-sm font-medium">{agendamento?.placa_caminhao || "N/A"}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Motorista</span>
-                  <span className="text-sm font-medium truncate block">{agendamento?.motorista_nome || "N/A"}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 🔥 LINHA CORRIGIDA - REMOVIDO HORÁRIO, ADICIONADA DATA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Data Agendada</span>
-                  <span className="text-sm font-medium">
-                    {agendamento?.data_retirada 
-                      ? new Date(agendamento.data_retirada).toLocaleDateString("pt-BR")
-                      : "N/A"}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs text-muted-foreground block">Etapa Atual</span>
-                  <Badge className={`${etapaInfo.cor} border-0 font-medium text-xs`}>
-                    {etapaInfo.nome}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Linha 4: Nota Fiscal (se existir) */}
-            {carregamento.numero_nf && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs text-muted-foreground block">Nota Fiscal</span>
-                    <span className="text-sm font-medium">{carregamento.numero_nf}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Estatísticas de Tempo */}
-            {stats && (
-              <div className="bg-gray-50 rounded-lg p-3 space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Estatísticas de Tempo</span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            {agendamento && (
+              <>
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-muted-foreground block">Tempo decorrido</span>
-                    <span className="font-medium">{formatarTempo(stats.tempoTotalDecorrido)}</span>
+                    <span className="text-xs text-muted-foreground">Cliente:</span>
+                    <p className="font-semibold text-sm">{agendamento.cliente?.nome || "N/A"}</p>
                   </div>
-                  
-                  {stats.tempoTotalProcesso && (
-                    <div>
-                      <span className="text-muted-foreground block">Tempo total do processo</span>
-                      <span className="font-medium">{formatarTempo(stats.tempoTotalProcesso)}</span>
-                    </div>
-                  )}
-                  
-                  {stats.tempoMedioPorEtapa > 0 && (
-                    <div>
-                      <span className="text-muted-foreground block">Tempo médio por etapa</span>
-                      <span className="font-medium">{formatarTempo(stats.tempoMedioPorEtapa)}</span>
-                    </div>
-                  )}
+                  <div>
+                    <span className="text-xs text-muted-foreground">Quantidade:</span>
+                    <p className="font-semibold text-sm">{agendamento.quantidade ?? "N/A"} ton</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Placa:</span>
+                    <p className="font-semibold text-sm">{agendamento.placa_caminhao || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Motorista:</span>
+                    <p className="font-semibold text-sm">{agendamento.motorista_nome || "N/A"}</p>
+                  </div>
                 </div>
-              </div>
+  
+                {/* Separador */}
+                <div className="border-t"></div>
+  
+                {/* Data e Status */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Data Agendada:</span>
+                    <p className="font-semibold text-sm">
+                      {agendamento.data_retirada 
+                        ? new Date(agendamento.data_retirada).toLocaleDateString("pt-BR")
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Etapa Atual:</span>
+                    <div className="mt-1">
+                      <Badge className={`${etapaInfo.cor} border-0 font-medium text-xs`}>
+                        {etapaInfo.nome}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+  
+                {/* Nota Fiscal (se existir) */}
+                {carregamento.numero_nf && (
+                  <>
+                    <div className="border-t"></div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Nota Fiscal:</span>
+                      <p className="font-semibold text-sm">{carregamento.numero_nf}</p>
+                    </div>
+                  </>
+                )}
+  
+                {/* Estatísticas de Tempo */}
+                {stats && (
+                  <>
+                    <div className="border-t"></div>
+                    <div>
+                      <h3 className="text-sm font-medium mb-3">Estatísticas de Tempo</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Tempo Decorrido:</span>
+                          <p className="font-semibold text-sm">{formatarTempo(stats.tempoTotalDecorrido)}</p>
+                        </div>
+                        
+                        {stats.tempoTotalProcesso && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Tempo Total:</span>
+                            <p className="font-semibold text-sm">{formatarTempo(stats.tempoTotalProcesso)}</p>
+                          </div>
+                        )}
+                        
+                        {stats.tempoMedioPorEtapa > 0 && (
+                          <div>
+                            <span className="text-xs text-muted-foreground">Tempo Médio/Etapa:</span>
+                            <p className="font-semibold text-sm">{formatarTempo(stats.tempoMedioPorEtapa)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </CardContent>
