@@ -169,14 +169,7 @@ const EstoqueDetalhe = () => {
       const hasPermission = 
         userRole === "admin" ||
         userRole === "logistica" ||
-        (userRole === "armazem" && currentArmazem && currentArmazem.id === armazemId);
-      
-      console.log("🔍 [DEBUG] EstoqueDetalhe - Verificação de permissão:", {
-        hasPermission,
-        userRole,
-        currentArmazem: currentArmazem?.id,
-        armazemId
-      });
+        (userRole === "armazem" && currentArmazem?.id === armazemId);
       
       if (!hasPermission) {
         console.log("❌ [ERROR] EstoqueDetalhe - Sem permissão, redirecionando");
