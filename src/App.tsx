@@ -8,6 +8,7 @@ import { usePermissions } from "./hooks/usePermissions";
 import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Estoque from "./pages/Estoque";
+import EstoqueDetalhe from "./pages/EstoqueDetalhe"; // 🆕 IMPORT ADICIONADO
 import Liberacoes from "./pages/Liberacoes";
 import Agendamentos from "./pages/Agendamentos";
 import Carregamentos from "./pages/Carregamentos";
@@ -101,6 +102,17 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* 🆕 NOVA ROTA ADICIONADA */}
+            <Route
+              path="/estoque/:produtoId/:armazemId"
+              element={
+                <ProtectedRoute resource="estoque">
+                  <Layout>
+                    <EstoqueDetalhe />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/liberacoes"
               element={
@@ -177,16 +189,6 @@ const App = () => (
                 <ProtectedRoute resource="colaboradores">
                   <Layout>
                     <Colaboradores />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/produtos"
-              element={
-                <ProtectedRoute resource="produtos">
-                  <Layout>
-                    <Produtos />
                   </Layout>
                 </ProtectedRoute>
               }
