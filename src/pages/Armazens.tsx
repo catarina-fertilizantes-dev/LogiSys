@@ -738,21 +738,79 @@ const Armazens = () => {
 
       {/* Modal de detalhes do armazém */}
       <Dialog open={!!detalhesArmazem} onOpenChange={open => !open && setDetalhesArmazem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detalhesArmazem?.nome}</DialogTitle>
+            <DialogTitle>Detalhes do Armazém</DialogTitle>
+            <DialogDescription>
+              {detalhesArmazem?.nome}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4">
-            <p><b>Email:</b> {detalhesArmazem?.email ?? "—"}</p>
-            <p><b>Telefone:</b> {detalhesArmazem?.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
-            <p><b>CEP:</b> {detalhesArmazem?.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
-            <p><b>Endereço:</b> {detalhesArmazem?.endereco || "—"}</p>
-            <p><b>Cidade:</b> {detalhesArmazem?.cidade || "—"}</p>
-            <p><b>Estado:</b> {detalhesArmazem?.estado || "—"}</p>
-            <p><b>CNPJ/CPF:</b> {detalhesArmazem?.cnpj_cpf ? formatCpfCnpj(detalhesArmazem.cnpj_cpf) : "—"}</p>
-            <p><b>Capacidade Total:</b> {detalhesArmazem?.capacidade_total ?? "—"} t</p>
-            <p><b>Disponível:</b> {detalhesArmazem?.capacidade_disponivel ?? "—"} t</p>
-            <p><b>Status:</b> {detalhesArmazem?.ativo ? "Ativo" : "Inativo"}</p>
+          <div className="space-y-4 py-4">
+            {detalhesArmazem && (
+              <>
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email:</Label>
+                    <p className="font-semibold">{detalhesArmazem.email ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Status:</Label>
+                    <div className="mt-1">
+                      <Badge variant={detalhesArmazem.ativo ? "default" : "secondary"}>
+                        {detalhesArmazem.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
+                    <p className="font-semibold">{detalhesArmazem.cnpj_cpf ? formatCpfCnpj(detalhesArmazem.cnpj_cpf) : "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Telefone:</Label>
+                    <p className="font-semibold">{detalhesArmazem.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
+                  </div>
+                </div>
+      
+                {/* Separador */}
+                <div className="border-t"></div>
+      
+                {/* Localização */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Cidade:</Label>
+                    <p className="font-semibold">{detalhesArmazem.cidade || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Estado:</Label>
+                    <p className="font-semibold">{detalhesArmazem.estado || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Endereço:</Label>
+                    <p className="font-semibold">{detalhesArmazem.endereco || "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CEP:</Label>
+                    <p className="font-semibold">{detalhesArmazem.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
+                  </div>
+                </div>
+      
+                {/* Separador */}
+                <div className="border-t"></div>
+      
+                {/* Capacidade */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Capacidade Total:</Label>
+                    <p className="font-semibold">{detalhesArmazem.capacidade_total ?? "—"} t</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Capacidade Disponível:</Label>
+                    <p className="font-semibold">{detalhesArmazem.capacidade_disponivel ?? "—"} t</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter className="flex gap-2">
             {canCreate && detalhesArmazem?.temp_password && (
