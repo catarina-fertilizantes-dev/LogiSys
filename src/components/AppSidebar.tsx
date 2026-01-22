@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -102,6 +102,7 @@ export function AppSidebar() {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut, userRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
+  const location = useLocation();
   const isCollapsed = state === "collapsed";
 
   const handleLogout = async () => {
@@ -113,6 +114,46 @@ export function AppSidebar() {
     if (isMobile) {
       setOpenMobile(false);
     }
+  };
+
+  // 🎯 FUNÇÃO PARA VERIFICAR SE O MENU ESTÁ ATIVO
+  const isMenuActive = (itemUrl: string) => {
+    const currentPath = location.pathname;
+    
+    // Para o dashboard (página inicial)
+    if (itemUrl === "/" && currentPath === "/") {
+      return true;
+    }
+    
+    // Para outras páginas, verificar se o caminho atual começa com a URL do item
+    if (itemUrl !== "/" && currentPath.startsWith(itemUrl)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // 🎨 FUNÇÃO PARA GERAR CLASSES CSS DO MENU ATIVO
+  const getMenuClasses = (itemUrl: string, isCollapsed: boolean) => {
+    const isActive = isMenuActive(itemUrl);
+    
+    if (isActive) {
+      return `
+        bg-gradient-to-r from-primary/20 to-primary/10 
+        text-primary 
+        font-semibold 
+        border-r-2 border-primary
+        shadow-sm
+        ${!isCollapsed ? 'pl-4' : ''}
+      `;
+    }
+    
+    return `
+      hover:bg-sidebar-accent/50 
+      text-sidebar-foreground 
+      transition-all duration-200
+      hover:text-sidebar-accent-foreground
+    `;
   };
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
@@ -165,25 +206,34 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleUpperMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-accent/50"
-                      }
-                      onClick={handleItemClick}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {visibleUpperMenuItems.map((item) => {
+                const isActive = isMenuActive(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                        onClick={handleItemClick}
+                      >
+                        <item.icon 
+                          className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                        />
+                        {!isCollapsed && (
+                          <span className={isActive ? 'text-primary' : ''}>
+                            {item.title}
+                          </span>
+                        )}
+                        {/* 🎯 INDICADOR VISUAL ADICIONAL PARA ITEM ATIVO */}
+                        {isActive && !isCollapsed && (
+                          <div className="ml-auto w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -193,25 +243,34 @@ export function AppSidebar() {
             <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {visibleLowerMenuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className={({ isActive }) =>
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                            : "hover:bg-sidebar-accent/50"
-                        }
-                        onClick={handleItemClick}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {visibleLowerMenuItems.map((item) => {
+                  const isActive = isMenuActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.url}
+                          end={item.url === "/"}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                          onClick={handleItemClick}
+                        >
+                          <item.icon 
+                            className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                          />
+                          {!isCollapsed && (
+                            <span className={isActive ? 'text-primary' : ''}>
+                              {item.title}
+                            </span>
+                          )}
+                          {/* 🎯 INDICADOR VISUAL ADICIONAL PARA ITEM ATIVO */}
+                          {isActive && !isCollapsed && (
+                            <div className="ml-auto w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -221,7 +280,10 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
+                <SidebarMenuButton 
+                  onClick={handleLogout}
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                >
                   <LogOut className="h-4 w-4" />
                   {!isCollapsed && <span>Sair</span>}
                 </SidebarMenuButton>
