@@ -755,9 +755,11 @@ const Clientes = () => {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Status:</Label>
-                    <Badge variant={detalhesCliente.ativo ? "default" : "secondary"}>
-                      {detalhesCliente.ativo ? "Ativo" : "Inativo"}
-                    </Badge>
+                    <div className="mt-1">
+                      <Badge variant={detalhesCliente.ativo ? "default" : "secondary"}>
+                        {detalhesCliente.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
