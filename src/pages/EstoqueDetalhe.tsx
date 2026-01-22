@@ -161,15 +161,20 @@ const EstoqueDetalhe = () => {
   // Verificar permissões
   useEffect(() => {
     if (!isLoading && estoqueDetalhes && userId) {
+      // 🎯 AGUARDAR currentArmazem SER CARREGADO PARA USUÁRIO ARMAZÉM
+      if (userRole === "armazem" && !currentArmazem) {
+        return; // Aguarda currentArmazem ser carregado
+      }
+      
       const hasPermission = 
         userRole === "admin" ||
         userRole === "logistica" ||
-        (userRole === "armazem" && currentArmazem === armazemId);
+        (userRole === "armazem" && currentArmazem && currentArmazem.id === armazemId);
       
       console.log("🔍 [DEBUG] EstoqueDetalhe - Verificação de permissão:", {
         hasPermission,
         userRole,
-        currentArmazem,
+        currentArmazem: currentArmazem?.id,
         armazemId
       });
       
