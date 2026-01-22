@@ -220,41 +220,41 @@ const EstoqueDetalhe = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {/* Nota de Remessa */}
               {remessa.url_nota_remessa ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start h-auto p-3"
-                  onClick={() => window.open(remessa.url_nota_remessa!, '_blank')}
+                <a
+                  href={remessa.url_nota_remessa}
+                  
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors text-inherit no-underline"
                 >
-                  <FileText className="h-4 w-4 mr-2 text-red-600" />
-                  <div className="text-left">
+                  <FileText className="h-4 w-4 text-red-600" />
+                  <div className="text-left flex-1">
                     <div className="text-sm font-medium">Nota de Remessa</div>
                     <div className="text-xs text-muted-foreground">PDF</div>
                   </div>
-                  <Download className="h-3 w-3 ml-auto" />
-                </Button>
+                  <Download className="h-3 w-3" />
+                </a>
               ) : (
                 <div className="p-3 border border-dashed rounded-md text-center">
                   <FileText className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                   <div className="text-xs text-muted-foreground">Nota não disponível</div>
                 </div>
               )}
-
+          
               {/* XML da Remessa */}
               {remessa.url_xml_remessa ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start h-auto p-3"
-                  onClick={() => window.open(remessa.url_xml_remessa!, '_blank')}
+                <a
+                  href={remessa.url_xml_remessa}
+                  
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors text-inherit no-underline"
                 >
-                  <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                  <div className="text-left">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <div className="text-left flex-1">
                     <div className="text-sm font-medium">Arquivo XML</div>
                     <div className="text-xs text-muted-foreground">XML</div>
                   </div>
-                  <Download className="h-3 w-3 ml-auto" />
-                </Button>
+                  <Download className="h-3 w-3" />
+                </a>
               ) : (
                 <div className="p-3 border border-dashed rounded-md text-center">
                   <FileText className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
