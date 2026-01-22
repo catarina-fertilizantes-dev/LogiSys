@@ -125,6 +125,13 @@ const Estoque = () => {
   const { data: estoqueData, isLoading, error } = useQuery({
     queryKey: ["estoque", currentArmazem?.id],
     queryFn: async () => {
+      console.log("🔍 [DEBUG] Estoque.tsx - queryFn executada");
+      console.log("🔍 [DEBUG] Estoque.tsx - Condições queryFn:", {
+        userRole,
+        currentArmazem,
+        currentArmazemId: currentArmazem?.id
+      });
+
       let query = supabase
         .from("estoque")
         .select(`
@@ -138,6 +145,7 @@ const Estoque = () => {
 
       // 🎯 FILTRAR POR ARMAZÉM PARA USUÁRIO ARMAZÉM
       if (userRole === "armazem" && currentArmazem?.id) {
+        console.log("🔍 [DEBUG] Estoque.tsx - Aplicando filtro por armazém:", currentArmazem.id);
         query = query.eq("armazem_id", currentArmazem.id);
       }
 
@@ -149,7 +157,16 @@ const Estoque = () => {
       return data;
     },
     refetchInterval: 30000,
-    enabled: (userRole !== "armazem" || !!currentArmazem?.id),
+    enabled: (() => {
+      const enabled = (userRole !== "armazem" || !!currentArmazem?.id);
+      console.log("�� [DEBUG] Estoque.tsx - Query enabled:", {
+        userRole,
+        currentArmazem: !!currentArmazem,
+        currentArmazemId: currentArmazem?.id,
+        enabled
+      });
+      return enabled;
+    })(),
   });
 
   const { data: produtosCadastrados } = useQuery({
@@ -284,6 +301,13 @@ const Estoque = () => {
   const [xmlRemessaFile, setXmlRemessaFile] = useState<File | null>(null);
   const [numeroRemessa, setNumeroRemessa] = useState("");
   const [observacoesRemessa, setObservacoesRemessa] = useState("");
+
+  // 🔍 DEBUG LOGS - Estoque.tsx
+  console.log("🔍 [DEBUG] Estoque.tsx - Renderização iniciada");
+  console.log("🔍 [DEBUG] Estoque.tsx - userRole:", userRole);
+  console.log("�� [DEBUG] Estoque.tsx - currentArmazem:", currentArmazem);
+  console.log("🔍 [DEBUG] Estoque.tsx - user?.id:", user?.id);
+  console.log("🔍 [DEBUG] Estoque.tsx - isLoading:", isLoading);
 
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
