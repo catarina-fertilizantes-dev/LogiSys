@@ -225,10 +225,6 @@ export function AppSidebar() {
                             {item.title}
                           </span>
                         )}
-                        {/* 🎯 INDICADOR VISUAL ADICIONAL PARA ITEM ATIVO */}
-                        {isActive && !isCollapsed && (
-                          <div className="ml-auto w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -261,10 +257,6 @@ export function AppSidebar() {
                             <span className={isActive ? 'text-primary' : ''}>
                               {item.title}
                             </span>
-                          )}
-                          {/* 🎯 INDICADOR VISUAL ADICIONAL PARA ITEM ATIVO */}
-                          {isActive && !isCollapsed && (
-                            <div className="ml-auto w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                           )}
                         </NavLink>
                       </SidebarMenuButton>
