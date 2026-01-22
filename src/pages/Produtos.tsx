@@ -363,14 +363,37 @@ const Produtos = () => {
 
       {/* Modal detalhes produto */}
       <Dialog open={!!detalhesProduto} onOpenChange={open => !open && setDetalhesProduto(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detalhesProduto?.nome}</DialogTitle>
+            <DialogTitle>Detalhes do Produto</DialogTitle>
+            <DialogDescription>
+              {detalhesProduto?.nome}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4">
-            <p><b>Unidade:</b> {unidadeLabels[detalhesProduto?.unidade || ""] || detalhesProduto?.unidade}</p>
-            <p><b>Status:</b> {detalhesProduto?.ativo ? "Ativo" : "Inativo"}</p>
-            <p><b>Criado em:</b> {detalhesProduto?.created_at ? new Date(detalhesProduto.created_at).toLocaleString() : "—"}</p>
+          <div className="space-y-4 py-4">
+            {detalhesProduto && (
+              <>
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Unidade:</Label>
+                    <p className="font-semibold">{unidadeLabels[detalhesProduto.unidade || ""] || detalhesProduto.unidade}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Status:</Label>
+                    <div className="mt-1">
+                      <Badge variant={detalhesProduto.ativo ? "default" : "secondary"}>
+                        {detalhesProduto.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Criado em:</Label>
+                    <p className="font-semibold">{detalhesProduto.created_at ? new Date(detalhesProduto.created_at).toLocaleString() : "—"}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={() => setDetalhesProduto(null)}>
