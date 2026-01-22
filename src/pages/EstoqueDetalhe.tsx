@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,67 +53,51 @@ const EstoqueDetalhe = () => {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [currentArmazem, setCurrentArmazem] = useState<string | null>(null);
+  // 🆕 BUSCAR ARMAZÉM DO USUÁRIO DIRETAMENTE (SEM ESTADO LOCAL)
+  const { data: currentArmazem } = useQuery({
+    queryKey: ["current-armazem-detalhe", user?.id],
+    queryFn: async () => {
+      if (!user || userRole !== "armazem") return null;
+      const { data, error } = await supabase
+        .from("armazens")
+        .select("id, nome, cidade, estado")
+        .eq("user_id", user.id)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && userRole === "armazem",
+  });
 
-  // 🔍 DEBUG LOGS - EstoqueDetalhe.jsx
+  // 🔍 DEBUG LOGS - EstoqueDetalhe.jsx (OTIMIZADO)
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Renderização iniciada");
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - produtoId (URL):", produtoId);
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - armazemId (URL):", armazemId);
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - userRole:", userRole);
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - user?.id:", user?.id);
-  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - userId state:", userId);
-  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - currentArmazem state:", currentArmazem);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - currentArmazem:", currentArmazem);
 
   // Função para voltar à página pai
   const handleGoBack = () => {
     navigate("/estoque");
   };
 
-  useEffect(() => {
-    if (user?.id) {
-      console.log("🔍 [DEBUG] EstoqueDetalhe - User ID:", user.id);
-      setUserId(user.id);
-    }
-  }, [user]);
-
-  // Buscar armazém do usuário logado (para controle de acesso)
-  useEffect(() => {
-    const fetchCurrentArmazem = async () => {
-      if (!userId || userRole !== "armazem") return;
-      
-      console.log("🔍 [DEBUG] EstoqueDetalhe - Buscando armazém do usuário:", userId);
-      const { data } = await supabase
-        .from("armazens")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("ativo", true)
-        .maybeSingle();
-      
-      if (data) {
-        console.log("🔍 [DEBUG] EstoqueDetalhe - Armazém encontrado:", data.id);
-        setCurrentArmazem(data.id);
-      }
-    };
-    
-    fetchCurrentArmazem();
-  }, [userId, userRole]);
-
   // Query principal para buscar detalhes do estoque
   const { data: estoqueDetalhes, isLoading, error } = useQuery({
-    queryKey: ["estoque-detalhe", produtoId, armazemId, userId],
+    queryKey: ["estoque-detalhe", produtoId, armazemId, user?.id],
     queryFn: async () => {
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - queryFn executada");
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Parâmetros:", { 
         produtoId, 
         armazemId, 
-        userId, 
+        userId: user?.id, 
         userRole, 
         currentArmazem 
       });
       
       // Verificar permissões
-      if (userRole === "armazem" && currentArmazem && currentArmazem !== armazemId) {
+      if (userRole === "armazem" && currentArmazem && currentArmazem.id !== armazemId) {
         console.log("❌ [ERROR] EstoqueDetalhe.jsx - Sem permissão para este armazém");
         throw new Error("Sem permissão para visualizar este armazém");
       }
@@ -172,12 +156,12 @@ const EstoqueDetalhe = () => {
       return resultado;
     },
     enabled: (() => {
-      const enabled = !!produtoId && !!armazemId && !!userId && 
+      const enabled = !!produtoId && !!armazemId && !!user?.id && 
                      (userRole !== "armazem" || !!currentArmazem);
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Query enabled:", {
         produtoId: !!produtoId,
         armazemId: !!armazemId,
-        userId: !!userId,
+        userId: !!user?.id,
         userRole,
         currentArmazem: !!currentArmazem,
         enabled
@@ -192,13 +176,13 @@ const EstoqueDetalhe = () => {
     console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Condições verificação:", {
       isLoading,
       estoqueDetalhes: !!estoqueDetalhes,
-      userId: !!userId,
+      userId: !!user?.id,
       userRole,
       currentArmazem,
       armazemId
     });
     
-    if (!isLoading && estoqueDetalhes && userId) {
+    if (!isLoading && estoqueDetalhes && user?.id) {
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Entrando na verificação de permissão");
       
       // 🎯 AGUARDAR currentArmazem SER CARREGADO PARA USUÁRIO ARMAZÉM
@@ -210,16 +194,16 @@ const EstoqueDetalhe = () => {
       const hasPermission = 
         userRole === "admin" ||
         userRole === "logistica" ||
-        (userRole === "armazem" && currentArmazem === armazemId);
+        (userRole === "armazem" && currentArmazem?.id === armazemId);
       
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Verificação de permissão:", {
         userRole,
         isAdmin: userRole === "admin",
         isLogistica: userRole === "logistica",
         isArmazem: userRole === "armazem",
-        currentArmazem,
+        currentArmazemId: currentArmazem?.id,
         armazemIdFromUrl: armazemId,
-        armazemMatch: currentArmazem === armazemId,
+        armazemMatch: currentArmazem?.id === armazemId,
         hasPermission
       });
       
@@ -230,7 +214,7 @@ const EstoqueDetalhe = () => {
         console.log("✅ [SUCCESS] EstoqueDetalhe - Permissão concedida");
       }
     }
-  }, [isLoading, estoqueDetalhes, userId, userRole, currentArmazem, armazemId, navigate]);
+  }, [isLoading, estoqueDetalhes, user?.id, userRole, currentArmazem, armazemId, navigate]);
 
   // 🆕 FUNÇÃO PARA TESTAR ACESSO AO ARQUIVO
   const testFileAccess = async (url: string, tipo: string) => {
