@@ -200,7 +200,13 @@ const CarregamentoDetalhe = () => {
             ),
             placa_caminhao,
             motorista_nome,
-            motorista_documento
+            motorista_documento,
+            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
+              pedido_interno,
+              produto:produtos!liberacoes_produto_id_fkey (
+                nome
+              )
+            )
           )
         `)
         .eq("id", id)
@@ -856,6 +862,21 @@ const CarregamentoDetalhe = () => {
           <div className="space-y-4">
             {agendamento && (
               <>
+                {/* Informações do Pedido e Produto */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Pedido:</span>
+                    <p className="font-semibold text-sm">{carregamento?.agendamento?.liberacao?.pedido_interno || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground">Produto:</span>
+                    <p className="font-semibold text-sm">{carregamento?.agendamento?.liberacao?.produto?.nome || "N/A"}</p>
+                  </div>
+                </div>
+  
+                {/* Separador */}
+                <div className="border-t"></div>
+  
                 {/* Informações Básicas */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -872,7 +893,14 @@ const CarregamentoDetalhe = () => {
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Motorista:</span>
-                    <p className="font-semibold text-sm">{agendamento.motorista_nome || "N/A"}</p>
+                    <p className="font-semibold text-sm">
+                      {agendamento.motorista_nome || "N/A"}
+                      {agendamento.motorista_documento && (
+                        <span className="block text-xs text-muted-foreground font-normal">
+                          CPF: {agendamento.motorista_documento.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
   
