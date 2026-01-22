@@ -737,19 +737,73 @@ const Clientes = () => {
 
       {/* Modal de detalhes do cliente */}
       <Dialog open={!!detalhesCliente} onOpenChange={open => !open && setDetalhesCliente(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detalhesCliente?.nome}</DialogTitle>
+            <DialogTitle>Detalhes do Cliente</DialogTitle>
+            <DialogDescription>
+              {detalhesCliente?.nome}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-4">
-            <p><b>Email:</b> {detalhesCliente?.email}</p>
-            <p><b>Telefone:</b> {detalhesCliente?.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
-            <p><b>CEP:</b> {detalhesCliente?.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
-            <p><b>Endereço:</b> {detalhesCliente?.endereco || "—"}</p>
-            <p><b>Cidade:</b> {detalhesCliente?.cidade || "—"}</p>
-            <p><b>Estado:</b> {detalhesCliente?.estado || "—"}</p>
-            <p><b>CNPJ/CPF:</b> {detalhesCliente?.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
-            <p><b>Status:</b> {detalhesCliente?.ativo ? "Ativo" : "Inativo"}</p>
+          <div className="space-y-4 py-4">
+            {detalhesCliente && (
+              <>
+                {/* Informações Básicas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Nome:</Label>
+                    <p className="font-semibold">{detalhesCliente.nome}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Status:</Label>
+                    <Badge variant={detalhesCliente.ativo ? "default" : "secondary"}>
+                      {detalhesCliente.ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email:</Label>
+                    <p className="font-semibold">{detalhesCliente.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
+                    <p className="font-semibold">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
+                  </div>
+                </div>
+      
+                {/* Contato */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Contato</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Telefone:</Label>
+                      <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CEP:</Label>
+                      <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
+                    </div>
+                  </div>
+                </div>
+      
+                {/* Endereço */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Endereço</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Endereço:</Label>
+                      <p className="font-semibold">{detalhesCliente.endereco || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cidade:</Label>
+                      <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Estado:</Label>
+                      <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter className="flex gap-2">
             {canCreate && detalhesCliente?.temp_password && (
