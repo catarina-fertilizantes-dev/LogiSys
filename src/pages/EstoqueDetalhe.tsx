@@ -56,6 +56,15 @@ const EstoqueDetalhe = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentArmazem, setCurrentArmazem] = useState<string | null>(null);
 
+  // 🔍 DEBUG LOGS - EstoqueDetalhe.jsx
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Renderização iniciada");
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - produtoId (URL):", produtoId);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - armazemId (URL):", armazemId);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - userRole:", userRole);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - user?.id:", user?.id);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - userId state:", userId);
+  console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - currentArmazem state:", currentArmazem);
+
   // Função para voltar à página pai
   const handleGoBack = () => {
     navigate("/estoque");
@@ -94,10 +103,18 @@ const EstoqueDetalhe = () => {
   const { data: estoqueDetalhes, isLoading, error } = useQuery({
     queryKey: ["estoque-detalhe", produtoId, armazemId, userId],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] EstoqueDetalhe - Buscando dados:", { produtoId, armazemId });
+      console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - queryFn executada");
+      console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Parâmetros:", { 
+        produtoId, 
+        armazemId, 
+        userId, 
+        userRole, 
+        currentArmazem 
+      });
       
       // Verificar permissões
       if (userRole === "armazem" && currentArmazem && currentArmazem !== armazemId) {
+        console.log("❌ [ERROR] EstoqueDetalhe.jsx - Sem permissão para este armazém");
         throw new Error("Sem permissão para visualizar este armazém");
       }
 
@@ -154,26 +171,63 @@ const EstoqueDetalhe = () => {
       console.log("✅ [SUCCESS] EstoqueDetalhe - Dados carregados:", resultado);
       return resultado;
     },
-    enabled: !!produtoId && !!armazemId && !!userId && 
-             (userRole !== "armazem" || !!currentArmazem),
+    enabled: (() => {
+      const enabled = !!produtoId && !!armazemId && !!userId && 
+                     (userRole !== "armazem" || !!currentArmazem);
+      console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Query enabled:", {
+        produtoId: !!produtoId,
+        armazemId: !!armazemId,
+        userId: !!userId,
+        userRole,
+        currentArmazem: !!currentArmazem,
+        enabled
+      });
+      return enabled;
+    })(),
   });
 
   // Verificar permissões
   useEffect(() => {
+    console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - useEffect permissão disparado");
+    console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Condições verificação:", {
+      isLoading,
+      estoqueDetalhes: !!estoqueDetalhes,
+      userId: !!userId,
+      userRole,
+      currentArmazem,
+      armazemId
+    });
+    
     if (!isLoading && estoqueDetalhes && userId) {
+      console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Entrando na verificação de permissão");
+      
       // 🎯 AGUARDAR currentArmazem SER CARREGADO PARA USUÁRIO ARMAZÉM
       if (userRole === "armazem" && !currentArmazem) {
+        console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Aguardando currentArmazem ser carregado");
         return; // Aguarda currentArmazem ser carregado
       }
       
       const hasPermission = 
         userRole === "admin" ||
         userRole === "logistica" ||
-        (userRole === "armazem" && currentArmazem?.id === armazemId);
+        (userRole === "armazem" && currentArmazem === armazemId);
+      
+      console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Verificação de permissão:", {
+        userRole,
+        isAdmin: userRole === "admin",
+        isLogistica: userRole === "logistica",
+        isArmazem: userRole === "armazem",
+        currentArmazem,
+        armazemIdFromUrl: armazemId,
+        armazemMatch: currentArmazem === armazemId,
+        hasPermission
+      });
       
       if (!hasPermission) {
         console.log("❌ [ERROR] EstoqueDetalhe - Sem permissão, redirecionando");
         navigate("/estoque");
+      } else {
+        console.log("✅ [SUCCESS] EstoqueDetalhe - Permissão concedida");
       }
     }
   }, [isLoading, estoqueDetalhes, userId, userRole, currentArmazem, armazemId, navigate]);
