@@ -994,8 +994,8 @@ const CarregamentoDetalhe = () => {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
+          <PageHeader title="Detalhes do Carregamento" />
         </div>
-        <PageHeader title="Detalhes do Carregamento" />
         <div className="flex justify-center items-center h-40">
           <Loader2 className="animate-spin h-8 w-8 text-primary" />
         </div>
@@ -1015,8 +1015,8 @@ const CarregamentoDetalhe = () => {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
+          <PageHeader title="Detalhes do Carregamento" />
         </div>
-        <PageHeader title="Detalhes do Carregamento" />
         <Card className="border-destructive">
           <CardContent className="p-6">
             <div className="text-center text-destructive">
@@ -1045,8 +1045,8 @@ const CarregamentoDetalhe = () => {
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
+        <PageHeader title="Detalhes do Carregamento" />
       </div>
-      <PageHeader title="Detalhes do Carregamento" />
       <div className="max-w-[1050px] mx-auto space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
