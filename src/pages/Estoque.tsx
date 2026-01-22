@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // 🆕 NAVEGAÇÃO ADICIONADA
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -98,6 +99,7 @@ const Estoque = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
+  const navigate = useNavigate(); // 🆕 HOOK DE NAVEGAÇÃO
 
   // 🎯 CONTROLE DE PERMISSÕES BASEADO NO ROLE
   const canCreate = hasRole("admin") || hasRole("logistica");
@@ -675,7 +677,7 @@ const Estoque = () => {
   const temProdutosDisponiveis = produtosAtivos.length > 0;
   const temArmazensDisponiveis = armazensDisponiveis.length > 0;
 
-  // 🆕 RENDERIZAÇÃO CONDICIONAL PARA INTERFACE SIMPLIFICADA (ARMAZÉM)
+  // 🆕 RENDERIZAÇÃO CONDICIONAL PARA INTERFACE SIMPLIFICADA (ARMAZÉM) - COM NAVEGAÇÃO
   const renderInterfaceSimplificada = () => {
     if (!currentArmazem) {
       return (
@@ -701,11 +703,15 @@ const Estoque = () => {
       );
     }
   
-    // 🎯 APENAS LISTA DE PRODUTOS (SEM CARD DO ARMAZÉM)
+    // 🎯 APENAS LISTA DE PRODUTOS (SEM CARD DO ARMAZÉM) - COM NAVEGAÇÃO
     return (
       <div className="grid gap-3">
         {armazem.produtos.map((produto) => (
-          <Card key={produto.id} className="transition-all hover:shadow-md">
+          <Card 
+            key={produto.id} 
+            className="transition-all hover:shadow-md cursor-pointer"
+            onClick={() => navigate(`/estoque/${produto.produto_id}/${currentArmazem.id}`)} // 🆕 NAVEGAÇÃO ADICIONADA
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -1187,7 +1193,7 @@ const Estoque = () => {
             </div>
           )}
 
-          {/* Interface completa com cards expansíveis */}
+          {/* Interface completa com cards expansíveis - COM NAVEGAÇÃO */}
           <div className="flex flex-col gap-4">
             {filteredArmazens.map((armazem) => (
               <div key={armazem.id}>
@@ -1224,7 +1230,12 @@ const Estoque = () => {
                     <div className="border-t py-3 px-5 bg-muted/50 flex flex-col gap-3">
                       {armazem.produtos.length > 0 ? (
                         armazem.produtos.map((produto) => (
-                          <Card key={produto.id} className="w-full flex flex-row items-center bg-muted/30 px-3 py-2" style={{ minHeight: 56 }}>
+                          <Card 
+                            key={produto.id} 
+                            className="w-full flex flex-row items-center bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50" 
+                            style={{ minHeight: 56 }}
+                            onClick={() => navigate(`/estoque/${produto.produto_id}/${armazem.id}`)} // 🆕 NAVEGAÇÃO ADICIONADA
+                          >
                             <CardContent className="w-full py-2 flex flex-row items-center justify-between gap-4">
                               <div>
                                 <span className="font-medium">{produto.produto}</span>
