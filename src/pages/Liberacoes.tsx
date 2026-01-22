@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2, ChevronRight } from "lucide-react";
+import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2, ChevronRight, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,52 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// 🎯 FUNÇÃO PARA DETERMINAR STATUS DO CARREGAMENTO (IGUAL À PÁGINA AGENDAMENTOS)
+const getStatusCarregamento = (etapaAtual: number) => {
+  if (etapaAtual === 1) {
+    return {
+      status: "Aguardando",
+      percentual: 0,
+      cor: "bg-yellow-100 text-yellow-800",
+      tooltip: "Aguardando chegada do veículo"
+    };
+  } else if (etapaAtual >= 2 && etapaAtual <= 5) {
+    const percentual = Math.round(((etapaAtual - 1) / 5) * 100);
+    let tooltip = "";
+    
+    switch (etapaAtual) {
+      case 2:
+        tooltip = "Carregamento do caminhão iniciado";
+        break;
+      case 3:
+        tooltip = "Carregando o caminhão";
+        break;
+      case 4:
+        tooltip = "Carregamento do caminhão finalizado";
+        break;
+      case 5:
+        tooltip = "Anexando documentação";
+        break;
+      default:
+        tooltip = `Etapa ${etapaAtual} em andamento`;
+    }
+    
+    return {
+      status: "Em Andamento",
+      percentual,
+      cor: "bg-blue-100 text-blue-800",
+      tooltip
+    };
+  } else {
+    return {
+      status: "Finalizado",
+      percentual: 100,
+      cor: "bg-green-100 text-green-800",
+      tooltip: "Documentação anexada e processo concluído"
+    };
+  }
+};
 
 // 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
@@ -43,6 +89,15 @@ interface LiberacaoItem {
   percentualAgendado: number;
   // 🆕 CAMPO PARA HISTÓRICO
   finalizada: boolean;
+  // 🚛 NOVOS CAMPOS PARA BARRA DE CARREGAMENTO
+  agendamentos?: Array<{
+    id: string;
+    status: string;
+    carregamentos?: Array<{
+      id: string;
+      etapa_atual: number;
+    }>;
+  }>;
 }
 
 // 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE LIBERAÇÃO
@@ -69,6 +124,49 @@ const getAgendamentoBarTooltip = (percentualAgendado: number, quantidadeAgendada
     const quantidadeRestante = quantidadeTotal - quantidadeAgendada;
     return `${quantidadeAgendada.toLocaleString('pt-BR')}t agendada de ${quantidadeTotal.toLocaleString('pt-BR')}t total. Restam ${quantidadeRestante.toLocaleString('pt-BR')}t disponíveis para agendamento`;
   }
+};
+
+// 🚛 FUNÇÃO PARA CALCULAR STATUS DO CARREGAMENTO DA LIBERAÇÃO
+const calcularStatusCarregamentoLiberacao = (liberacao: LiberacaoItem) => {
+  if (!liberacao.agendamentos || liberacao.agendamentos.length === 0) {
+    return {
+      percentual: 0,
+      tooltip: "Nenhum agendamento criado para esta liberação"
+    };
+  }
+
+  // Buscar carregamentos em andamento ou finalizados
+  const carregamentosComEtapa = liberacao.agendamentos
+    .filter(ag => ag.carregamentos && ag.carregamentos.length > 0)
+    .map(ag => ag.carregamentos![0].etapa_atual);
+
+  if (carregamentosComEtapa.length === 0) {
+    return {
+      percentual: 0,
+      tooltip: "Agendamentos criados, mas carregamentos ainda não iniciados"
+    };
+  }
+
+  // Calcular média das etapas de carregamento
+  const etapaMedia = carregamentosComEtapa.reduce((sum, etapa) => sum + etapa, 0) / carregamentosComEtapa.length;
+  const percentualMedio = Math.round(((etapaMedia - 1) / 5) * 100);
+
+  let tooltip = "";
+  if (carregamentosComEtapa.length === 1) {
+    const statusInfo = getStatusCarregamento(carregamentosComEtapa[0]);
+    tooltip = statusInfo.tooltip;
+  } else {
+    const finalizados = carregamentosComEtapa.filter(etapa => etapa >= 6).length;
+    const emAndamento = carregamentosComEtapa.filter(etapa => etapa >= 2 && etapa <= 5).length;
+    const aguardando = carregamentosComEtapa.filter(etapa => etapa === 1).length;
+    
+    tooltip = `${carregamentosComEtapa.length} carregamento(s): ${finalizados} finalizado(s), ${emAndamento} em andamento, ${aguardando} aguardando`;
+  }
+
+  return {
+    percentual: Math.max(0, Math.min(100, percentualMedio)),
+    tooltip
+  };
 };
 
 // Componente para exibir quando não há dados disponíveis
@@ -172,7 +270,7 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
+  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM DADOS DE CARREGAMENTO
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id],
     queryFn: async () => {
@@ -189,7 +287,15 @@ const Liberacoes = () => {
           cliente_id,
           clientes(nome, cnpj_cpf),
           produto:produtos(id, nome),
-          armazem:armazens(id, nome, cidade, estado)
+          armazem:armazens(id, nome, cidade, estado),
+          agendamentos(
+            id,
+            status,
+            carregamentos!carregamentos_agendamento_id_fkey(
+              id,
+              etapa_atual
+            )
+          )
         `)
         .order("created_at", { ascending: false });
 
@@ -233,7 +339,7 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL" + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
+  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL" + ADICIONADO CRITÉRIO DE FINALIZAÇÃO + DADOS DE CARREGAMENTO
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     return liberacoesData.map((item: any) => {
@@ -269,6 +375,7 @@ const Liberacoes = () => {
         armazem_id: item.armazem?.id,
         created_at: item.created_at,
         finalizada, // 🆕 CAMPO PARA SEPARAR SEÇÕES
+        agendamentos: item.agendamentos || [], // 🚛 DADOS DOS AGENDAMENTOS E CARREGAMENTOS
       };
     });
   }, [liberacoesData, agendamentosData]);
@@ -578,114 +685,164 @@ const Liberacoes = () => {
   };
 
   // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE LIBERAÇÃO
-  const renderLiberacaoCard = (lib: LiberacaoItem) => (
-    <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-5">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div 
-              className="flex items-start gap-4 flex-1"
-              onClick={() => setDetalhesLiberacao(lib)}
-            >
-              {/* badge ícone à esquerda com cor do Estoque */}
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                <ClipboardList className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                {/* 🎯 LAYOUT DO CARD */}
-                <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
-                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
-                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
-                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
-                
-                {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
-                <div className="mt-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-4">
-                    <span>
-                      <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
-                    </span>
-                    <span>
-                      <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
-                    </span>
-                    <span>
-                      <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <div 
-                  className="flex items-center gap-1 cursor-help"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Badge className={getStatusColor(lib.status)}>
-                    {getStatusLabel(lib.status)}
-                  </Badge>
-                  <Info className="h-3 w-3 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+  const renderLiberacaoCard = (lib: LiberacaoItem) => {
+    // 🚛 CALCULAR STATUS DO CARREGAMENTO PARA ESTA LIBERAÇÃO
+    const statusCarregamento = calcularStatusCarregamentoLiberacao(lib);
 
-          {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
-          <div 
-            className="pt-2 border-t"
-            onClick={() => setDetalhesLiberacao(lib)}
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
-              
-              {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${lib.percentualAgendado}%` }}
-                    ></div>
+    return (
+      <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
+        <CardContent className="p-5">
+          <div className="space-y-3">
+            <div className="flex items-start justify-between">
+              <div 
+                className="flex items-start gap-4 flex-1"
+                onClick={() => setDetalhesLiberacao(lib)}
+              >
+                {/* badge ícone à esquerda com cor do Estoque */}
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+                  <ClipboardList className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  {/* 🎯 LAYOUT DO CARD */}
+                  <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
+                  <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
+                  <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
+                  <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
+                  
+                  {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                      <span>
+                        <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
+                      </span>
+                      <span>
+                        <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
+                      </span>
+                      <span>
+                        <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
+                      </span>
+                    </div>
                   </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
-                </TooltipContent>
-              </Tooltip>
+                </div>
+              </div>
               
-              {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
+              {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
                     className="flex items-center gap-1 cursor-help"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <Badge className={getStatusColor(lib.status)}>
+                      {getStatusLabel(lib.status)}
+                    </Badge>
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-12">
-                      {lib.percentualAgendado}%
-                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                  <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
                 </TooltipContent>
               </Tooltip>
-              
-              {/* ✅ ITEM 5.3: REMOVIDO O TEXTO "Xt agendada" */}
+            </div>
+
+            {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
+            <div 
+              className="pt-2 border-t"
+              onClick={() => setDetalhesLiberacao(lib)}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
+                
+                {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${lib.percentualAgendado}%` }}
+                      ></div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex items-center gap-1 cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground font-medium w-12">
+                        {lib.percentualAgendado}%
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
+            {/* 🚛 NOVA BARRA DE CARREGAMENTO - IMPLEMENTAÇÃO IGUAL À PÁGINA AGENDAMENTOS */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2"
+                  onClick={() => setDetalhesLiberacao(lib)}
+                >
+                  <Truck className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+                </div>
+                
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div 
+                        className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${statusCarregamento.percentual}%` }}
+                      ></div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm">{statusCarregamento.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex items-center gap-1 cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground font-medium w-12">
+                        {statusCarregamento.percentual}%
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm">{statusCarregamento.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Verificar se há dados disponíveis
   const temProdutosDisponiveis = produtos && produtos.length > 0;
