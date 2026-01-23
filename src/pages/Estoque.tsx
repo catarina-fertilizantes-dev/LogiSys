@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // 🆕 NAVEGAÇÃO ADICIONADA
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -99,14 +99,13 @@ const Estoque = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
-  const navigate = useNavigate(); // 🆕 HOOK DE NAVEGAÇÃO
+  const navigate = useNavigate();
 
   // 🎯 CONTROLE DE PERMISSÕES BASEADO NO ROLE
   const canCreate = hasRole("admin") || hasRole("logistica");
 
   // Estados de loading
   const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
   // Estados para documentos
   const [notaRemessaFile, setNotaRemessaFile] = useState<File | null>(null);
@@ -303,8 +302,6 @@ const Estoque = () => {
   const [search, setSearch] = useState("");
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editQuantity, setEditQuantity] = useState<string>("");
 
   const [selectedStatuses, setSelectedStatuses] = useState<StockStatus[]>([]);
   const [dateFrom, setDateFrom] = useState("");
@@ -359,46 +356,6 @@ const Estoque = () => {
         return { ...armazem, produtos };
       });
   }, [estoquePorArmazem, search, selectedProdutos, selectedWarehouses, selectedStatuses, dateFrom, dateTo]);
-
-  const handleUpdateQuantity = async (produtoId: string, newQtyStr: string) => {
-    const newQty = Number(newQtyStr);
-    if (Number.isNaN(newQty) || newQty < 0 || newQtyStr.trim() === "" || !/^\d+(\.\d+)?$/.test(newQtyStr.trim())) {
-      toast({ variant: "destructive", title: "Valor inválido", description: "Digite um valor numérico maior ou igual a zero." });
-      return;
-    }
-
-    setIsUpdating(prev => ({ ...prev, [produtoId]: true }));
-
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("estoque")
-        .update({
-          quantidade: newQty,
-          updated_at: new Date().toISOString(),
-          updated_by: userData.user?.id,
-        })
-        .eq("id", produtoId);
-
-      if (error) {
-        toast({ variant: "destructive", title: "Erro ao atualizar estoque", description: error.message });
-        return;
-      }
-
-      toast({ title: "Quantidade atualizada com sucesso!" });
-      setEditingId(null);
-      queryClient.invalidateQueries({ queryKey: ["estoque"] });
-    } catch (err: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Erro inesperado ao atualizar",
-        description: err instanceof Error ? err.message : String(err)
-      });
-      console.error("❌ [ERROR]", err);
-    } finally {
-      setIsUpdating(prev => ({ ...prev, [produtoId]: false }));
-    }
-  };
 
   const showingCount = filteredArmazens.reduce((acc, armazem) => acc + armazem.produtos.length, 0);
   const totalCount = estoquePorArmazem.reduce((acc, armazem) => acc + armazem.produtos.length, 0);
@@ -735,7 +692,7 @@ const Estoque = () => {
           <Card 
             key={produto.id} 
             className="transition-all hover:shadow-md cursor-pointer"
-            onClick={() => navigate(`/estoque/${produto.produto_id}/${currentArmazem.id}`)} // 🆕 NAVEGAÇÃO ADICIONADA
+            onClick={() => navigate(`/estoque/${produto.produto_id}/${currentArmazem.id}`)}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -1218,7 +1175,7 @@ const Estoque = () => {
             </div>
           )}
 
-          {/* Interface completa com cards expansíveis - COM NAVEGAÇÃO */}
+          {/* Interface completa com cards expansíveis - SIMPLIFICADA (SEM BOTÃO ATUALIZAR) */}
           <div className="flex flex-col gap-4">
             {filteredArmazens.map((armazem) => (
               <div key={armazem.id}>
@@ -1259,10 +1216,10 @@ const Estoque = () => {
                             key={produto.id} 
                             className="w-full flex flex-row items-center bg-muted/30 px-3 py-2 cursor-pointer hover:bg-muted/50" 
                             style={{ minHeight: 56 }}
-                            onClick={() => navigate(`/estoque/${produto.produto_id}/${armazem.id}`)} // 🆕 NAVEGAÇÃO ADICIONADA
+                            onClick={() => navigate(`/estoque/${produto.produto_id}/${armazem.id}`)}
                           >
                             <CardContent className="w-full py-2 flex flex-row items-center justify-between gap-4">
-                              <div>
+                              <div className="flex-1">
                                 <span className="font-medium">{produto.produto}</span>
                                 <span className="ml-2 font-mono text-xs">{produto.quantidade} {produto.unidade}</span>
                                 <div className="flex gap-2 text-xs text-muted-foreground items-center">
@@ -1272,64 +1229,6 @@ const Estoque = () => {
                                   </Badge>
                                 </div>
                               </div>
-                              {editingId === produto.id ? (
-                                <div className="flex gap-1 ml-auto">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    size="sm"
-                                    value={editQuantity}
-                                    onChange={(e) => setEditQuantity(e.target.value)}
-                                    style={{ width: "110px", minWidth: "100px" }}
-                                    className="h-8"
-                                    onClick={e => e.stopPropagation()}
-                                    disabled={isUpdating[produto.id]}
-                                  />
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      handleUpdateQuantity(produto.id, editQuantity);
-                                    }}
-                                    disabled={isUpdating[produto.id]}
-                                  >
-                                    {isUpdating[produto.id] ? (
-                                      <>
-                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                        Salvando...
-                                      </>
-                                    ) : (
-                                      "Salvar"
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      setEditingId(null);
-                                    }}
-                                    disabled={isUpdating[produto.id]}
-                                  >
-                                    Cancelar
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setEditingId(produto.id);
-                                    setEditQuantity(produto.quantidade.toString());
-                                  }}
-                                  disabled={!canCreate} // Só admin/logística pode editar
-                                  className="ml-auto"
-                                >
-                                  Atualizar quantidade
-                                </Button>
-                              )}
                             </CardContent>
                           </Card>
                         ))
