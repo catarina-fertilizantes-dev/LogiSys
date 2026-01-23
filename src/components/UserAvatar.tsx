@@ -10,13 +10,6 @@ export const UserAvatar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🔍 DEBUG LOGS
-  console.log("🔍 [DEBUG] UserAvatar - Renderizando...");
-  console.log("🔍 [DEBUG] UserAvatar - user:", user);
-  console.log("🔍 [DEBUG] UserAvatar - userRole:", userRole);
-  console.log("🔍 [DEBUG] UserAvatar - user?.email:", user?.email);
-  console.log("🔍 [DEBUG] UserAvatar - user?.user_metadata:", user?.user_metadata);
-
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -35,19 +28,11 @@ export const UserAvatar = () => {
   }, [isOpen]);
 
   // Não renderizar se não há usuário logado
-  if (!user) {
-    console.log("❌ [DEBUG] UserAvatar - Usuário não encontrado, não renderizando");
-    return null;
-  }
-
-  console.log("✅ [DEBUG] UserAvatar - Usuário encontrado, renderizando avatar");
+  if (!user) return null;
 
   // Extrair informações do usuário
   const userName = user.user_metadata?.nome || user.email?.split('@')[0] || 'Usuário';
   const userEmail = user.email || '';
-  
-  console.log("🔍 [DEBUG] UserAvatar - userName:", userName);
-  console.log("🔍 [DEBUG] UserAvatar - userEmail:", userEmail);
   
   // Gerar iniciais para o avatar
   const getInitials = (name: string, email: string) => {
@@ -62,7 +47,6 @@ export const UserAvatar = () => {
   };
 
   const initials = getInitials(userName, userEmail);
-  console.log("🔍 [DEBUG] UserAvatar - initials:", initials);
 
   // Mapear roles para labels amigáveis
   const getRoleLabel = (role: string | null) => {
@@ -94,14 +78,10 @@ export const UserAvatar = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div className="bg-yellow-200 p-2 text-xs">
-        DEBUG: UserAvatar renderizando - {userName} ({userRole})
-      </div>
-      
-      {/* Avatar Button */}
+      {/* Avatar Button - Ajustado para header */}
       <Button
         variant="ghost"
-        className="relative h-10 w-auto px-2 md:px-3 rounded-full hover:bg-muted/50 transition-colors"
+        className="relative h-10 w-auto px-2 md:px-3 rounded-full hover:bg-sidebar-accent/50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-2">
@@ -111,18 +91,18 @@ export const UserAvatar = () => {
           </div>
           
           {/* Nome (apenas desktop) */}
-          <span className="hidden md:block text-sm font-medium text-foreground max-w-[120px] truncate">
+          <span className="hidden md:block text-sm font-medium text-sidebar-foreground max-w-[120px] truncate">
             {userName}
           </span>
           
           {/* Chevron */}
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-sidebar-foreground/70 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </div>
       </Button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-card border border-border rounded-lg shadow-lg z-[70] overflow-hidden">
           {/* Header do usuário */}
           <div className="p-4 bg-muted/30">
             <div className="flex items-start gap-3">
