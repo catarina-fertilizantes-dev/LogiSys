@@ -8,7 +8,7 @@ interface PageHeaderProps {
   icon?: LucideIcon;
   actions?: ReactNode;
   backButton?: ReactNode;
-  showUserMenu?: boolean; // 🆕 Nova prop opcional
+  showUserMenu?: boolean;
 }
 
 export const PageHeader = ({ 
@@ -17,14 +17,19 @@ export const PageHeader = ({
   icon: Icon, 
   actions, 
   backButton,
-  showUserMenu = true // 🆕 Padrão true
+  showUserMenu = true
 }: PageHeaderProps) => {
+  
+  // 🔍 DEBUG LOGS
+  console.log("🔍 [DEBUG] PageHeader - Renderizando...");
+  console.log("🔍 [DEBUG] PageHeader - showUserMenu:", showUserMenu);
+  console.log("🔍 [DEBUG] PageHeader - title:", title);
+  
   return (
     <div className="border-b border-border bg-card">
       <div className="px-4 md:px-6 py-4 md:py-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            {/* 🆕 Botão Voltar à esquerda */}
             {backButton && (
               <div className="flex items-center mt-1">
                 {backButton}
@@ -46,7 +51,20 @@ export const PageHeader = ({
           {/* Container para actions e user menu */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             {actions && <div className="flex gap-2">{actions}</div>}
-            {showUserMenu && <UserAvatar />}
+            
+            {/* 🔍 DEBUG: Teste visual antes do UserAvatar */}
+            <div className="bg-red-200 p-2 text-xs">
+              DEBUG: showUserMenu = {showUserMenu ? 'true' : 'false'}
+            </div>
+            
+            {showUserMenu && (
+              <>
+                <div className="bg-green-200 p-2 text-xs">
+                  DEBUG: Renderizando UserAvatar
+                </div>
+                <UserAvatar />
+              </>
+            )}
           </div>
         </div>
       </div>
