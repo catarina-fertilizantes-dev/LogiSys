@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { UserAvatar } from "@/components/UserAvatar"; // 🆕 IMPORT ADICIONADO
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -49,9 +50,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
           
-          {/* Espaço para futuras ações globais */}
+          {/* 🆕 ÁREA DO USUÁRIO ADICIONADA */}
           <div className="ml-auto flex items-center gap-2">
-            {/* Futuras funcionalidades: notificações, perfil, etc. */}
+            <UserAvatar />
           </div>
         </header>
 
