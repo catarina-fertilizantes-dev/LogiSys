@@ -10,6 +10,13 @@ export const UserAvatar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // 🔍 DEBUG LOGS
+  console.log("🔍 [DEBUG] UserAvatar - Renderizando...");
+  console.log("🔍 [DEBUG] UserAvatar - user:", user);
+  console.log("🔍 [DEBUG] UserAvatar - userRole:", userRole);
+  console.log("🔍 [DEBUG] UserAvatar - user?.email:", user?.email);
+  console.log("🔍 [DEBUG] UserAvatar - user?.user_metadata:", user?.user_metadata);
+
   // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -28,11 +35,19 @@ export const UserAvatar = () => {
   }, [isOpen]);
 
   // Não renderizar se não há usuário logado
-  if (!user) return null;
+  if (!user) {
+    console.log("❌ [DEBUG] UserAvatar - Usuário não encontrado, não renderizando");
+    return null;
+  }
+
+  console.log("✅ [DEBUG] UserAvatar - Usuário encontrado, renderizando avatar");
 
   // Extrair informações do usuário
   const userName = user.user_metadata?.nome || user.email?.split('@')[0] || 'Usuário';
   const userEmail = user.email || '';
+  
+  console.log("🔍 [DEBUG] UserAvatar - userName:", userName);
+  console.log("🔍 [DEBUG] UserAvatar - userEmail:", userEmail);
   
   // Gerar iniciais para o avatar
   const getInitials = (name: string, email: string) => {
@@ -47,6 +62,7 @@ export const UserAvatar = () => {
   };
 
   const initials = getInitials(userName, userEmail);
+  console.log("🔍 [DEBUG] UserAvatar - initials:", initials);
 
   // Mapear roles para labels amigáveis
   const getRoleLabel = (role: string | null) => {
@@ -78,6 +94,10 @@ export const UserAvatar = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
+      <div className="bg-yellow-200 p-2 text-xs">
+        DEBUG: UserAvatar renderizando - {userName} ({userRole})
+      </div>
+      
       {/* Avatar Button */}
       <Button
         variant="ghost"
