@@ -44,13 +44,13 @@ const getDocumentIcon = (type: DocumentType) => {
 const getDocumentColor = (type: DocumentType) => {
   switch (type) {
     case 'pdf':
-      return 'border-red-200 hover:border-red-300 hover:bg-red-50';
+      return 'border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-900';
     case 'xml':
-      return 'border-blue-200 hover:border-blue-300 hover:bg-blue-50';
+      return 'border-blue-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900';
     case 'image':
-      return 'border-green-200 hover:border-green-300 hover:bg-green-50';
+      return 'border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-900';
     default:
-      return 'border-gray-200 hover:border-gray-300 hover:bg-gray-50';
+      return 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900';
   }
 };
 
@@ -159,7 +159,7 @@ export const DocumentViewer = ({
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium truncate">{title}</div>
                 {description && (
-                  <div className="text-xs text-muted-foreground truncate">{description}</div>
+                  <div className="text-xs opacity-75 truncate">{description}</div>
                 )}
               </div>
             </div>
@@ -170,7 +170,7 @@ export const DocumentViewer = ({
                   size="sm"
                   onClick={handlePreview}
                   disabled={disabled}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-white/50"
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -180,7 +180,7 @@ export const DocumentViewer = ({
                 size="sm"
                 onClick={handleOpenDocument}
                 disabled={disabled || isLoading}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 hover:bg-white/50"
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -191,7 +191,7 @@ export const DocumentViewer = ({
             </div>
           </div>
         </div>
-  
+
         {/* Modal de Preview */}
         <DocumentPreviewModal
           isOpen={showPreviewModal}
