@@ -142,7 +142,7 @@ export const DocumentViewer = ({
       <>
         <div 
           className={`
-            p-3 border rounded-md transition-all group
+            p-3 border rounded-md transition-all
             ${getDocumentColor(type)}
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm cursor-pointer'}
             ${className}
@@ -170,7 +170,7 @@ export const DocumentViewer = ({
                   size="sm"
                   onClick={handlePreview}
                   disabled={disabled}
-                  className="h-8 w-8 p-0 opacity-70 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 p-0"
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -180,7 +180,7 @@ export const DocumentViewer = ({
                 size="sm"
                 onClick={handleOpenDocument}
                 disabled={disabled || isLoading}
-                className="h-8 w-8 p-0 opacity-70 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 p-0"
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -191,7 +191,7 @@ export const DocumentViewer = ({
             </div>
           </div>
         </div>
-
+  
         {/* Modal de Preview */}
         <DocumentPreviewModal
           isOpen={showPreviewModal}
