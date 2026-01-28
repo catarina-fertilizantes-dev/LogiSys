@@ -14,13 +14,11 @@ import {
   Loader2, 
   ArrowLeft, 
   Package, 
-  Calendar, 
-  Hash, 
-  User, 
   MapPin,
-  Filter,
+  Filter as FilterIcon,
   X,
-  TrendingUp,
+  ChevronDown,
+  ChevronUp,
   Archive,
   Layers
 } from "lucide-react";
@@ -53,14 +51,6 @@ interface EstoqueDetalhes {
   remessas: RemessaItem[];
 }
 
-interface FiltrosState {
-  dataInicio: string;
-  dataFim: string;
-  numeroRemessa: string;
-  quantidadeMin: string;
-  quantidadeMax: string;
-}
-
 const formatarDataHora = (data: string) => {
   return new Date(data).toLocaleString("pt-BR", {
     day: "2-digit",
@@ -71,8 +61,8 @@ const formatarDataHora = (data: string) => {
   });
 };
 
-const formatarData = (data: string) => {
-  return new Date(data).toLocaleDateString("pt-BR");
+const parseDate = (d: string) => {
+  return new Date(d);
 };
 
 const EstoqueDetalhe = () => {
@@ -81,15 +71,13 @@ const EstoqueDetalhe = () => {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
-  // Estados para filtros
-  const [filtros, setFiltros] = useState<FiltrosState>({
-    dataInicio: '',
-    dataFim: '',
-    numeroRemessa: '',
-    quantidadeMin: '',
-    quantidadeMax: ''
-  });
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  // Estados para filtros (seguindo padrão da página Estoque)
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [quantidadeMin, setQuantidadeMin] = useState("");
+  const [quantidadeMax, setQuantidadeMax] = useState("");
 
   // 🆕 BUSCAR ARMAZÉM DO USUÁRIO DIRETAMENTE (SEM ESTADO LOCAL)
   const { data: currentArmazem } = useQuery({
@@ -257,64 +245,56 @@ const EstoqueDetalhe = () => {
   // Função para aplicar filtros
   const aplicarFiltros = (remessas: RemessaItem[]): RemessaItem[] => {
     return remessas.filter(remessa => {
-      // Filtro por período
-      if (filtros.dataInicio) {
-        const dataRemessa = new Date(remessa.created_at);
-        const dataInicio = new Date(filtros.dataInicio);
-        if (dataRemessa < dataInicio) return false;
-      }
-
-      if (filtros.dataFim) {
-        const dataRemessa = new Date(remessa.created_at);
-        const dataFim = new Date(filtros.dataFim);
-        dataFim.setHours(23, 59, 59, 999); // Incluir o dia todo
-        if (dataRemessa > dataFim) return false;
-      }
-
-      // Filtro por número da remessa
-      if (filtros.numeroRemessa) {
-        const numeroFiltro = filtros.numeroRemessa.toLowerCase();
+      // Filtro por busca (número da remessa ou ID)
+      if (search.trim()) {
+        const termo = search.trim().toLowerCase();
         const numeroRemessa = (remessa.numero_remessa || '').toLowerCase();
         const idRemessa = remessa.id.toLowerCase();
-        if (!numeroRemessa.includes(numeroFiltro) && !idRemessa.includes(numeroFiltro)) {
+        if (!numeroRemessa.includes(termo) && !idRemessa.includes(termo)) {
           return false;
         }
       }
 
+      // Filtro por período
+      if (dateFrom) {
+        const dataRemessa = parseDate(remessa.created_at);
+        const dataInicio = new Date(dateFrom);
+        if (dataRemessa < dataInicio) return false;
+      }
+
+      if (dateTo) {
+        const dataRemessa = parseDate(remessa.created_at);
+        const dataFim = new Date(dateTo);
+        dataFim.setHours(23, 59, 59, 999);
+        if (dataRemessa > dataFim) return false;
+      }
+
       // Filtro por quantidade mínima
-      if (filtros.quantidadeMin) {
-        const quantidadeMin = parseFloat(filtros.quantidadeMin);
-        if (remessa.quantidade_original < quantidadeMin) return false;
+      if (quantidadeMin.trim()) {
+        const qtdMin = parseFloat(quantidadeMin);
+        if (!isNaN(qtdMin) && remessa.quantidade_original < qtdMin) return false;
       }
 
       // Filtro por quantidade máxima
-      if (filtros.quantidadeMax) {
-        const quantidadeMax = parseFloat(filtros.quantidadeMax);
-        if (remessa.quantidade_original > quantidadeMax) return false;
+      if (quantidadeMax.trim()) {
+        const qtdMax = parseFloat(quantidadeMax);
+        if (!isNaN(qtdMax) && remessa.quantidade_original > qtdMax) return false;
       }
 
       return true;
     });
   };
 
-  // Função para limpar filtros
-  const limparFiltros = () => {
-    setFiltros({
-      dataInicio: '',
-      dataFim: '',
-      numeroRemessa: '',
-      quantidadeMin: '',
-      quantidadeMax: ''
-    });
-  };
-
-  // Verificar se há filtros ativos
-  const temFiltrosAtivos = Object.values(filtros).some(valor => valor !== '');
-
   // Calcular dados filtrados e totalizadores
   const remessasFiltradas = estoqueDetalhes ? aplicarFiltros(estoqueDetalhes.remessas) : [];
   const entradaTotal = remessasFiltradas.reduce((total, remessa) => total + remessa.quantidade_original, 0);
   const numeroRemessasFiltradas = remessasFiltradas.length;
+
+  // Verificar se há filtros ativos
+  const activeFiltersCount = 
+    (search.trim() ? 1 : 0) +
+    (dateFrom || dateTo ? 1 : 0) +
+    (quantidadeMin.trim() || quantidadeMax.trim() ? 1 : 0);
 
   // Renderizar card de remessa
   const renderRemessaCard = (remessa: RemessaItem) => (
@@ -463,193 +443,170 @@ const EstoqueDetalhe = () => {
       />
       
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Card de informações gerais com totalizadores */}
+        {/* 🆕 Card de informações gerais OTIMIZADO */}
         <Card className="shadow-sm">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold mb-4">Informações do Estoque</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Informações do Produto */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Produto</h3>
-                </div>
-                <div className="ml-7 space-y-2">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Nome:</span>
-                    <p className="font-semibold">{estoqueDetalhes.produto.nome}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Estoque Atual:</span>
-                    <p className="font-semibold text-lg text-primary">
-                      {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
-                    </p>
-                  </div>
+            {/* Layout otimizado 2x2 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Produto */}
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-muted-foreground">Produto:</p>
+                  <p className="font-semibold truncate">{estoqueDetalhes.produto.nome}</p>
                 </div>
               </div>
 
-              {/* Informações do Armazém */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <h3 className="font-medium">Armazém</h3>
+              {/* Armazém */}
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-muted-foreground">Armazém:</p>
+                  <p className="font-semibold truncate">{estoqueDetalhes.armazem.nome}</p>
                 </div>
-                <div className="ml-7 space-y-2">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Nome:</span>
-                    <p className="font-semibold">{estoqueDetalhes.armazem.nome}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Localização:</span>
-                    <p className="font-semibold">{estoqueDetalhes.armazem.cidade}/{estoqueDetalhes.armazem.estado}</p>
-                  </div>
+              </div>
+
+              {/* Nº de Remessas */}
+              <div className="flex items-center gap-3">
+                <Layers className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-muted-foreground">Nº de Remessas:</p>
+                  <p className="font-semibold">{numeroRemessasFiltradas}</p>
+                </div>
+              </div>
+
+              {/* Localização */}
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-muted-foreground">Localização:</p>
+                  <p className="font-semibold truncate">{estoqueDetalhes.armazem.cidade}/{estoqueDetalhes.armazem.estado}</p>
                 </div>
               </div>
             </div>
 
-            {/* 🆕 TOTALIZADORES */}
-            <div className="pt-4 border-t">
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Totalizadores {temFiltrosAtivos && '(Filtrados)'}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Archive className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">Entrada Total</span>
+            {/* 🆕 TOTALIZADORES SIMPLIFICADOS */}
+            <div className="pt-4 border-t mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Archive className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-800">Entrada Total</span>
                   </div>
-                  <p className="text-lg font-bold text-green-700">
+                  <p className="text-xl font-bold text-green-700">
                     {entradaTotal.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
 
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Package className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Estoque Atual</span>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-800">Estoque Atual</span>
                   </div>
-                  <p className="text-lg font-bold text-blue-700">
+                  <p className="text-xl font-bold text-blue-700">
                     {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
-
-                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Layers className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-800">Nº Remessas</span>
-                  </div>
-                  <p className="text-lg font-bold text-purple-700">
-                    {numeroRemessasFiltradas}
-                  </p>
-                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* 🆕 SEÇÃO DE FILTROS */}
-        <Card className="shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium flex items-center gap-2">
-                <Filter className="h-4 w-4 text-primary" />
-                Filtros de Remessas
-                {temFiltrosAtivos && (
-                  <Badge variant="secondary" className="ml-2">
-                    {Object.values(filtros).filter(v => v !== '').length} ativo(s)
-                  </Badge>
-                )}
-              </h3>
-              <div className="flex gap-2">
-                {temFiltrosAtivos && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={limparFiltros}
-                    className="text-xs"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Limpar
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMostrarFiltros(!mostrarFiltros)}
-                >
-                  <Filter className="h-3 w-3 mr-1" />
-                  {mostrarFiltros ? 'Ocultar' : 'Mostrar'}
-                </Button>
-              </div>
-            </div>
+        {/* 🆕 FILTROS NO PADRÃO DA PÁGINA ESTOQUE */}
+        <div className="flex items-center gap-3">
+          <Input
+            className="h-9 flex-1"
+            placeholder="Buscar por número da remessa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            Mostrando <span className="font-medium">{numeroRemessasFiltradas}</span> de <span className="font-medium">{estoqueDetalhes.remessas.length}</span>
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="whitespace-nowrap" 
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <FilterIcon className="h-4 w-4 mr-1" />
+            Filtros {activeFiltersCount ? `(${activeFiltersCount})` : ""}
+            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+          </Button>
+        </div>
 
-            {mostrarFiltros && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
-                {/* Filtro de Período */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Período</Label>
-                  <div className="space-y-2">
-                    <Input
-                      type="date"
-                      placeholder="Data início"
-                      value={filtros.dataInicio}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, dataInicio: e.target.value }))}
-                      className="text-xs"
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Data fim"
-                      value={filtros.dataFim}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, dataFim: e.target.value }))}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Filtro de Número da Remessa */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Número da Remessa</Label>
-                  <Input
-                    type="text"
-                    placeholder="Digite o número ou ID..."
-                    value={filtros.numeroRemessa}
-                    onChange={(e) => setFiltros(prev => ({ ...prev, numeroRemessa: e.target.value }))}
-                    className="text-xs"
+        {filtersOpen && (
+          <div className="rounded-md border p-3 space-y-3 relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Período */}
+              <div>
+                <Label className="text-sm mb-2 block">Período</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="date" 
+                    value={dateFrom} 
+                    onChange={(e) => setDateFrom(e.target.value)} 
+                    className="h-9 flex-1" 
+                    placeholder="De"
+                  />
+                  <Input 
+                    type="date" 
+                    value={dateTo} 
+                    onChange={(e) => setDateTo(e.target.value)} 
+                    className="h-9 flex-1" 
+                    placeholder="Até"
                   />
                 </div>
+              </div>
 
-                {/* Filtro de Quantidade */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    Quantidade ({estoqueDetalhes.produto.unidade})
-                  </Label>
-                  <div className="space-y-2">
-                    <Input
-                      type="number"
-                      placeholder="Mínima"
-                      value={filtros.quantidadeMin}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, quantidadeMin: e.target.value }))}
-                      className="text-xs"
-                      min="0"
-                      step="0.01"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Máxima"
-                      value={filtros.quantidadeMax}
-                      onChange={(e) => setFiltros(prev => ({ ...prev, quantidadeMax: e.target.value }))}
-                      className="text-xs"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
+              {/* Quantidade */}
+              <div>
+                <Label className="text-sm mb-2 block">
+                  Quantidade ({estoqueDetalhes.produto.unidade})
+                </Label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    value={quantidadeMin} 
+                    onChange={(e) => setQuantidadeMin(e.target.value)} 
+                    className="h-9 flex-1" 
+                    placeholder="Mín"
+                  />
+                  <Input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    value={quantidadeMax} 
+                    onChange={(e) => setQuantidadeMax(e.target.value)} 
+                    className="h-9 flex-1" 
+                    placeholder="Máx"
+                  />
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  setSearch("");
+                  setDateFrom("");
+                  setDateTo("");
+                  setQuantidadeMin("");
+                  setQuantidadeMax("");
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Limpar Filtros
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Lista de remessas */}
         <div className="space-y-4">
@@ -657,7 +614,7 @@ const EstoqueDetalhe = () => {
             <Package className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">
               Histórico de Remessas 
-              {temFiltrosAtivos ? (
+              {activeFiltersCount > 0 ? (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   ({numeroRemessasFiltradas} de {estoqueDetalhes.remessas.length})
                 </span>
@@ -672,10 +629,10 @@ const EstoqueDetalhe = () => {
           <div className="space-y-4">
             {remessasFiltradas.length > 0 ? (
               remessasFiltradas.map(renderRemessaCard)
-            ) : temFiltrosAtivos ? (
+            ) : activeFiltersCount > 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center">
-                  <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <FilterIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold text-muted-foreground mb-2">
                     Nenhuma remessa encontrada
                   </h3>
@@ -685,7 +642,13 @@ const EstoqueDetalhe = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={limparFiltros}
+                    onClick={() => {
+                      setSearch("");
+                      setDateFrom("");
+                      setDateTo("");
+                      setQuantidadeMin("");
+                      setQuantidadeMax("");
+                    }}
                   >
                     <X className="h-3 w-3 mr-1" />
                     Limpar Filtros
