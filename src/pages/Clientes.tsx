@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Filter as FilterIcon, Key, Loader2, X } from "lucide-react";
+import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,18 @@ const estadosBrasil = [
 
 type Cliente = Database['public']['Tables']['clientes']['Row'] & {
   temp_password?: string | null;
+  representantes?: {
+    id: string;
+    nome: string;
+  } | null;
+};
+
+// 🆕 TIPO PARA REPRESENTANTES
+type Representante = {
+  id: string;
+  nome: string;
+  email: string;
+  ativo: boolean;
 };
 
 // Helpers de formatação
@@ -128,6 +140,9 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 🆕 ESTADO PARA REPRESENTANTES
+  const [representantes, setRepresentantes] = useState<Representante[]>([]);
+
   // Formulário Novo Cliente
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoCliente, setNovoCliente] = useState({
@@ -139,6 +154,7 @@ const Clientes = () => {
     cidade: "",
     estado: "",
     cep: "",
+    representante_id: "", // 🆕 CAMPO ADICIONADO
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -166,16 +182,45 @@ const Clientes = () => {
       cidade: "",
       estado: "",
       cep: "",
+      representante_id: "", // 🆕 RESET INCLUÍDO
     });
+  };
+
+  // 🆕 FUNÇÃO PARA BUSCAR REPRESENTANTES
+  const fetchRepresentantes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("representantes")
+        .select("id, nome, email, ativo")
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar representantes:', error);
+        return;
+      }
+
+      setRepresentantes(data || []);
+    } catch (err) {
+      console.error('Erro inesperado ao buscar representantes:', err);
+    }
   };
 
   const fetchClientes = async () => {
     setLoading(true);
     setError(null);
     try {
+      // 🆕 QUERY MODIFICADA PARA INCLUIR REPRESENTANTES
       const { data, error } = await supabase
         .from("clientes")
-        .select("*, temp_password")
+        .select(`
+          *, 
+          temp_password,
+          representantes:representante_id (
+            id,
+            nome
+          )
+        `)
         .order("nome", { ascending: true });
       if (error) {
         setError(error.message);
@@ -212,11 +257,12 @@ const Clientes = () => {
   
   useEffect(() => {
     fetchClientes();
+    fetchRepresentantes(); // 🆕 BUSCAR REPRESENTANTES
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreateCliente = async () => {
-    const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep } = novoCliente;
+    const { nome, cnpj_cpf, email, telefone, endereco, cidade, estado, cep, representante_id } = novoCliente;
     if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
       toast({
         variant: "destructive",
@@ -316,6 +362,23 @@ const Clientes = () => {
       }
 
       if (data && data.success) {
+        // 🆕 ATUALIZAR REPRESENTANTE SE SELECIONADO
+        if (representante_id) {
+          const { error: updateError } = await supabase
+            .from("clientes")
+            .update({ representante_id: representante_id })
+            .eq("id", data.cliente.id);
+
+          if (updateError) {
+            console.error('Erro ao atribuir representante:', updateError);
+            toast({
+              variant: "destructive",
+              title: "Cliente criado, mas erro ao atribuir representante",
+              description: "O cliente foi criado, mas não foi possível atribuir o representante.",
+            });
+          }
+        }
+
         toast({
           title: "Cliente criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
@@ -438,7 +501,8 @@ const Clientes = () => {
           cliente.nome?.toLowerCase().includes(term) ||
           cliente.email?.toLowerCase().includes(term) ||
           cliente.cnpj_cpf?.toLowerCase().includes(term) ||
-          (cliente.cidade && cliente.cidade.toLowerCase().includes(term));
+          (cliente.cidade && cliente.cidade.toLowerCase().includes(term)) ||
+          (cliente.representantes?.nome && cliente.representantes.nome.toLowerCase().includes(term)); // 🆕 BUSCA POR REPRESENTANTE
         if (!matches) return false;
       }
       return true;
@@ -529,6 +593,30 @@ const Clientes = () => {
                         placeholder="email@exemplo.com"
                         disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
+                    </div>
+                    {/* 🆕 DROPDOWN DE REPRESENTANTE ADICIONADO */}
+                    <div className="col-span-2">
+                      <Label htmlFor="representante_id">Representante</Label>
+                      <Select
+                        value={novoCliente.representante_id}
+                        onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value })}
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger id="representante_id">
+                          <SelectValue placeholder="Selecione um representante (opcional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum representante</SelectItem>
+                          {representantes.map((rep) => (
+                            <SelectItem key={rep.id} value={rep.id}>
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="h-4 w-4" />
+                                {rep.nome}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="telefone">Telefone</Label>
@@ -652,7 +740,7 @@ const Clientes = () => {
             </Select>
           </div>
           <Input
-            placeholder="Buscar por nome, email, CNPJ/CPF..."
+            placeholder="Buscar por nome, email, CNPJ/CPF, representante..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -721,7 +809,7 @@ const Clientes = () => {
               variant="outline"
               onClick={() => {
                 const baseUrl = window.location.origin;
-                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                const texto = `Credenciais de acesso ao LogiSys\\n\\nAcesse: ${baseUrl}\\nEmail: ${credenciaisModal.email}\\nSenha: ${credenciaisModal.senha}\\n\\nImportante: Troque a senha no primeiro acesso.`;
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
@@ -768,6 +856,20 @@ const Clientes = () => {
                   <div>
                     <Label className="text-xs text-muted-foreground">Telefone:</Label>
                     <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
+                  </div>
+                  {/* 🆕 REPRESENTANTE ADICIONADO */}
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Representante:</Label>
+                    <div className="mt-1">
+                      {detalhesCliente.representantes ? (
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-primary" />
+                          <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Nenhum representante atribuído</span>
+                      )}
+                    </div>
                   </div>
                 </div>
       
@@ -827,6 +929,13 @@ const Clientes = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{cliente.nome}</h3>
                   <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                  {/* 🆕 REPRESENTANTE ADICIONADO NO CARD */}
+                  {cliente.representantes && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <UserCheck className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge variant={cliente.ativo ? "default" : "secondary"}>
