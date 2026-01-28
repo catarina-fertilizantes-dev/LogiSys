@@ -166,6 +166,8 @@ const Clientes = () => {
 
   const [detalhesCliente, setDetalhesCliente] = useState<Cliente | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
+  // 🆕 FILTRO POR REPRESENTANTE ADICIONADO
+  const [filterRepresentante, setFilterRepresentante] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   // 🚀 NOVOS ESTADOS DE LOADING
@@ -186,13 +188,12 @@ const Clientes = () => {
     });
   };
 
-  // 🆕 FUNÇÃO PARA BUSCAR REPRESENTANTES
+  // 🆕 FUNÇÃO PARA BUSCAR REPRESENTANTES (INCLUINDO INATIVOS PARA FILTRO)
   const fetchRepresentantes = async () => {
     try {
       const { data, error } = await supabase
         .from("representantes")
         .select("id, nome, email, ativo")
-        .eq("ativo", true)
         .order("nome", { ascending: true });
 
       if (error) {
@@ -490,11 +491,24 @@ const Clientes = () => {
     });
   };
 
+  // 🆕 FILTRO MODIFICADO PARA INCLUIR REPRESENTANTE
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
     return clientes.filter((cliente) => {
+      // Filtro por status
       if (filterStatus === "ativo" && !cliente.ativo) return false;
       if (filterStatus === "inativo" && cliente.ativo) return false;
+      
+      // 🆕 FILTRO POR REPRESENTANTE
+      if (filterRepresentante !== "all") {
+        if (filterRepresentante === "sem-representante") {
+          if (cliente.representante_id) return false;
+        } else {
+          if (cliente.representante_id !== filterRepresentante) return false;
+        }
+      }
+      
+      // Filtro por termo de busca
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         const matches =
@@ -502,14 +516,24 @@ const Clientes = () => {
           cliente.email?.toLowerCase().includes(term) ||
           cliente.cnpj_cpf?.toLowerCase().includes(term) ||
           (cliente.cidade && cliente.cidade.toLowerCase().includes(term)) ||
-          (cliente.representantes?.nome && cliente.representantes.nome.toLowerCase().includes(term)); // 🆕 BUSCA POR REPRESENTANTE
+          (cliente.representantes?.nome && cliente.representantes.nome.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
     });
-  }, [clientes, filterStatus, searchTerm]);
+  }, [clientes, filterStatus, filterRepresentante, searchTerm]);
 
   const canCreate = hasRole("logistica") || hasRole("admin");
+
+  // 🆕 FUNÇÃO PARA LIMPAR TODOS OS FILTROS
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+    setFilterRepresentante("all");
+  };
+
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = searchTerm || filterStatus !== "all" || filterRepresentante !== "all";
 
   if (loading) {
     return (
@@ -594,7 +618,7 @@ const Clientes = () => {
                         disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
-                    {/* �� DROPDOWN DE REPRESENTANTE CORRIGIDO */}
+                    {/* 🆕 DROPDOWN DE REPRESENTANTE CORRIGIDO */}
                     <div className="col-span-2">
                       <Label htmlFor="representante_id">Representante</Label>
                       <Select
@@ -606,7 +630,7 @@ const Clientes = () => {
                           <SelectValue placeholder="Selecione um representante (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          {representantes.map((rep) => (
+                          {representantes.filter(rep => rep.ativo).map((rep) => (
                             <SelectItem key={rep.id} value={rep.id}>
                               <div className="flex items-center gap-2">
                                 <UserCheck className="h-4 w-4" />
@@ -614,7 +638,7 @@ const Clientes = () => {
                               </div>
                             </SelectItem>
                           ))}
-                          {representantes.length === 0 && (
+                          {representantes.filter(rep => rep.ativo).length === 0 && (
                             <SelectItem value="no-representantes" disabled>
                               Nenhum representante disponível
                             </SelectItem>
@@ -738,14 +762,14 @@ const Clientes = () => {
         }
       />
 
-      {/* Filtros e busca */}
+      {/* 🆕 FILTROS E BUSCA MODIFICADOS */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
             <FilterIcon className="h-4 w-4 text-muted-foreground" />
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por status" />
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -754,24 +778,49 @@ const Clientes = () => {
               </SelectContent>
             </Select>
           </div>
+          
+          {/* 🆕 FILTRO POR REPRESENTANTE */}
+          <div className="flex gap-2 items-center">
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <Select value={filterRepresentante} onValueChange={setFilterRepresentante}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Representante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os representantes</SelectItem>
+                <SelectItem value="sem-representante">Sem representante</SelectItem>
+                {representantes.map((rep) => (
+                  <SelectItem key={rep.id} value={rep.id}>
+                    <div className="flex items-center gap-2">
+                      <span className={rep.ativo ? "text-foreground" : "text-muted-foreground"}>
+                        {rep.nome}
+                      </span>
+                      {!rep.ativo && <span className="text-xs text-muted-foreground">(Inativo)</span>}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <Input
             placeholder="Buscar por nome, email, CNPJ/CPF, representante..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
           />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => {
-              setSearchTerm("");
-              setFilterStatus("all");
-            }}
-            className="gap-1"
-          >
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearFilters}
+              className="gap-1"
+            >
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       </div>
 
@@ -824,7 +873,7 @@ const Clientes = () => {
               variant="outline"
               onClick={() => {
                 const baseUrl = window.location.origin;
-                const texto = `Credenciais de acesso ao LogiSys\\n\\nAcesse: ${baseUrl}\\nEmail: ${credenciaisModal.email}\\nSenha: ${credenciaisModal.senha}\\n\\nImportante: Troque a senha no primeiro acesso.`;
+                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
@@ -1014,10 +1063,21 @@ const Clientes = () => {
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm || filterStatus !== "all"
+            {hasActiveFilters
               ? "Nenhum cliente encontrado com os filtros aplicados"
               : "Nenhum cliente cadastrado ainda"}
           </p>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleClearFilters}
+              className="mt-2"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       )}
     </div>
