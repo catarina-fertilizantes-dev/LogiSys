@@ -1,8 +1,8 @@
 // src/components/DocumentPreviewModal.tsx
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, AlertCircle, ExternalLink, X } from "lucide-react";
+import { Loader2, Download, AlertCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentType, DocumentBucket } from "./DocumentViewer";
@@ -285,11 +285,10 @@ export const DocumentPreviewModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden" hideClose>
-        {/* Header customizado */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <div className="flex items-center gap-2">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{title}</DialogTitle>
             <Button
               variant="outline"
               size="sm"
@@ -303,17 +302,10 @@ export const DocumentPreviewModal = ({
               )}
               Baixar
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
+        </DialogHeader>
         
-        <div className="p-6 pt-0">
+        <div className="mt-4">
           {renderPreviewContent()}
         </div>
       </DialogContent>
