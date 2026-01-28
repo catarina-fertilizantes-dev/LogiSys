@@ -788,7 +788,12 @@ const CarregamentoDetalhe = () => {
             </div>
             {podeEditar && (
               <Button
-                disabled={!stageFile || proximaEtapaMutation.isPending || isUploadingPhoto}
+                disabled={
+                  // 🆕 Validação atualizada: Para etapa 5, exige PDF E XML
+                  (isEtapaDoc ? (!stageFile || !stageFileXml) : !stageFile) || 
+                  proximaEtapaMutation.isPending || 
+                  isUploadingPhoto
+                }
                 size="sm"
                 className="px-6"
                 onClick={() => {
@@ -883,7 +888,7 @@ const CarregamentoDetalhe = () => {
                   {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
                 </label>
                 
-                {/* 🆕 Botão único para anexar foto - ÍCONE CORRIGIDO */}
+                {/* Botão para anexar arquivo */}
                 <div className="space-y-3">
                   {canUseCamera ? (
                     <Button
@@ -900,18 +905,18 @@ const CarregamentoDetalhe = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => document.getElementById('file-upload')?.click()}
+                      onClick={() => document.getElementById('file-upload-pdf')?.click()}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                       className="flex items-center gap-2"
                     >
                       <Upload className="h-4 w-4" />
-                      Anexar Arquivo
+                      {stageFile ? "Alterar PDF" : "Anexar PDF"}
                     </Button>
                   )}
                   
                   {/* Input de arquivo (oculto) */}
                   <Input
-                    id="file-upload"
+                    id="file-upload-pdf"
                     type="file"
                     accept={isEtapaDoc ? ".pdf" : "image/*"}
                     onChange={e => {
@@ -940,26 +945,59 @@ const CarregamentoDetalhe = () => {
                   )}
                 </div>
               </div>
-
+            
+              {/* 🆕 Seção XML padronizada e obrigatória */}
               {isEtapaDoc && (
                 <div>
-                  <label className="text-sm font-semibold block mb-1">
-                    Anexar Arquivo XML
+                  <label className="text-sm font-semibold block mb-2">
+                    Anexar Arquivo XML *
                   </label>
-                  <Input
-                    type="file"
-                    accept=".xml"
-                    onChange={e => {
-                      const file = e.target.files?.[0] ?? null;
-                      console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo XML selecionado:", file?.name);
-                      setStageFileXml(file);
-                    }}
-                    className="w-full text-sm"
-                    disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                  />
+                  
+                  <div className="space-y-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('file-upload-xml')?.click()}
+                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {stageFileXml ? "Alterar XML" : "Anexar XML"}
+                    </Button>
+                    
+                    {/* Input de arquivo XML (oculto) */}
+                    <Input
+                      id="file-upload-xml"
+                      type="file"
+                      accept=".xml"
+                      onChange={e => {
+                        const file = e.target.files?.[0] ?? null;
+                        console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo XML selecionado:", file?.name);
+                        setStageFileXml(file);
+                      }}
+                      className="hidden"
+                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                    />
+                    
+                    {/* Mostrar arquivo XML selecionado */}
+                    {stageFileXml && (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-700 flex-1">{stageFileXml.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setStageFileXml(null)}
+                          disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-
+            
               <div>
                 <label className="text-sm font-semibold block mb-1">
                   Observações (opcional)
