@@ -1,14 +1,18 @@
 // src/components/DocumentPreviewModal.tsx
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, AlertCircle, X } from "lucide-react";
-import { DocumentType } from "./DocumentViewer";
+import { Loader2, Download, AlertCircle, X, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { DocumentType, DocumentBucket } from "./DocumentViewer";
 
 interface DocumentPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   url: string | null;
   type: DocumentType;
+  bucket: DocumentBucket;
   title: string;
 }
 
@@ -17,25 +21,142 @@ export const DocumentPreviewModal = ({
   onClose,
   url,
   type,
+  bucket,
   title
 }: DocumentPreviewModalProps) => {
-  if (!url) return null;
+  const { toast } = useToast();
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDownload = () => {
-    window.open(url, '_blank');
+  // Gerar URL assinada quando modal abrir
+  useEffect(() => {
+    if (isOpen && url) {
+      generateSignedUrl();
+    } else {
+      // Limpar estado quando modal fechar
+      setSignedUrl(null);
+      setError(null);
+    }
+  }, [isOpen, url]);
+
+  const generateSignedUrl = async () => {
+    if (!url) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`🔍 [DEBUG] DocumentPreviewModal - Gerando URL assinada para:`, url);
+      
+      // Extrair nome do arquivo da URL
+      const fileName = url.split('/').pop();
+      if (!fileName) {
+        throw new Error('Nome do arquivo não encontrado na URL');
+      }
+
+      console.log(`🔍 [DEBUG] DocumentPreviewModal - Nome do arquivo:`, fileName);
+      console.log(`🔍 [DEBUG] DocumentPreviewModal - Bucket:`, bucket);
+
+      // Gerar URL assinada
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(fileName, 3600); // 1 hora
+
+      if (signedError) {
+        console.warn(`⚠️ [WARN] DocumentPreviewModal - Erro ao gerar URL assinada, usando URL pública:`, signedError);
+        // Fallback: usar URL pública direta
+        setSignedUrl(url);
+      } else {
+        console.log(`✅ [SUCCESS] DocumentPreviewModal - URL assinada gerada`);
+        setSignedUrl(signedData.signedUrl);
+      }
+    } catch (error) {
+      console.error(`❌ [ERROR] DocumentPreviewModal - Erro ao gerar URL assinada:`, error);
+      setError('Erro ao carregar documento para preview');
+      // Fallback: usar URL original
+      setSignedUrl(url);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      if (signedUrl) {
+        window.open(signedUrl, '_blank');
+      } else if (url) {
+        window.open(url, '_blank');
+      }
+      
+      toast({
+        title: "Download iniciado",
+        description: `${title} foi aberto em uma nova aba.`
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro no download",
+        description: "Não foi possível abrir o documento."
+      });
+    }
   };
 
   const renderPreviewContent = () => {
+    if (isLoading) {
+      return (
+        <div className="w-full h-[70vh] flex items-center justify-center border rounded-md bg-muted/30">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Carregando preview...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="w-full h-[70vh] flex items-center justify-center border rounded-md bg-muted/30">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+            <div>
+              <p className="font-medium text-destructive">Erro ao carregar preview</p>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+            </div>
+            <Button onClick={handleDownload} variant="outline">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Abrir em Nova Aba
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!signedUrl) {
+      return (
+        <div className="w-full h-[70vh] flex items-center justify-center border rounded-md bg-muted/30">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
+            <p className="font-medium">URL não disponível</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (type) {
       case 'pdf':
         return (
-          <div className="w-full h-[70vh] border rounded-md overflow-hidden">
+          <div className="w-full h-[70vh] border rounded-md overflow-hidden bg-white">
             <iframe
-              src={`${url}#toolbar=1&navpanes=1&scrollbar=1`}
+              src={`${signedUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
               className="w-full h-full"
               title={title}
               onError={() => {
                 console.error('❌ [ERROR] Erro ao carregar PDF no iframe');
+                setError('Erro ao carregar PDF. Tente fazer o download.');
+              }}
+              onLoad={() => {
+                console.log('✅ [SUCCESS] PDF carregado no iframe');
               }}
             />
           </div>
@@ -45,12 +166,15 @@ export const DocumentPreviewModal = ({
         return (
           <div className="w-full max-h-[70vh] flex items-center justify-center border rounded-md overflow-hidden bg-muted/30">
             <img
-              src={url}
+              src={signedUrl}
               alt={title}
-              className="max-w-full max-h-full object-contain"
-              onError={(e) => {
+              className="max-w-full max-h-full object-contain rounded"
+              onError={() => {
                 console.error('❌ [ERROR] Erro ao carregar imagem');
-                e.currentTarget.style.display = 'none';
+                setError('Erro ao carregar imagem. Tente fazer o download.');
+              }}
+              onLoad={() => {
+                console.log('✅ [SUCCESS] Imagem carregada');
               }}
             />
           </div>
@@ -64,7 +188,7 @@ export const DocumentPreviewModal = ({
               <div>
                 <p className="font-medium">Preview não disponível para XML</p>
                 <p className="text-sm text-muted-foreground">
-                  Clique em "Baixar" para visualizar o arquivo
+                  Arquivos XML são melhor visualizados em editores específicos
                 </p>
               </div>
               <Button onClick={handleDownload} className="mt-4">
@@ -86,20 +210,26 @@ export const DocumentPreviewModal = ({
                   Tipo de arquivo não suportado para preview
                 </p>
               </div>
+              <Button onClick={handleDownload} variant="outline">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Abrir em Nova Aba
+              </Button>
             </div>
           </div>
         );
     }
   };
 
+  if (!url) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <span>{title}</span>
-              <span className="text-xs bg-muted px-2 py-1 rounded uppercase">
+              <span className="text-xs bg-muted px-2 py-1 rounded uppercase font-mono">
                 {type}
               </span>
             </DialogTitle>
@@ -108,8 +238,13 @@ export const DocumentPreviewModal = ({
                 variant="outline"
                 size="sm"
                 onClick={handleDownload}
+                disabled={isLoading}
               >
-                <Download className="h-4 w-4 mr-2" />
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
                 Baixar
               </Button>
               <Button
