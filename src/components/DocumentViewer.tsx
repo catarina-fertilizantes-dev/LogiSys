@@ -3,11 +3,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { DocumentPreviewModal } from "@/components/DocumentPreviewModal";
 import { 
   FileText, 
   Image as ImageIcon, 
   Download, 
-  Loader2
+  Loader2,
+  Eye
 } from "lucide-react";
 
 export type DocumentType = 'pdf' | 'xml' | 'image';
@@ -61,10 +63,12 @@ export const DocumentViewer = ({
   variant = 'button',
   size = 'md',
   className = '',
+  showPreview = false,
   disabled = false
 }: DocumentViewerProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // Verificar se documento existe
   if (!url) {
@@ -126,37 +130,73 @@ export const DocumentViewer = ({
     }
   };
 
+  // Função para abrir preview modal
+  const handlePreview = () => {
+    if (disabled) return;
+    setShowPreviewModal(true);
+  };
+
   // Renderização baseada na variante
   if (variant === 'card') {
     return (
-      <div 
-        className={`
-          p-3 border rounded-md cursor-pointer transition-all
-          ${getDocumentColor(type)}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'}
-          ${className}
-        `}
-        onClick={handleOpenDocument}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {getDocumentIcon(type)}
-            <div>
-              <div className="text-sm font-medium">{title}</div>
-              {description && (
-                <div className="text-xs text-muted-foreground">{description}</div>
+      <>
+        <div 
+          className={`
+            p-3 border rounded-md transition-all
+            ${getDocumentColor(type)}
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm cursor-pointer'}
+            ${className}
+          `}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2" onClick={showPreview ? handlePreview : handleOpenDocument}>
+              {getDocumentIcon(type)}
+              <div>
+                <div className="text-sm font-medium">{title}</div>
+                {description && (
+                  <div className="text-xs text-muted-foreground">{description}</div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {showPreview && (type === 'pdf' || type === 'image') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePreview}
+                  disabled={disabled}
+                  className="h-8 w-8 p-0"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleOpenDocument}
+                disabled={disabled || isLoading}
+                className="h-8 w-8 p-0"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {isLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Download className="h-3 w-3" />
-            )}
-          </div>
         </div>
-      </div>
+
+        {/* Modal de Preview */}
+        <DocumentPreviewModal
+          isOpen={showPreviewModal}
+          onClose={() => setShowPreviewModal(false)}
+          url={url}
+          type={type}
+          bucket={bucket}
+          title={title}
+        />
+      </>
     );
   }
 
@@ -168,31 +208,66 @@ export const DocumentViewer = ({
   };
 
   return (
-    <Button
-      variant="outline"
-      size={size === 'sm' ? 'sm' : undefined}
-      className={`
-        justify-start ${sizeClasses[size]} w-full
-        ${getDocumentColor(type)}
-        ${className}
-      `}
-      onClick={handleOpenDocument}
-      disabled={disabled || isLoading}
-    >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-      ) : (
-        getDocumentIcon(type)
-      )}
-      <div className="text-left flex-1 ml-2">
-        <div className="text-sm font-medium">{title}</div>
-        {description && size !== 'sm' && (
-          <div className="text-xs text-muted-foreground">{description}</div>
+    <>
+      <div className="flex gap-2">
+        {/* Botão principal */}
+        <Button
+          variant="outline"
+          size={size === 'sm' ? 'sm' : undefined}
+          className={`
+            justify-start ${sizeClasses[size]} flex-1
+            ${getDocumentColor(type)}
+            ${className}
+          `}
+          onClick={showPreview ? handlePreview : handleOpenDocument}
+          disabled={disabled || isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            getDocumentIcon(type)
+          )}
+          <div className="text-left flex-1 ml-2">
+            <div className="text-sm font-medium">{title}</div>
+            {description && size !== 'sm' && (
+              <div className="text-xs text-muted-foreground">{description}</div>
+            )}
+          </div>
+          {!isLoading && showPreview && (type === 'pdf' || type === 'image') && (
+            <Eye className="h-3 w-3 ml-2" />
+          )}
+          {!isLoading && (!showPreview || (type !== 'pdf' && type !== 'image')) && (
+            <Download className="h-3 w-3 ml-2" />
+          )}
+        </Button>
+
+        {/* Botão de download separado quando preview está ativo */}
+        {showPreview && (type === 'pdf' || type === 'image') && (
+          <Button
+            variant="outline"
+            size={size === 'sm' ? 'sm' : undefined}
+            className="px-3"
+            onClick={handleOpenDocument}
+            disabled={disabled || isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+          </Button>
         )}
       </div>
-      {!isLoading && (
-        <Download className="h-3 w-3 ml-2" />
-      )}
-    </Button>
+
+      {/* Modal de Preview */}
+      <DocumentPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        url={url}
+        type={type}
+        bucket={bucket}
+        title={title}
+      />
+    </>
   );
 };
