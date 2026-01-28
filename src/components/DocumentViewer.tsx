@@ -170,7 +170,7 @@ export const DocumentViewer = ({
                   size="sm"
                   onClick={handlePreview}
                   disabled={disabled}
-                  className="h-8 w-8 p-0 hover:bg-white/50"
+                  className="h-8 w-8 p-0 hover:bg-white/70"
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -180,7 +180,7 @@ export const DocumentViewer = ({
                 size="sm"
                 onClick={handleOpenDocument}
                 disabled={disabled || isLoading}
-                className="h-8 w-8 p-0 hover:bg-white/50"
+                className="h-8 w-8 p-0 hover:bg-white/70"
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
