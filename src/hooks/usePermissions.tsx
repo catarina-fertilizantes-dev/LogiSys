@@ -14,7 +14,7 @@ export type Resource =
   | 'clientes'
   | 'armazens'
   | 'colaboradores'
-  | 'produtos';
+  | 'representantes'; // 🆕 ADICIONADO
 
 export interface Permission {
   can_create: boolean;
@@ -130,6 +130,10 @@ export const usePermissions = () => {
   const canAccess = (resource: Resource, action: 'create' | 'read' | 'update' | 'delete' = 'read'): boolean => {
     // Permissão extra: admin ou logistica sempre podem ver "clientes"
     if (resource === "clientes" && (userRole === "admin" || userRole === "logistica")) {
+      return true;
+    }
+    // 🆕 PERMISSÃO EXTRA: admin ou logistica sempre podem ver "representantes"
+    if (resource === "representantes" && (userRole === "admin" || userRole === "logistica")) {
       return true;
     }
     const perm = permissions[resource];
