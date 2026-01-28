@@ -142,30 +142,35 @@ export const DocumentViewer = ({
       <>
         <div 
           className={`
-            p-3 border rounded-md transition-all
+            p-3 border rounded-md transition-all group
             ${getDocumentColor(type)}
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm cursor-pointer'}
             ${className}
           `}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2" onClick={showPreview ? handlePreview : handleOpenDocument}>
-              {getDocumentIcon(type)}
-              <div>
-                <div className="text-sm font-medium">{title}</div>
+            <div 
+              className="flex items-center gap-2 flex-1 min-w-0" 
+              onClick={showPreview ? handlePreview : handleOpenDocument}
+            >
+              <div className="flex-shrink-0">
+                {getDocumentIcon(type)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">{title}</div>
                 {description && (
-                  <div className="text-xs text-muted-foreground">{description}</div>
+                  <div className="text-xs text-muted-foreground truncate">{description}</div>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              {showPreview && (type === 'pdf' || type === 'image') && (
+            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              {showPreview && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handlePreview}
                   disabled={disabled}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 opacity-70 group-hover:opacity-100 transition-opacity"
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -175,7 +180,7 @@ export const DocumentViewer = ({
                 size="sm"
                 onClick={handleOpenDocument}
                 disabled={disabled || isLoading}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 opacity-70 group-hover:opacity-100 transition-opacity"
               >
                 {isLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -200,7 +205,7 @@ export const DocumentViewer = ({
     );
   }
 
-  // Variant 'button' (padrão)
+  // Variant 'button' (padrão) - sem alterações
   const sizeClasses = {
     sm: 'h-8 px-2 text-xs',
     md: 'h-auto p-3',
@@ -233,16 +238,16 @@ export const DocumentViewer = ({
               <div className="text-xs text-muted-foreground">{description}</div>
             )}
           </div>
-          {!isLoading && showPreview && (type === 'pdf' || type === 'image') && (
+          {!isLoading && showPreview && (
             <Eye className="h-3 w-3 ml-2" />
           )}
-          {!isLoading && (!showPreview || (type !== 'pdf' && type !== 'image')) && (
+          {!isLoading && !showPreview && (
             <Download className="h-3 w-3 ml-2" />
           )}
         </Button>
 
         {/* Botão de download separado quando preview está ativo */}
-        {showPreview && (type === 'pdf' || type === 'image') && (
+        {showPreview && (
           <Button
             variant="outline"
             size={size === 'sm' ? 'sm' : undefined}
