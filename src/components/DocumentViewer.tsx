@@ -44,13 +44,13 @@ const getDocumentIcon = (type: DocumentType) => {
 const getDocumentColor = (type: DocumentType) => {
   switch (type) {
     case 'pdf':
-      return 'border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-900';
+      return 'border-red-200 hover:border-red-400 hover:bg-red-100 hover:text-red-700';
     case 'xml':
-      return 'border-blue-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900';
+      return 'border-blue-200 hover:border-blue-400 hover:bg-blue-100 hover:text-blue-700';
     case 'image':
-      return 'border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-900';
+      return 'border-green-200 hover:border-green-400 hover:bg-green-100 hover:text-green-700';
     default:
-      return 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900';
+      return 'border-gray-200 hover:border-gray-400 hover:bg-gray-100 hover:text-gray-700';
   }
 };
 
