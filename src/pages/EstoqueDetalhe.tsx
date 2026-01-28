@@ -71,13 +71,22 @@ const EstoqueDetalhe = () => {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
-  // Estados para filtros (seguindo padrão da página Estoque)
+  // Estados para filtros (seguindo padrão da página Carregamentos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [quantidadeMin, setQuantidadeMin] = useState("");
   const [quantidadeMax, setQuantidadeMax] = useState("");
+
+  // 🆕 FUNÇÃO PARA LIMPAR FILTROS
+  const clearFilters = () => {
+    setSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setQuantidadeMin("");
+    setQuantidadeMax("");
+  };
 
   // 🆕 BUSCAR ARMAZÉM DO USUÁRIO DIRETAMENTE (SEM ESTADO LOCAL)
   const { data: currentArmazem } = useQuery({
@@ -514,7 +523,7 @@ const EstoqueDetalhe = () => {
           </CardContent>
         </Card>
 
-        {/* 🆕 FILTROS NO PADRÃO DA PÁGINA ESTOQUE */}
+        {/* 🆕 BARRA DE FILTROS NO PADRÃO CARREGAMENTOS */}
         <div className="flex items-center gap-3">
           <Input
             className="h-9 flex-1"
@@ -528,21 +537,30 @@ const EstoqueDetalhe = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            className="whitespace-nowrap" 
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
             <FilterIcon className="h-4 w-4 mr-1" />
             Filtros {activeFiltersCount ? `(${activeFiltersCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={clearFilters} 
+            className="gap-1"
+          >
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
         </div>
 
+        {/* 🆕 FILTROS AVANÇADOS SEM BOTÃO LIMPAR INTERNO */}
         {filtersOpen && (
-          <div className="rounded-md border p-3 space-y-3 relative">
+          <div className="rounded-md border p-3 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Período */}
               <div>
-                <Label className="text-sm mb-2 block">Período</Label>
+                <Label className="text-sm font-semibold mb-2 block">Período</Label>
                 <div className="flex gap-2">
                   <Input 
                     type="date" 
@@ -563,7 +581,7 @@ const EstoqueDetalhe = () => {
 
               {/* Quantidade */}
               <div>
-                <Label className="text-sm mb-2 block">
+                <Label className="text-sm font-semibold mb-2 block">
                   Quantidade ({estoqueDetalhes.produto.unidade})
                 </Label>
                 <div className="flex gap-2">
@@ -587,23 +605,6 @@ const EstoqueDetalhe = () => {
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setSearch("");
-                  setDateFrom("");
-                  setDateTo("");
-                  setQuantidadeMin("");
-                  setQuantidadeMax("");
-                }}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Limpar Filtros
-              </Button>
             </div>
           </div>
         )}
@@ -642,13 +643,7 @@ const EstoqueDetalhe = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setSearch("");
-                      setDateFrom("");
-                      setDateTo("");
-                      setQuantidadeMin("");
-                      setQuantidadeMax("");
-                    }}
+                    onClick={clearFilters}
                   >
                     <X className="h-3 w-3 mr-1" />
                     Limpar Filtros
