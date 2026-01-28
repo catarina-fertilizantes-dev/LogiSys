@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck } from "lucide-react";
+import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck, Edit3, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +38,7 @@ type Cliente = Database['public']['Tables']['clientes']['Row'] & {
   } | null;
 };
 
-// 🆕 TIPO PARA REPRESENTANTES
+// Tipo para representantes
 type Representante = {
   id: string;
   nome: string;
@@ -140,7 +140,7 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🆕 ESTADO PARA REPRESENTANTES
+  // Estado para representantes
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
 
   // Formulário Novo Cliente
@@ -154,7 +154,7 @@ const Clientes = () => {
     cidade: "",
     estado: "",
     cep: "",
-    representante_id: "", // 🆕 CAMPO ADICIONADO
+    representante_id: "",
   });
 
   const [credenciaisModal, setCredenciaisModal] = useState({
@@ -165,12 +165,17 @@ const Clientes = () => {
   });
 
   const [detalhesCliente, setDetalhesCliente] = useState<Cliente | null>(null);
+  
+  // 🆕 ESTADOS PARA EDIÇÃO DE REPRESENTANTE
+  const [editandoRepresentante, setEditandoRepresentante] = useState(false);
+  const [novoRepresentanteId, setNovoRepresentanteId] = useState<string>("");
+  const [salvandoRepresentante, setSalvandoRepresentante] = useState(false);
+
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
-  // 🆕 FILTRO POR REPRESENTANTE ADICIONADO
   const [filterRepresentante, setFilterRepresentante] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 🚀 NOVOS ESTADOS DE LOADING
+  // Estados de loading
   const [isCreating, setIsCreating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
@@ -184,11 +189,11 @@ const Clientes = () => {
       cidade: "",
       estado: "",
       cep: "",
-      representante_id: "", // 🆕 RESET INCLUÍDO
+      representante_id: "",
     });
   };
 
-  // 🆕 FUNÇÃO PARA BUSCAR REPRESENTANTES (INCLUINDO INATIVOS PARA FILTRO)
+  // Função para buscar representantes
   const fetchRepresentantes = async () => {
     try {
       const { data, error } = await supabase
@@ -211,7 +216,6 @@ const Clientes = () => {
     setLoading(true);
     setError(null);
     try {
-      // 🆕 QUERY MODIFICADA PARA INCLUIR REPRESENTANTES
       const { data, error } = await supabase
         .from("clientes")
         .select(`
@@ -246,19 +250,96 @@ const Clientes = () => {
     }
   };
 
+  // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE
+  const handleSalvarRepresentante = async () => {
+    if (!detalhesCliente) return;
+
+    setSalvandoRepresentante(true);
+
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .update({ 
+          representante_id: novoRepresentanteId || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", detalhesCliente.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Buscar o nome do representante para exibir na mensagem
+      const representanteNome = novoRepresentanteId 
+        ? representantes.find(r => r.id === novoRepresentanteId)?.nome 
+        : null;
+
+      toast({
+        title: "Representante atualizado com sucesso!",
+        description: representanteNome 
+          ? `Cliente agora é representado por ${representanteNome}.`
+          : "Representante removido do cliente.",
+      });
+
+      // Recarregar dados
+      await fetchClientes();
+
+      // Atualizar o cliente no modal
+      const clienteAtualizado = await supabase
+        .from("clientes")
+        .select(`
+          *, 
+          temp_password,
+          representantes:representante_id (
+            id,
+            nome
+          )
+        `)
+        .eq("id", detalhesCliente.id)
+        .single();
+
+      if (clienteAtualizado.data) {
+        setDetalhesCliente(clienteAtualizado.data as Cliente);
+      }
+
+      // Resetar estados de edição
+      setEditandoRepresentante(false);
+      setNovoRepresentanteId("");
+
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar representante",
+        description: err instanceof Error ? err.message : "Erro desconhecido",
+      });
+    } finally {
+      setSalvandoRepresentante(false);
+    }
+  };
+
+  // 🆕 FUNÇÃO PARA CANCELAR EDIÇÃO
+  const handleCancelarEdicao = () => {
+    setEditandoRepresentante(false);
+    setNovoRepresentanteId(detalhesCliente?.representante_id || "");
+  };
+
+  // 🆕 FUNÇÃO PARA INICIAR EDIÇÃO
+  const handleIniciarEdicao = () => {
+    setEditandoRepresentante(true);
+    setNovoRepresentanteId(detalhesCliente?.representante_id || "");
+  };
+
   useEffect(() => {
-    // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-      // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
   
   useEffect(() => {
     fetchClientes();
-    fetchRepresentantes(); // 🆕 BUSCAR REPRESENTANTES
+    fetchRepresentantes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -272,7 +353,6 @@ const Clientes = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING STATE
     setIsCreating(true);
 
     try {
@@ -363,7 +443,7 @@ const Clientes = () => {
       }
 
       if (data && data.success) {
-        // 🆕 ATUALIZAR REPRESENTANTE SE SELECIONADO
+        // Atualizar representante se selecionado
         if (representante_id) {
           const { error: updateError } = await supabase
             .from("clientes")
@@ -409,20 +489,14 @@ const Clientes = () => {
         description: err instanceof Error ? err.message : JSON.stringify(err),
       });
     } finally {
-      // 🚀 DESATIVAR LOADING STATE
       setIsCreating(false);
     }
   };
 
-  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING - VERSÃO CORRIGIDA E COM DEBUG
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
-    console.log('🔄 Iniciando toggle:', { id, ativoAtual, novoValor: !ativoAtual });
-    
-    // Ativar loading para este cliente específico
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
   
     try {
-      // Fazer o update com select para verificar o resultado
       const { data, error } = await supabase
         .from("clientes")
         .update({ 
@@ -430,30 +504,22 @@ const Clientes = () => {
           updated_at: new Date().toISOString() 
         })
         .eq("id", id)
-        .select("id, nome, ativo"); // Adicionar select para ver o resultado
-  
-      console.log('📊 Resultado do update:', { data, error });
+        .select("id, nome, ativo");
       
       if (error) {
-        console.error('❌ Erro no Supabase:', error);
         throw error;
       }
-  
-      // Verificar se o update realmente aconteceu
+
       if (data && data.length > 0) {
-        console.log('✅ Cliente atualizado:', data[0]);
-        
         toast({
           title: `Cliente ${!ativoAtual ? "ativado" : "desativado"} com sucesso!`,
         });
-  
-        // Aguardar um pouco e recarregar
+
         setTimeout(() => {
           fetchClientes();
         }, 200);
         
       } else {
-        console.warn('⚠️ Nenhum registro foi atualizado');
         toast({
           variant: "destructive",
           title: "Nenhum registro foi atualizado",
@@ -461,14 +527,12 @@ const Clientes = () => {
       }
       
     } catch (err) {
-      console.error('❌ Erro completo no toggle:', err);
       toast({
         variant: "destructive",
         title: "Erro ao alterar status",
         description: err instanceof Error ? err.message : "Erro desconhecido",
       });
     } finally {
-      // Desativar loading para este cliente
       setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
@@ -491,7 +555,6 @@ const Clientes = () => {
     });
   };
 
-  // 🆕 FILTRO MODIFICADO PARA INCLUIR REPRESENTANTE
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
     return clientes.filter((cliente) => {
@@ -499,7 +562,7 @@ const Clientes = () => {
       if (filterStatus === "ativo" && !cliente.ativo) return false;
       if (filterStatus === "inativo" && cliente.ativo) return false;
       
-      // 🆕 FILTRO POR REPRESENTANTE
+      // Filtro por representante
       if (filterRepresentante !== "all") {
         if (filterRepresentante === "sem-representante") {
           if (cliente.representante_id) return false;
@@ -525,14 +588,14 @@ const Clientes = () => {
 
   const canCreate = hasRole("logistica") || hasRole("admin");
 
-  // 🆕 FUNÇÃO PARA LIMPAR TODOS OS FILTROS
+  // Função para limpar todos os filtros
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilterStatus("all");
     setFilterRepresentante("all");
   };
 
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  // Verificar se há filtros ativos
   const hasActiveFilters = searchTerm || filterStatus !== "all" || filterRepresentante !== "all";
 
   if (loading) {
@@ -565,7 +628,6 @@ const Clientes = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
               if (!open && isCreating) return;
               setDialogOpen(open);
             }}>
@@ -591,7 +653,7 @@ const Clientes = () => {
                         value={novoCliente.nome}
                         onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
                         placeholder="Nome completo"
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div>
@@ -604,7 +666,7 @@ const Clientes = () => {
                         }
                         placeholder="00.000.000/0000-00 ou 000.000.000-00"
                         maxLength={18}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div>
@@ -615,10 +677,9 @@ const Clientes = () => {
                         value={novoCliente.email}
                         onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
                         placeholder="email@exemplo.com"
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
-                    {/* 🆕 DROPDOWN DE REPRESENTANTE CORRIGIDO */}
                     <div className="col-span-2">
                       <Label htmlFor="representante_id">Representante</Label>
                       <Select
@@ -670,7 +731,7 @@ const Clientes = () => {
                         }
                         placeholder="(00) 00000-0000"
                         maxLength={15}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div>
@@ -683,7 +744,7 @@ const Clientes = () => {
                         }
                         placeholder="00000-000"
                         maxLength={9}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div className="col-span-2">
@@ -693,7 +754,7 @@ const Clientes = () => {
                         value={novoCliente.endereco}
                         onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
                         placeholder="Rua, número, complemento"
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div>
@@ -703,7 +764,7 @@ const Clientes = () => {
                         value={novoCliente.cidade}
                         onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
                         placeholder="Nome da cidade"
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     <div>
@@ -711,7 +772,7 @@ const Clientes = () => {
                       <Select
                         value={novoCliente.estado}
                         onValueChange={(value) => setNovoCliente({ ...novoCliente, estado: value })}
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       >
                         <SelectTrigger id="estado">
                           <SelectValue placeholder="Selecione o estado" />
@@ -734,14 +795,14 @@ const Clientes = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => setDialogOpen(false)}
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
                   >
                     Cancelar
                   </Button>
                   <Button 
                     className="bg-gradient-primary" 
                     onClick={handleCreateCliente}
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
                   >
                     {isCreating ? (
                       <>
@@ -762,7 +823,7 @@ const Clientes = () => {
         }
       />
 
-      {/* 🆕 FILTROS E BUSCA MODIFICADOS */}
+      {/* Filtros e busca */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
@@ -779,7 +840,6 @@ const Clientes = () => {
             </Select>
           </div>
           
-          {/* 🆕 FILTRO POR REPRESENTANTE */}
           <div className="flex gap-2 items-center">
             <UserCheck className="h-4 w-4 text-muted-foreground" />
             <Select value={filterRepresentante} onValueChange={setFilterRepresentante}>
@@ -887,8 +947,14 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de detalhes do cliente */}
-      <Dialog open={!!detalhesCliente} onOpenChange={open => !open && setDetalhesCliente(null)}>
+      {/* 🆕 MODAL DE DETALHES MODIFICADO COM EDIÇÃO DE REPRESENTANTE */}
+      <Dialog open={!!detalhesCliente} onOpenChange={open => {
+        if (!open) {
+          setDetalhesCliente(null);
+          setEditandoRepresentante(false);
+          setNovoRepresentanteId("");
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Cliente</DialogTitle>
@@ -921,19 +987,92 @@ const Clientes = () => {
                     <Label className="text-xs text-muted-foreground">Telefone:</Label>
                     <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
                   </div>
-                  {/* 🆕 REPRESENTANTE ADICIONADO */}
+                  
+                  {/* 🆕 SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
                   <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Representante:</Label>
-                    <div className="mt-1">
-                      {detalhesCliente.representantes ? (
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="h-4 w-4 text-primary" />
-                          <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Nenhum representante atribuído</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs text-muted-foreground">Representante:</Label>
+                      {canCreate && !editandoRepresentante && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleIniciarEdicao}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Edit3 className="h-3 w-3 mr-1" />
+                          Editar
+                        </Button>
                       )}
                     </div>
+                    
+                    {editandoRepresentante ? (
+                      // 🆕 MODO DE EDIÇÃO
+                      <div className="space-y-3">
+                        <Select
+                          value={novoRepresentanteId}
+                          onValueChange={setNovoRepresentanteId}
+                          disabled={salvandoRepresentante}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um representante" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">
+                              <span className="text-muted-foreground">Sem representante</span>
+                            </SelectItem>
+                            {representantes.filter(rep => rep.ativo).map((rep) => (
+                              <SelectItem key={rep.id} value={rep.id}>
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="h-4 w-4" />
+                                  {rep.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSalvarRepresentante}
+                            disabled={salvandoRepresentante}
+                            className="flex-1"
+                          >
+                            {salvandoRepresentante ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Salvando...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-3 w-3 mr-1" />
+                                Salvar
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelarEdicao}
+                            disabled={salvandoRepresentante}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // 🆕 MODO DE VISUALIZAÇÃO
+                      <div className="mt-1">
+                        {detalhesCliente.representantes ? (
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="h-4 w-4 text-primary" />
+                            <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Nenhum representante atribuído</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
       
@@ -993,7 +1132,6 @@ const Clientes = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{cliente.nome}</h3>
                   <p className="text-sm text-muted-foreground">{cliente.email}</p>
-                  {/* 🆕 REPRESENTANTE ADICIONADO NO CARD */}
                   {cliente.representantes && (
                     <div className="flex items-center gap-1 mt-1">
                       <UserCheck className="h-3 w-3 text-primary" />
@@ -1037,16 +1175,14 @@ const Clientes = () => {
                   <Label htmlFor={`switch-${cliente.id}`} className="text-sm">
                     {cliente.ativo ? "Ativo" : "Inativo"}
                   </Label>
-                  {/* 🚀 SWITCH COM LOADING STATE */}
                   <div className="relative">
                     <Switch
                       id={`switch-${cliente.id}`}
                       checked={cliente.ativo}
                       onCheckedChange={() => handleToggleAtivo(cliente.id, cliente.ativo)}
                       onClick={e => e.stopPropagation()}
-                      disabled={isTogglingStatus[cliente.id]} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isTogglingStatus[cliente.id]}
                     />
-                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
                     {isTogglingStatus[cliente.id] && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Loader2 className="h-3 w-3 animate-spin" />
