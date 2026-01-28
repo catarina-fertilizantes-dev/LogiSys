@@ -15,6 +15,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck, Edit3, Save, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,6 +181,9 @@ const Clientes = () => {
   const [novoRepresentanteId, setNovoRepresentanteId] = useState<string>("");
   const [salvandoRepresentante, setSalvandoRepresentante] = useState(false);
 
+  // 🆕 ESTADOS PARA CONTROLE DE FECHAMENTO DO MODAL
+  const [alertaSalvarAberto, setAlertaSalvarAberto] = useState(false);
+
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [filterRepresentante, setFilterRepresentante] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -191,6 +204,36 @@ const Clientes = () => {
       cep: "",
       representante_id: "",
     });
+  };
+
+  // 🆕 FUNÇÃO PARA RESETAR ESTADOS DE EDIÇÃO
+  const resetEdicaoStates = () => {
+    setEditandoRepresentante(false);
+    setNovoRepresentanteId("");
+    setAlertaSalvarAberto(false);
+  };
+
+  // 🆕 FUNÇÃO PARA FECHAR MODAL COM VERIFICAÇÃO
+  const handleFecharModal = () => {
+    if (editandoRepresentante) {
+      setAlertaSalvarAberto(true);
+    } else {
+      setDetalhesCliente(null);
+      resetEdicaoStates();
+    }
+  };
+
+  // 🆕 FUNÇÃO PARA CONFIRMAR FECHAMENTO SEM SALVAR
+  const handleConfirmarFechamento = () => {
+    setDetalhesCliente(null);
+    resetEdicaoStates();
+  };
+
+  // 🆕 FUNÇÃO PARA SALVAR E FECHAR
+  const handleSalvarEFechar = async () => {
+    await handleSalvarRepresentante();
+    setDetalhesCliente(null);
+    resetEdicaoStates();
   };
 
   // Função para buscar representantes
@@ -250,14 +293,14 @@ const Clientes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE - CORRIGIDA
+  // FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE - CORRIGIDA
   const handleSalvarRepresentante = async () => {
     if (!detalhesCliente) return;
 
     setSalvandoRepresentante(true);
 
     try {
-      // 🆕 TRATAR O VALOR "sem-representante" COMO NULL
+      // TRATAR O VALOR "sem-representante" COMO NULL
       const representanteIdParaSalvar = novoRepresentanteId === "sem-representante" ? null : novoRepresentanteId;
       
       const { error } = await supabase
@@ -306,8 +349,7 @@ const Clientes = () => {
       }
 
       // Resetar estados de edição
-      setEditandoRepresentante(false);
-      setNovoRepresentanteId("");
+      resetEdicaoStates();
 
     } catch (err) {
       toast({
@@ -322,14 +364,14 @@ const Clientes = () => {
 
   // Função para cancelar edição
   const handleCancelarEdicao = () => {
-    setEditandoRepresentante(false);
+    resetEdicaoStates();
     setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
-  // 🆕 FUNÇÃO PARA INICIAR EDIÇÃO - CORRIGIDA
+  // FUNÇÃO PARA INICIAR EDIÇÃO - CORRIGIDA
   const handleIniciarEdicao = () => {
     setEditandoRepresentante(true);
-    // 🆕 SE NÃO TEM REPRESENTANTE, USAR "sem-representante"
+    // SE NÃO TEM REPRESENTANTE, USAR "sem-representante"
     setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
@@ -951,14 +993,35 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 MODAL DE DETALHES MODIFICADO COM ALERTA PARA CLIENTE INATIVO */}
-      <Dialog open={!!detalhesCliente} onOpenChange={open => {
-        if (!open) {
-          setDetalhesCliente(null);
-          setEditandoRepresentante(false);
-          setNovoRepresentanteId("");
-        }
-      }}>
+      {/* 🆕 ALERT DIALOG PARA SALVAR ANTES DE FECHAR */}
+      <AlertDialog open={alertaSalvarAberto} onOpenChange={setAlertaSalvarAberto}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Salvar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem alterações não salvas na edição do representante. Deseja salvar antes de fechar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleConfirmarFechamento}>
+              Fechar sem salvar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleSalvarEFechar}>
+              Salvar e fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🆕 MODAL DE DETALHES MODIFICADO COM CONTROLE DE FECHAMENTO */}
+      <Dialog 
+        open={!!detalhesCliente} 
+        onOpenChange={(open) => {
+          if (!open) {
+            handleFecharModal();
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Cliente</DialogTitle>
@@ -969,7 +1032,7 @@ const Clientes = () => {
           <div className="space-y-4 py-4">
             {detalhesCliente && (
               <>
-                {/* 🆕 ALERTA PARA CLIENTE INATIVO */}
+                {/* ALERTA PARA CLIENTE INATIVO */}
                 {!detalhesCliente.ativo && editandoRepresentante && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
                     <div className="flex items-start gap-2">
@@ -1004,7 +1067,7 @@ const Clientes = () => {
                     <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
                   </div>
                   
-                  {/* 🆕 SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
+                  {/* SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-xs text-muted-foreground">Representante:</Label>
@@ -1022,7 +1085,7 @@ const Clientes = () => {
                     </div>
                     
                     {editandoRepresentante ? (
-                      // 🆕 MODO DE EDIÇÃO
+                      // MODO DE EDIÇÃO
                       <div className="space-y-3">
                         <Select
                           value={novoRepresentanteId}
@@ -1033,7 +1096,7 @@ const Clientes = () => {
                             <SelectValue placeholder="Selecione um representante" />
                           </SelectTrigger>
                           <SelectContent>
-                            {/* 🆕 VALOR CORRIGIDO */}
+                            {/* VALOR CORRIGIDO */}
                             <SelectItem value="sem-representante">
                               <span className="text-muted-foreground">Sem representante</span>
                             </SelectItem>
@@ -1078,7 +1141,7 @@ const Clientes = () => {
                         </div>
                       </div>
                     ) : (
-                      // 🆕 MODO DE VISUALIZAÇÃO
+                      // MODO DE VISUALIZAÇÃO
                       <div className="mt-1">
                         {detalhesCliente.representantes ? (
                           <div className="flex items-center gap-2">
@@ -1124,50 +1187,59 @@ const Clientes = () => {
                 variant="outline"
                 onClick={() => handleShowCredentials(detalhesCliente)}
                 className="flex-1"
+                disabled={editandoRepresentante} // 🆕 DESABILITAR DURANTE EDIÇÃO
               >
                 <Key className="h-4 w-4 mr-2" />
                 Ver Credenciais
               </Button>
             )}
-            <Button onClick={() => setDetalhesCliente(null)}>
+            <Button 
+              onClick={handleFecharModal}
+              disabled={editandoRepresentante} // 🆕 DESABILITAR DURANTE EDIÇÃO
+            >
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 LISTA DE CLIENTES COM LAYOUT MODIFICADO */}
+      {/* 🆕 LISTA DE CLIENTES COM LAYOUT MODIFICADO PARA ALINHAMENTO PERFEITO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClientes.map((cliente) => (
           <Card
             key={cliente.id}
             className="cursor-pointer transition-all"
-            onClick={() => setDetalhesCliente(cliente)}
+            onClick={() => {
+              setDetalhesCliente(cliente);
+              resetEdicaoStates(); // 🆕 RESETAR ESTADOS AO ABRIR NOVO MODAL
+            }}
           >
             <CardContent className="p-4 space-y-3">
-              {/* 🆕 LAYOUT MODIFICADO CONFORME ESPECIFICADO */}
+              {/* 🆕 LAYOUT MODIFICADO PARA ALINHAMENTO PERFEITO */}
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">{cliente.nome}</h3>
                 <p className="text-sm text-muted-foreground">{cliente.email}</p>
-                
-                {/* 🆕 REPRESENTANTE (SE HOUVER) */}
-                {cliente.representantes && (
-                  <div className="flex items-center gap-1">
-                    <UserCheck className="h-3 w-3 text-primary" />
-                    <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
-                  </div>
-                )}
-                
-                {/* 🆕 CNPJ/CPF SEMPRE VISÍVEL */}
                 <p className="text-sm">
                   <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(cliente.cnpj_cpf)}
                 </p>
+                
+                {/* 🆕 ESPAÇO RESERVADO PARA REPRESENTANTE - ALTURA FIXA */}
+                <div className="h-5 flex items-center">
+                  {cliente.representantes ? (
+                    <div className="flex items-center gap-1">
+                      <UserCheck className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
+                    </div>
+                  ) : (
+                    <div></div> // 🆕 DIV VAZIA PARA MANTER ALTURA
+                  )}
+                </div>
               </div>
               
-              {/* 🆕 SEPARADOR */}
+              {/* Separador */}
               <div className="border-t"></div>
               
-              {/* 🆕 BADGE E SWITCH NA MESMA LINHA */}
+              {/* Badge e switch na mesma linha */}
               {canCreate && (
                 <div className="flex items-center justify-between">
                   <Badge variant={cliente.ativo ? "default" : "secondary"}>
@@ -1193,6 +1265,7 @@ const Clientes = () => {
           </Card>
         ))}
       </div>
+      
       {filteredClientes.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
