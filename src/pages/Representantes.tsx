@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox"; // 🆕 ADICIONADO
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCheck, Plus, Filter as FilterIcon, Key, Loader2, X, Users, Eye } from "lucide-react";
+import { UserCheck, Plus, Filter as FilterIcon, Key, Loader2, X, Users, Eye, Settings } from "lucide-react"; // 🆕 Settings ADICIONADO
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,17 @@ type Representante = Database['public']['Tables']['representantes']['Row'] & {
     cnpj_cpf: string;
     ativo: boolean;
   }>;
+};
+
+// 🆕 TIPO PARA CLIENTES NO MODAL DE GERENCIAMENTO
+type ClienteParaGerenciamento = {
+  id: string;
+  nome: string;
+  email: string;
+  cnpj_cpf: string;
+  ativo: boolean;
+  representante_id: string | null;
+  representante_nome?: string | null;
 };
 
 // Helpers de formatação
@@ -119,7 +131,7 @@ const Representantes = () => {
 
   const [detalhesRepresentante, setDetalhesRepresentante] = useState<Representante | null>(null);
   
-  // 🆕 MODAL PARA CLIENTES DO REPRESENTANTE
+  // Modal para clientes do representante
   const [clientesModal, setClientesModal] = useState({
     show: false,
     representante: null as Representante | null,
@@ -131,6 +143,16 @@ const Representantes = () => {
       ativo: boolean;
     }>,
     loading: false,
+  });
+
+  // 🆕 MODAL PARA GERENCIAR CLIENTES
+  const [gerenciarClientesModal, setGerenciarClientesModal] = useState({
+    show: false,
+    representante: null as Representante | null,
+    todosClientes: [] as ClienteParaGerenciamento[],
+    clientesSelecionados: new Set<string>(),
+    loading: false,
+    saving: false,
   });
 
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
@@ -150,7 +172,7 @@ const Representantes = () => {
     });
   };
 
-  // 🆕 QUERY MODIFICADA PARA INCLUIR CONTAGEM DE CLIENTES
+  // Query modificada para incluir contagem de clientes
   const fetchRepresentantes = async () => {
     setLoading(true);
     setError(null);
@@ -175,7 +197,7 @@ const Representantes = () => {
         return;
       }
 
-      // 🆕 PROCESSAR DADOS PARA INCLUIR CONTAGEM
+      // Processar dados para incluir contagem
       const representantesComContagem = data?.map(rep => ({
         ...rep,
         clientes_count: rep.clientes?.[0]?.count || 0
@@ -194,7 +216,7 @@ const Representantes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA BUSCAR CLIENTES DO REPRESENTANTE
+  // Função para buscar clientes do representante
   const fetchClientesRepresentante = async (representanteId: string, representanteNome: string) => {
     setClientesModal(prev => ({ ...prev, loading: true }));
     
@@ -231,6 +253,175 @@ const Representantes = () => {
       });
       setClientesModal(prev => ({ ...prev, loading: false }));
     }
+  };
+
+  // 🆕 FUNÇÃO PARA BUSCAR TODOS OS CLIENTES PARA GERENCIAMENTO
+  const fetchTodosClientesParaGerenciamento = async (representante: Representante) => {
+    setGerenciarClientesModal(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select(`
+          id, 
+          nome, 
+          email, 
+          cnpj_cpf, 
+          ativo, 
+          representante_id,
+          representantes:representante_id (
+            nome
+          )
+        `)
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar clientes",
+          description: "Não foi possível carregar a lista de clientes.",
+        });
+        return;
+      }
+
+      // Processar dados e identificar clientes já atribuídos ao representante
+      const clientesProcessados: ClienteParaGerenciamento[] = data?.map(cliente => ({
+        id: cliente.id,
+        nome: cliente.nome,
+        email: cliente.email,
+        cnpj_cpf: cliente.cnpj_cpf,
+        ativo: cliente.ativo,
+        representante_id: cliente.representante_id,
+        representante_nome: cliente.representantes?.nome || null,
+      })) || [];
+
+      // Identificar clientes já atribuídos ao representante atual
+      const clientesJaAtribuidos = new Set(
+        clientesProcessados
+          .filter(cliente => cliente.representante_id === representante.id)
+          .map(cliente => cliente.id)
+      );
+
+      setGerenciarClientesModal({
+        show: true,
+        representante,
+        todosClientes: clientesProcessados,
+        clientesSelecionados: clientesJaAtribuidos,
+        loading: false,
+        saving: false,
+      });
+
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar clientes",
+        description: "Erro inesperado ao carregar clientes.",
+      });
+      setGerenciarClientesModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÕES DE ATRIBUIÇÃO
+  const handleSalvarAtribuicoes = async () => {
+    const { representante, todosClientes, clientesSelecionados } = gerenciarClientesModal;
+    
+    if (!representante) return;
+
+    setGerenciarClientesModal(prev => ({ ...prev, saving: true }));
+
+    try {
+      // Identificar mudanças
+      const clientesAtuais = new Set(
+        todosClientes
+          .filter(cliente => cliente.representante_id === representante.id)
+          .map(cliente => cliente.id)
+      );
+
+      const clientesParaAtribuir = Array.from(clientesSelecionados).filter(id => !clientesAtuais.has(id));
+      const clientesParaDesatribuir = Array.from(clientesAtuais).filter(id => !clientesSelecionados.has(id));
+
+      // Atribuir novos clientes
+      if (clientesParaAtribuir.length > 0) {
+        const { error: errorAtribuir } = await supabase
+          .from("clientes")
+          .update({ 
+            representante_id: representante.id,
+            updated_at: new Date().toISOString()
+          })
+          .in("id", clientesParaAtribuir);
+
+        if (errorAtribuir) {
+          throw errorAtribuir;
+        }
+      }
+
+      // Desatribuir clientes removidos
+      if (clientesParaDesatribuir.length > 0) {
+        const { error: errorDesatribuir } = await supabase
+          .from("clientes")
+          .update({ 
+            representante_id: null,
+            updated_at: new Date().toISOString()
+          })
+          .in("id", clientesParaDesatribuir);
+
+        if (errorDesatribuir) {
+          throw errorDesatribuir;
+        }
+      }
+
+      const totalMudancas = clientesParaAtribuir.length + clientesParaDesatribuir.length;
+      
+      if (totalMudancas > 0) {
+        toast({
+          title: "Atribuições atualizadas com sucesso!",
+          description: `${clientesParaAtribuir.length} cliente(s) atribuído(s), ${clientesParaDesatribuir.length} cliente(s) desatribuído(s).`,
+        });
+
+        // Recarregar dados
+        fetchRepresentantes();
+      } else {
+        toast({
+          title: "Nenhuma alteração detectada",
+          description: "As atribuições permanecem inalteradas.",
+        });
+      }
+
+      // Fechar modal
+      setGerenciarClientesModal({
+        show: false,
+        representante: null,
+        todosClientes: [],
+        clientesSelecionados: new Set(),
+        loading: false,
+        saving: false,
+      });
+
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar atribuições",
+        description: err instanceof Error ? err.message : "Erro desconhecido",
+      });
+      setGerenciarClientesModal(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  // 🆕 FUNÇÃO PARA TOGGLE DE CLIENTE INDIVIDUAL
+  const handleToggleCliente = (clienteId: string) => {
+    setGerenciarClientesModal(prev => {
+      const novoSet = new Set(prev.clientesSelecionados);
+      if (novoSet.has(clienteId)) {
+        novoSet.delete(clienteId);
+      } else {
+        novoSet.add(clienteId);
+      }
+      return {
+        ...prev,
+        clientesSelecionados: novoSet,
+      };
+    });
   };
 
   useEffect(() => {
@@ -454,7 +645,7 @@ const Representantes = () => {
     });
   }, [representantes, filterStatus, searchTerm]);
   
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  // Verificar se há filtros ativos
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
 
   const canCreate = hasRole("logistica") || hasRole("admin");
@@ -706,7 +897,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 MODAL DE CLIENTES DO REPRESENTANTE */}
+      {/* Modal de clientes do representante */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
@@ -769,6 +960,133 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 🆕 MODAL PARA GERENCIAR CLIENTES */}
+      <Dialog 
+        open={gerenciarClientesModal.show} 
+        onOpenChange={(open) => !open && setGerenciarClientesModal({ 
+          show: false, 
+          representante: null, 
+          todosClientes: [], 
+          clientesSelecionados: new Set(), 
+          loading: false, 
+          saving: false 
+        })}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Gerenciar Clientes
+            </DialogTitle>
+            <DialogDescription>
+              {gerenciarClientesModal.representante?.nome} - Selecione os clientes que este representante deve gerenciar
+            </DialogDescription>
+          </DialogHeader>
+          
+          {gerenciarClientesModal.loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Carregando clientes...</span>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="font-medium">
+                    {gerenciarClientesModal.clientesSelecionados.size} de {gerenciarClientesModal.todosClientes.length} clientes selecionados
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Marque os clientes que devem ser gerenciados por este representante
+                  </p>
+                </div>
+              </div>
+              
+              {gerenciarClientesModal.todosClientes.length > 0 ? (
+                <div className="grid gap-2 max-h-96 overflow-y-auto">
+                  {gerenciarClientesModal.todosClientes.map((cliente) => {
+                    const isSelected = gerenciarClientesModal.clientesSelecionados.has(cliente.id);
+                    const temOutroRepresentante = cliente.representante_id && cliente.representante_id !== gerenciarClientesModal.representante?.id;
+                    
+                    return (
+                      <Card key={cliente.id} className={`p-3 transition-colors ${isSelected ? 'bg-primary/5 border-primary/20' : ''}`}>
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id={`cliente-${cliente.id}`}
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleCliente(cliente.id)}
+                            disabled={gerenciarClientesModal.saving}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Label 
+                                htmlFor={`cliente-${cliente.id}`} 
+                                className="font-medium cursor-pointer"
+                              >
+                                {cliente.nome}
+                              </Label>
+                              <Badge variant={cliente.ativo ? "default" : "secondary"}>
+                                {cliente.ativo ? "Ativo" : "Inativo"}
+                              </Badge>
+                              {temOutroRepresentante && (
+                                <Badge variant="outline" className="text-xs">
+                                  Atribuído a: {cliente.representante_nome}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>{cliente.email}</span>
+                              <span>CNPJ/CPF: {formatCPFCNPJ(cliente.cnpj_cpf)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Nenhum cliente ativo encontrado no sistema
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setGerenciarClientesModal({ 
+                show: false, 
+                representante: null, 
+                todosClientes: [], 
+                clientesSelecionados: new Set(), 
+                loading: false, 
+                saving: false 
+              })}
+              disabled={gerenciarClientesModal.saving}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSalvarAtribuicoes}
+              disabled={gerenciarClientesModal.saving || gerenciarClientesModal.loading}
+              className="bg-gradient-primary"
+            >
+              {gerenciarClientesModal.saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar Alterações"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de detalhes do representante */}
       <Dialog open={!!detalhesRepresentante} onOpenChange={open => !open && setDetalhesRepresentante(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -806,7 +1124,7 @@ const Representantes = () => {
                     <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
                     <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                   </div>
-                  {/* 🆕 INFORMAÇÃO DE CLIENTES ADICIONADA */}
+                  {/* Informação de clientes */}
                   <div className="col-span-2">
                     <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
                     <div className="flex items-center gap-2 mt-1">
@@ -849,7 +1167,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 LISTA DE REPRESENTANTES MODIFICADA */}
+      {/* Lista de representantes modificada */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
@@ -862,7 +1180,7 @@ const Representantes = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{representante.nome}</h3>
                   <p className="text-sm text-muted-foreground">{representante.email}</p>
-                  {/* 🆕 BADGE COM CONTAGEM DE CLIENTES */}
+                  {/* Badge com contagem de clientes */}
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
@@ -902,9 +1220,10 @@ const Representantes = () => {
                 )}
               </div>
               
-              {/* 🆕 BOTÃO "VER CLIENTES" ADICIONADO */}
-              {(representante.clientes_count || 0) > 0 && (
-                <div className="pt-2 border-t">
+              {/* 🆕 BOTÕES DE AÇÃO MODIFICADOS */}
+              <div className="space-y-2 pt-2 border-t">
+                {/* Botão Ver Clientes */}
+                {(representante.clientes_count || 0) > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -917,8 +1236,24 @@ const Representantes = () => {
                     <Eye className="h-3 w-3 mr-2" />
                     Ver Clientes ({representante.clientes_count})
                   </Button>
-                </div>
-              )}
+                )}
+                
+                {/* 🆕 BOTÃO GERENCIAR CLIENTES */}
+                {canCreate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetchTodosClientesParaGerenciamento(representante);
+                    }}
+                    className="w-full text-xs"
+                  >
+                    <Settings className="h-3 w-3 mr-2" />
+                    Gerenciar Clientes
+                  </Button>
+                )}
+              </div>
               
               {canCreate && (
                 <div className="flex items-center justify-between pt-3 border-t">
