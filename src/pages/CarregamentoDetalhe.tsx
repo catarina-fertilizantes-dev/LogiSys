@@ -24,7 +24,8 @@ import {
   ArrowLeft,
   Camera,
   Upload,
-  X
+  X,
+  Image
 } from "lucide-react";
 
 const ETAPAS = [
@@ -877,43 +878,39 @@ const CarregamentoDetalhe = () => {
             </div>
           ) : podeEditar ? (
             // Etapa atual - usuário armazém pode editar
-            <div className="space-y-3">
+            <div className="space-y-3">             
               <div>
                 <label className="text-sm font-semibold block mb-2">
                   {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
                 </label>
                 
-                {/* 🆕 Botões de captura/upload */}
+                {/* 🆕 Botão único para anexar foto */}
                 <div className="space-y-3">
-                  {canUseCamera && (
-                    <div className="flex gap-2">
-                      {/* Botão câmera */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStartPhotoCapture(selectedEtapa)}
-                        disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                        className="flex items-center gap-2"
-                      >
-                        <Camera className="h-4 w-4" />
-                        📸 Tirar Foto
-                      </Button>
-                      
-                      {/* Botão upload tradicional */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                        disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                        className="flex items-center gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        📎 Anexar Arquivo
-                      </Button>
-                    </div>
+                  {canUseCamera ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStartPhotoCapture(selectedEtapa)}
+                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                      className="flex items-center gap-2"
+                    >
+                      <Image className="h-4 w-4" />
+                      📷 Anexar Foto
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      📎 Anexar Arquivo
+                    </Button>
                   )}
                   
-                  {/* Input de arquivo (oculto se houver câmera) */}
+                  {/* Input de arquivo (oculto) */}
                   <Input
                     id="file-upload"
                     type="file"
@@ -923,7 +920,7 @@ const CarregamentoDetalhe = () => {
                       console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo selecionado:", file?.name);
                       setStageFile(file);
                     }}
-                    className={`w-full text-sm ${canUseCamera ? 'hidden' : ''}`}
+                    className="hidden"
                     disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                   />
                   
