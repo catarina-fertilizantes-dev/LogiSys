@@ -24,8 +24,7 @@ import {
   ArrowLeft,
   Camera,
   Upload,
-  X,
-  Image
+  X
 } from "lucide-react";
 
 const ETAPAS = [
@@ -884,7 +883,7 @@ const CarregamentoDetalhe = () => {
                   {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
                 </label>
                 
-                {/* 🆕 Botão único para anexar foto */}
+                {/* 🆕 Botão único para anexar foto - ÍCONE CORRIGIDO */}
                 <div className="space-y-3">
                   {canUseCamera ? (
                     <Button
@@ -894,8 +893,8 @@ const CarregamentoDetalhe = () => {
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                       className="flex items-center gap-2"
                     >
-                      <Image className="h-4 w-4" />
-                      📷 Anexar Foto
+                      <Camera className="h-4 w-4" />
+                      Anexar Foto
                     </Button>
                   ) : (
                     <Button
@@ -906,7 +905,7 @@ const CarregamentoDetalhe = () => {
                       className="flex items-center gap-2"
                     >
                       <Upload className="h-4 w-4" />
-                      📎 Anexar Arquivo
+                      Anexar Arquivo
                     </Button>
                   )}
                   
