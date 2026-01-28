@@ -433,6 +433,9 @@ const Armazens = () => {
       return true;
     });
   }, [armazens, filterStatus, searchTerm]);
+  
+  // �� VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
 
   if (loading) {
     return (
@@ -658,18 +661,20 @@ const Armazens = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
           />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => {
-              setSearchTerm("");
-              setFilterStatus("all");
-            }}
-            className="gap-1"
-          >
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setSearchTerm("");
+                setFilterStatus("all");
+              }}
+              className="gap-1"
+            >
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       </div>
 
@@ -915,10 +920,24 @@ const Armazens = () => {
         <div className="text-center py-12">
           <Warehouse className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {searchTerm || filterStatus !== "all"
+            {hasActiveFilters
               ? "Nenhum armazém encontrado com os filtros aplicados"
               : "Nenhum armazém cadastrado ainda"}
           </p>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                setSearchTerm("");
+                setFilterStatus("all");
+              }}
+              className="mt-2"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       )}
     </div>
