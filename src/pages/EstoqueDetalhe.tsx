@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +6,24 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { DocumentViewer } from "@/components/DocumentViewer";
-import { Loader2, ArrowLeft, Package, Calendar, Hash, User, MapPin } from "lucide-react";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Package, 
+  Calendar, 
+  Hash, 
+  User, 
+  MapPin,
+  Filter,
+  X,
+  TrendingUp,
+  Archive,
+  Layers
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface RemessaItem {
@@ -38,6 +53,14 @@ interface EstoqueDetalhes {
   remessas: RemessaItem[];
 }
 
+interface FiltrosState {
+  dataInicio: string;
+  dataFim: string;
+  numeroRemessa: string;
+  quantidadeMin: string;
+  quantidadeMax: string;
+}
+
 const formatarDataHora = (data: string) => {
   return new Date(data).toLocaleString("pt-BR", {
     day: "2-digit",
@@ -48,11 +71,25 @@ const formatarDataHora = (data: string) => {
   });
 };
 
+const formatarData = (data: string) => {
+  return new Date(data).toLocaleDateString("pt-BR");
+};
+
 const EstoqueDetalhe = () => {
   const { produtoId, armazemId } = useParams<{ produtoId: string; armazemId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
+
+  // Estados para filtros
+  const [filtros, setFiltros] = useState<FiltrosState>({
+    dataInicio: '',
+    dataFim: '',
+    numeroRemessa: '',
+    quantidadeMin: '',
+    quantidadeMax: ''
+  });
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
   // 🆕 BUSCAR ARMAZÉM DO USUÁRIO DIRETAMENTE (SEM ESTADO LOCAL)
   const { data: currentArmazem } = useQuery({
@@ -217,6 +254,68 @@ const EstoqueDetalhe = () => {
     }
   }, [isLoading, estoqueDetalhes, user?.id, userRole, currentArmazem, armazemId, navigate]);
 
+  // Função para aplicar filtros
+  const aplicarFiltros = (remessas: RemessaItem[]): RemessaItem[] => {
+    return remessas.filter(remessa => {
+      // Filtro por período
+      if (filtros.dataInicio) {
+        const dataRemessa = new Date(remessa.created_at);
+        const dataInicio = new Date(filtros.dataInicio);
+        if (dataRemessa < dataInicio) return false;
+      }
+
+      if (filtros.dataFim) {
+        const dataRemessa = new Date(remessa.created_at);
+        const dataFim = new Date(filtros.dataFim);
+        dataFim.setHours(23, 59, 59, 999); // Incluir o dia todo
+        if (dataRemessa > dataFim) return false;
+      }
+
+      // Filtro por número da remessa
+      if (filtros.numeroRemessa) {
+        const numeroFiltro = filtros.numeroRemessa.toLowerCase();
+        const numeroRemessa = (remessa.numero_remessa || '').toLowerCase();
+        const idRemessa = remessa.id.toLowerCase();
+        if (!numeroRemessa.includes(numeroFiltro) && !idRemessa.includes(numeroFiltro)) {
+          return false;
+        }
+      }
+
+      // Filtro por quantidade mínima
+      if (filtros.quantidadeMin) {
+        const quantidadeMin = parseFloat(filtros.quantidadeMin);
+        if (remessa.quantidade_original < quantidadeMin) return false;
+      }
+
+      // Filtro por quantidade máxima
+      if (filtros.quantidadeMax) {
+        const quantidadeMax = parseFloat(filtros.quantidadeMax);
+        if (remessa.quantidade_original > quantidadeMax) return false;
+      }
+
+      return true;
+    });
+  };
+
+  // Função para limpar filtros
+  const limparFiltros = () => {
+    setFiltros({
+      dataInicio: '',
+      dataFim: '',
+      numeroRemessa: '',
+      quantidadeMin: '',
+      quantidadeMax: ''
+    });
+  };
+
+  // Verificar se há filtros ativos
+  const temFiltrosAtivos = Object.values(filtros).some(valor => valor !== '');
+
+  // Calcular dados filtrados e totalizadores
+  const remessasFiltradas = estoqueDetalhes ? aplicarFiltros(estoqueDetalhes.remessas) : [];
+  const entradaTotal = remessasFiltradas.reduce((total, remessa) => total + remessa.quantidade_original, 0);
+  const numeroRemessasFiltradas = remessasFiltradas.length;
+
   // Renderizar card de remessa
   const renderRemessaCard = (remessa: RemessaItem) => (
     <Card key={remessa.id} className="transition-all hover:shadow-md">
@@ -364,12 +463,12 @@ const EstoqueDetalhe = () => {
       />
       
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Card de informações gerais */}
+        {/* Card de informações gerais com totalizadores */}
         <Card className="shadow-sm">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold mb-4">Informações do Estoque</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Informações do Produto */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -382,7 +481,7 @@ const EstoqueDetalhe = () => {
                     <p className="font-semibold">{estoqueDetalhes.produto.nome}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Quantidade Total:</span>
+                    <span className="text-sm text-muted-foreground">Estoque Atual:</span>
                     <p className="font-semibold text-lg text-primary">
                       {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                     </p>
@@ -408,6 +507,147 @@ const EstoqueDetalhe = () => {
                 </div>
               </div>
             </div>
+
+            {/* 🆕 TOTALIZADORES */}
+            <div className="pt-4 border-t">
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Totalizadores {temFiltrosAtivos && '(Filtrados)'}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Archive className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">Entrada Total</span>
+                  </div>
+                  <p className="text-lg font-bold text-green-700">
+                    {entradaTotal.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Estoque Atual</span>
+                  </div>
+                  <p className="text-lg font-bold text-blue-700">
+                    {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
+                  </p>
+                </div>
+
+                <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Layers className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-800">Nº Remessas</span>
+                  </div>
+                  <p className="text-lg font-bold text-purple-700">
+                    {numeroRemessasFiltradas}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 🆕 SEÇÃO DE FILTROS */}
+        <Card className="shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                Filtros de Remessas
+                {temFiltrosAtivos && (
+                  <Badge variant="secondary" className="ml-2">
+                    {Object.values(filtros).filter(v => v !== '').length} ativo(s)
+                  </Badge>
+                )}
+              </h3>
+              <div className="flex gap-2">
+                {temFiltrosAtivos && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={limparFiltros}
+                    className="text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                >
+                  <Filter className="h-3 w-3 mr-1" />
+                  {mostrarFiltros ? 'Ocultar' : 'Mostrar'}
+                </Button>
+              </div>
+            </div>
+
+            {mostrarFiltros && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                {/* Filtro de Período */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Período</Label>
+                  <div className="space-y-2">
+                    <Input
+                      type="date"
+                      placeholder="Data início"
+                      value={filtros.dataInicio}
+                      onChange={(e) => setFiltros(prev => ({ ...prev, dataInicio: e.target.value }))}
+                      className="text-xs"
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Data fim"
+                      value={filtros.dataFim}
+                      onChange={(e) => setFiltros(prev => ({ ...prev, dataFim: e.target.value }))}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Filtro de Número da Remessa */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Número da Remessa</Label>
+                  <Input
+                    type="text"
+                    placeholder="Digite o número ou ID..."
+                    value={filtros.numeroRemessa}
+                    onChange={(e) => setFiltros(prev => ({ ...prev, numeroRemessa: e.target.value }))}
+                    className="text-xs"
+                  />
+                </div>
+
+                {/* Filtro de Quantidade */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Quantidade ({estoqueDetalhes.produto.unidade})
+                  </Label>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Mínima"
+                      value={filtros.quantidadeMin}
+                      onChange={(e) => setFiltros(prev => ({ ...prev, quantidadeMin: e.target.value }))}
+                      className="text-xs"
+                      min="0"
+                      step="0.01"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Máxima"
+                      value={filtros.quantidadeMax}
+                      onChange={(e) => setFiltros(prev => ({ ...prev, quantidadeMax: e.target.value }))}
+                      className="text-xs"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -416,13 +656,42 @@ const EstoqueDetalhe = () => {
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">
-              Histórico de Remessas ({estoqueDetalhes.remessas.length})
+              Histórico de Remessas 
+              {temFiltrosAtivos ? (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({numeroRemessasFiltradas} de {estoqueDetalhes.remessas.length})
+                </span>
+              ) : (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({estoqueDetalhes.remessas.length})
+                </span>
+              )}
             </h2>
           </div>
           
           <div className="space-y-4">
-            {estoqueDetalhes.remessas.length > 0 ? (
-              estoqueDetalhes.remessas.map(renderRemessaCard)
+            {remessasFiltradas.length > 0 ? (
+              remessasFiltradas.map(renderRemessaCard)
+            ) : temFiltrosAtivos ? (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold text-muted-foreground mb-2">
+                    Nenhuma remessa encontrada
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Nenhuma remessa corresponde aos filtros aplicados.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={limparFiltros}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar Filtros
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center">
