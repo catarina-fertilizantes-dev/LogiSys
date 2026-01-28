@@ -374,6 +374,9 @@ const Estoque = () => {
     (selectedWarehouses.length && userRole !== "armazem" ? 1 : 0) + // Não conta filtro de armazém para usuário armazém
     (selectedStatuses.length ? 1 : 0) +
     ((dateFrom || dateTo) ? 1 : 0);
+  
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = search.trim() || selectedProdutos.length > 0 || selectedWarehouses.length > 0 || selectedStatuses.length > 0 || dateFrom || dateTo;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoProduto, setNovoProduto] = useState({
@@ -688,8 +691,21 @@ const Estoque = () => {
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            Nenhum produto em estoque encontrado
+            {hasActiveFilters
+              ? "Nenhum produto encontrado com os filtros aplicados"
+              : "Nenhum produto em estoque encontrado"}
           </p>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearFilters}
+              className="mt-2"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       );
     }
@@ -1035,15 +1051,17 @@ const Estoque = () => {
               Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
               {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearFilters} 
-              className="gap-1"
-            >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
-            </Button>
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters} 
+                className="gap-1"
+              >
+                <X className="h-4 w-4" /> 
+                Limpar Filtros
+              </Button>
+            )}
           </div>
 
           {/* 🆕 FILTROS SIMPLIFICADOS PARA ARMAZÉM SEM BOTÃO LIMPAR INTERNO */}
@@ -1121,15 +1139,17 @@ const Estoque = () => {
               Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
               {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearFilters} 
-              className="gap-1"
-            >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
-            </Button>
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters} 
+                className="gap-1"
+              >
+                <X className="h-4 w-4" /> 
+                Limpar Filtros
+              </Button>
+            )}
           </div>
 
           {/* 🆕 FILTROS COMPLETOS SEM BOTÃO LIMPAR INTERNO */}
@@ -1265,8 +1285,24 @@ const Estoque = () => {
               </div>
             ))}
             {filteredArmazens.length === 0 && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Nenhum armazém encontrado com os filtros atuais.
+              <div className="text-center py-12">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {hasActiveFilters
+                    ? "Nenhum armazém encontrado com os filtros aplicados"
+                    : "Nenhum estoque cadastrado ainda"}
+                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="mt-2"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
             )}
           </div>
