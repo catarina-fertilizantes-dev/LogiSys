@@ -250,40 +250,43 @@ const Clientes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE
+  // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE - CORRIGIDA
   const handleSalvarRepresentante = async () => {
     if (!detalhesCliente) return;
-
+  
     setSalvandoRepresentante(true);
-
+  
     try {
+      // 🆕 TRATAR O VALOR "sem-representante" COMO NULL
+      const representanteIdParaSalvar = novoRepresentanteId === "sem-representante" ? null : novoRepresentanteId;
+      
       const { error } = await supabase
         .from("clientes")
         .update({ 
-          representante_id: novoRepresentanteId || null,
+          representante_id: representanteIdParaSalvar,
           updated_at: new Date().toISOString()
         })
         .eq("id", detalhesCliente.id);
-
+  
       if (error) {
         throw error;
       }
-
+  
       // Buscar o nome do representante para exibir na mensagem
-      const representanteNome = novoRepresentanteId 
-        ? representantes.find(r => r.id === novoRepresentanteId)?.nome 
+      const representanteNome = representanteIdParaSalvar 
+        ? representantes.find(r => r.id === representanteIdParaSalvar)?.nome 
         : null;
-
+  
       toast({
         title: "Representante atualizado com sucesso!",
         description: representanteNome 
           ? `Cliente agora é representado por ${representanteNome}.`
           : "Representante removido do cliente.",
       });
-
+  
       // Recarregar dados
       await fetchClientes();
-
+  
       // Atualizar o cliente no modal
       const clienteAtualizado = await supabase
         .from("clientes")
@@ -297,15 +300,15 @@ const Clientes = () => {
         `)
         .eq("id", detalhesCliente.id)
         .single();
-
+  
       if (clienteAtualizado.data) {
         setDetalhesCliente(clienteAtualizado.data as Cliente);
       }
-
+  
       // Resetar estados de edição
       setEditandoRepresentante(false);
       setNovoRepresentanteId("");
-
+  
     } catch (err) {
       toast({
         variant: "destructive",
@@ -323,10 +326,11 @@ const Clientes = () => {
     setNovoRepresentanteId(detalhesCliente?.representante_id || "");
   };
 
-  // 🆕 FUNÇÃO PARA INICIAR EDIÇÃO
+  // 🆕 FUNÇÃO PARA INICIAR EDIÇÃO - CORRIGIDA
   const handleIniciarEdicao = () => {
     setEditandoRepresentante(true);
-    setNovoRepresentanteId(detalhesCliente?.representante_id || "");
+    // 🆕 SE NÃO TEM REPRESENTANTE, USAR "sem-representante"
+    setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
   useEffect(() => {
@@ -1006,7 +1010,7 @@ const Clientes = () => {
                     </div>
                     
                     {editandoRepresentante ? (
-                      // 🆕 MODO DE EDIÇÃO
+                      // MODO DE EDIÇÃO
                       <div className="space-y-3">
                         <Select
                           value={novoRepresentanteId}
@@ -1017,7 +1021,8 @@ const Clientes = () => {
                             <SelectValue placeholder="Selecione um representante" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">
+                            {/* 🆕 VALOR CORRIGIDO */}
+                            <SelectItem value="sem-representante">
                               <span className="text-muted-foreground">Sem representante</span>
                             </SelectItem>
                             {representantes.filter(rep => rep.ativo).map((rep) => (
@@ -1061,7 +1066,7 @@ const Clientes = () => {
                         </div>
                       </div>
                     ) : (
-                      // 🆕 MODO DE VISUALIZAÇÃO
+                      // MODO DE VISUALIZAÇÃO - continua igual
                       <div className="mt-1">
                         {detalhesCliente.representantes ? (
                           <div className="flex items-center gap-2">
