@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Camera, Upload, Smartphone, Monitor } from 'lucide-react';
 import CameraCapture from './CameraCapture';
 
@@ -21,7 +19,7 @@ export const PhotoCaptureMethod = ({
   disabled = false,
   accept = "image/*"
 }: PhotoCaptureMethodProps) => {
-  const [method, setMethod] = useState<'select' | 'camera' | 'upload'>('select');
+  const [method, setMethod] = useState<'select' | 'camera'>('select');
 
   // Detectar se é dispositivo móvel
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -31,11 +29,18 @@ export const PhotoCaptureMethod = ({
   // Verificar suporte à câmera
   const hasCameraSupport = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onFileSelect(file);
-    }
+  // 🆕 Função para abrir seletor de arquivo diretamente
+  const handleFileSelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        onFileSelect(file);
+      }
+    };
+    input.click();
   };
 
   if (method === 'camera') {
@@ -49,46 +54,6 @@ export const PhotoCaptureMethod = ({
     );
   }
 
-  if (method === 'upload') {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Upload className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">Upload de Arquivo</h3>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setMethod('select')}
-                disabled={isUploading}
-              >
-                Voltar
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="file-upload">Selecionar arquivo de imagem</Label>
-              <Input
-                id="file-upload"
-                type="file"
-                accept={accept}
-                onChange={handleFileUpload}
-                disabled={isUploading || disabled}
-                className="cursor-pointer"
-              />
-              <p className="text-xs text-muted-foreground">
-                Formatos aceitos: JPG, PNG, WebP (máx. 10MB)
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Seleção de método
   return (
     <Card>
@@ -96,9 +61,16 @@ export const PhotoCaptureMethod = ({
         <div className="space-y-4">
           <div className="text-center">
             <h3 className="font-semibold mb-2">Como deseja adicionar a foto?</h3>
-            <p className="text-sm text-muted-foreground">
-              Escolha entre capturar uma nova foto ou fazer upload de um arquivo
+            <p className="text-sm text-muted-foreground mb-4">
+              Escolha entre capturar uma nova foto ou selecionar um arquivo
             </p>
+            
+            {/* �� Informações sobre formatos aceitos */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-xs text-blue-700">
+                <strong>Formatos aceitos:</strong> JPG, PNG, WebP (máx. 10MB)
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -130,18 +102,18 @@ export const PhotoCaptureMethod = ({
               </Button>
             )}
 
-            {/* Opção Upload */}
+            {/* 🆕 Opção Upload - vai direto para seletor de arquivo */}
             <Button
               variant="outline"
-              onClick={() => setMethod('upload')}
+              onClick={handleFileSelect}
               disabled={isUploading || disabled}
               className="h-auto p-4 flex flex-col gap-2"
             >
               <Upload className="h-8 w-8 text-primary" />
               <div className="text-center">
-                <div className="font-medium">Upload de Arquivo</div>
+                <div className="font-medium">Selecionar Arquivo</div>
                 <div className="text-xs text-muted-foreground">
-                  Selecionar da galeria
+                  Escolher da galeria
                 </div>
               </div>
             </Button>
