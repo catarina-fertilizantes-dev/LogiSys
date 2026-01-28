@@ -378,6 +378,9 @@ const Carregamentos = () => {
   const activeAdvancedCount =
     (selectedStatus.length ? 1 : 0) + 
     ((dateFrom || dateTo) ? 1 : 0);
+  
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = search.trim() || selectedStatus.length > 0 || dateFrom || dateTo;
 
   // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE CARREGAMENTO
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
@@ -568,10 +571,12 @@ const Carregamentos = () => {
             Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
 
         {/* 🎯 FILTROS COM SISTEMA DE STATUS */}
@@ -616,8 +621,24 @@ const Carregamentos = () => {
           <div className="grid gap-4">
             {carregamentosAtivos.map(renderCarregamentoCard)}
             {carregamentosAtivos.length === 0 && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                {search.trim() ? "Nenhum carregamento ativo encontrado." : "Nenhum carregamento ativo no momento."}
+              <div className="text-center py-8">
+                <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {hasActiveFilters
+                    ? "Nenhum carregamento ativo encontrado com os filtros aplicados"
+                    : "Nenhum carregamento ativo no momento"}
+                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="mt-2"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -652,8 +673,24 @@ const Carregamentos = () => {
 
         {/* Mensagem quando não há dados */}
         {carregamentosAtivos.length === 0 && carregamentosFinalizados.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">
-            Nenhum carregamento encontrado.
+          <div className="text-center py-12">
+            <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {hasActiveFilters
+                ? "Nenhum carregamento encontrado com os filtros aplicados"
+                : "Nenhum carregamento cadastrado ainda"}
+            </p>
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+                className="mt-2"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar Filtros
+              </Button>
+            )}
           </div>
         )}
       </div>
