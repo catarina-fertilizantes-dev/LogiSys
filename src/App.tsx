@@ -16,6 +16,7 @@ import CarregamentoDetalhe from "./pages/CarregamentoDetalhe";
 import Produtos from "./pages/Produtos";
 import Armazens from "./pages/Armazens";
 import Clientes from "./pages/Clientes";
+import Representantes from "./pages/Representantes"; // 🆕 IMPORT ADICIONADO
 import Colaboradores from "./pages/Colaboradores";
 import AuthPage from "./pages/AuthPage";
 import ChangePassword from "./pages/ChangePassword";
@@ -179,6 +180,17 @@ const App = () => (
                 <ProtectedRoute resource="clientes">
                   <Layout>
                     <Clientes />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* 🆕 NOVA ROTA ADICIONADA */}
+            <Route
+              path="/representantes"
+              element={
+                <ProtectedRoute resource="representantes">
+                  <Layout>
+                    <Representantes />
                   </Layout>
                 </ProtectedRoute>
               }
