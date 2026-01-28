@@ -304,6 +304,9 @@ const EstoqueDetalhe = () => {
     (search.trim() ? 1 : 0) +
     (dateFrom || dateTo ? 1 : 0) +
     (quantidadeMin.trim() || quantidadeMax.trim() ? 1 : 0);
+  
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = search.trim() || dateFrom || dateTo || quantidadeMin.trim() || quantidadeMax.trim();
 
   // Renderizar card de remessa
   const renderRemessaCard = (remessa: RemessaItem) => (
@@ -543,15 +546,17 @@ const EstoqueDetalhe = () => {
             Filtros {activeFiltersCount ? `(${activeFiltersCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearFilters} 
-            className="gap-1"
-          >
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters} 
+              className="gap-1"
+            >
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
 
         {/* 🆕 FILTROS AVANÇADOS SEM BOTÃO LIMPAR INTERNO */}
@@ -630,7 +635,7 @@ const EstoqueDetalhe = () => {
           <div className="space-y-4">
             {remessasFiltradas.length > 0 ? (
               remessasFiltradas.map(renderRemessaCard)
-            ) : activeFiltersCount > 0 ? (
+            ) : hasActiveFilters ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center">
                   <FilterIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
