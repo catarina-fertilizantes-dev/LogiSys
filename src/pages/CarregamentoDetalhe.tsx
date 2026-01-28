@@ -10,7 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentViewer } from "@/components/DocumentViewer";
-import { Loader2, CheckCircle, ArrowRight, User, Truck, Calendar, Hash, Clock, ArrowLeft } from "lucide-react";
+import PhotoCaptureMethod from "@/components/PhotoCaptureMethod";
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { 
+  Loader2, 
+  CheckCircle, 
+  ArrowRight, 
+  User, 
+  Truck, 
+  Calendar, 
+  Hash, 
+  Clock, 
+  ArrowLeft,
+  Camera,
+  Upload,
+  X
+} from "lucide-react";
 
 const ETAPAS = [
   { 
@@ -103,9 +118,96 @@ const CarregamentoDetalhe = () => {
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
 
+  // 🆕 Estados para captura de foto
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [currentPhotoEtapa, setCurrentPhotoEtapa] = useState<number | null>(null);
+
+  // 🆕 Hook de upload de fotos
+  const { uploadPhoto, isUploading: isUploadingPhoto } = usePhotoUpload({
+    bucket: 'carregamento-fotos',
+    folder: id || 'unknown'
+  });
+
   // Função para voltar à página pai
   const handleGoBack = () => {
     navigate("/carregamentos");
+  };
+
+  // 🆕 Função para iniciar captura de foto
+  const handleStartPhotoCapture = (etapa: number) => {
+    console.log("🔍 [DEBUG] CarregamentoDetalhe - Iniciando captura de foto para etapa:", etapa);
+    setCurrentPhotoEtapa(etapa);
+    setShowPhotoCapture(true);
+  };
+
+  // 🆕 Função para processar foto capturada/selecionada
+  const handlePhotoCapture = async (file: File) => {
+    if (!currentPhotoEtapa || !id) return;
+    
+    console.log("🔍 [DEBUG] CarregamentoDetalhe - Processando foto capturada:", file.name);
+    
+    try {
+      const result = await uploadPhoto(file, `etapa-${currentPhotoEtapa}-${Date.now()}.jpg`);
+      
+      if (result) {
+        // Atualizar banco de dados com URL da foto
+        await updateCarregamentoFoto(currentPhotoEtapa, result.url);
+        
+        // Definir como arquivo selecionado para o fluxo normal
+        setStageFile(file);
+        
+        // Fechar modal e resetar estados
+        setShowPhotoCapture(false);
+        setCurrentPhotoEtapa(null);
+        
+        // Recarregar dados
+        queryClient.invalidateQueries({ queryKey: ["carregamento-detalhe", id] });
+        
+        toast({
+          title: "Foto capturada com sucesso!",
+          description: "A foto foi anexada à etapa atual."
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao processar foto:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao processar foto',
+        description: 'Tente novamente ou use o upload de arquivo.'
+      });
+    }
+  };
+
+  // 🆕 Função para cancelar captura
+  const handleCancelPhotoCapture = () => {
+    setShowPhotoCapture(false);
+    setCurrentPhotoEtapa(null);
+  };
+
+  // 🆕 Função para atualizar foto no banco de dados
+  const updateCarregamentoFoto = async (etapa: number, fotoUrl: string) => {
+    const campoFoto = {
+      1: 'url_foto_chegada',
+      2: 'url_foto_inicio', 
+      3: 'url_foto_carregando',
+      4: 'url_foto_finalizacao'
+    }[etapa];
+
+    if (!campoFoto || !id) return;
+
+    console.log("🔍 [DEBUG] CarregamentoDetalhe - Atualizando campo:", campoFoto, "com URL:", fotoUrl);
+
+    const { error } = await supabase
+      .from('carregamentos')
+      .update({ [campoFoto]: fotoUrl })
+      .eq('id', id);
+
+    if (error) {
+      console.error("❌ [ERROR] CarregamentoDetalhe - Erro ao salvar foto:", error);
+      throw new Error(`Erro ao salvar foto: ${error.message}`);
+    }
+
+    console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
   useEffect(() => {
@@ -492,7 +594,7 @@ const CarregamentoDetalhe = () => {
             const isAtual = etapaIndex === etapaAtual;
             const isSelected = selectedEtapa === etapaIndex;
             // 🚀 DESABILITAR CLIQUES DURANTE LOADING
-            const podeClicar = !proximaEtapaMutation.isPending;
+            const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto;
             
             // Lógica visual melhorada - prioriza seleção sobre estado atual
             let circleClasses = "rounded-full flex items-center justify-center transition-all";
@@ -614,6 +716,9 @@ const CarregamentoDetalhe = () => {
                       isEtapaAtual && 
                       !isEtapaFinalizada;
 
+    // 🆕 Verificar se pode usar câmera (só armazém e etapas 1-4)
+    const canUseCamera = podeEditar && selectedEtapa >= 1 && selectedEtapa <= 4;
+
     console.log("🔍 [DEBUG] CarregamentoDetalhe - renderAreaEtapas:", {
       selectedEtapa,
       etapaAtual,
@@ -621,6 +726,7 @@ const CarregamentoDetalhe = () => {
       isEtapaAtual,
       isEtapaFutura,
       podeEditar,
+      canUseCamera,
       roles,
       armazemId,
       carregamento_armazem_id: carregamento?.armazem_id
@@ -682,7 +788,7 @@ const CarregamentoDetalhe = () => {
             </div>
             {podeEditar && (
               <Button
-                disabled={!stageFile || proximaEtapaMutation.isPending}
+                disabled={!stageFile || proximaEtapaMutation.isPending || isUploadingPhoto}
                 size="sm"
                 className="px-6"
                 onClick={() => {
@@ -690,7 +796,7 @@ const CarregamentoDetalhe = () => {
                   proximaEtapaMutation.mutate();
                 }}
               >
-                {proximaEtapaMutation.isPending ? (
+                {proximaEtapaMutation.isPending || isUploadingPhoto ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     Processando...
@@ -773,20 +879,70 @@ const CarregamentoDetalhe = () => {
             // Etapa atual - usuário armazém pode editar
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-semibold block mb-1">
+                <label className="text-sm font-semibold block mb-2">
                   {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
                 </label>
-                <Input
-                  type="file"
-                  accept={isEtapaDoc ? ".pdf" : "image/*"}
-                  onChange={e => {
-                    const file = e.target.files?.[0] ?? null;
-                    console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo selecionado:", file?.name);
-                    setStageFile(file);
-                  }}
-                  className="w-full text-sm"
-                  disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
-                />
+                
+                {/* 🆕 Botões de captura/upload */}
+                <div className="space-y-3">
+                  {canUseCamera && (
+                    <div className="flex gap-2">
+                      {/* Botão câmera */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStartPhotoCapture(selectedEtapa)}
+                        disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                        className="flex items-center gap-2"
+                      >
+                        <Camera className="h-4 w-4" />
+                        📸 Tirar Foto
+                      </Button>
+                      
+                      {/* Botão upload tradicional */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        📎 Anexar Arquivo
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Input de arquivo (oculto se houver câmera) */}
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept={isEtapaDoc ? ".pdf" : "image/*"}
+                    onChange={e => {
+                      const file = e.target.files?.[0] ?? null;
+                      console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo selecionado:", file?.name);
+                      setStageFile(file);
+                    }}
+                    className={`w-full text-sm ${canUseCamera ? 'hidden' : ''}`}
+                    disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                  />
+                  
+                  {/* Mostrar arquivo selecionado */}
+                  {stageFile && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-700 flex-1">{stageFile.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStageFile(null)}
+                        disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {isEtapaDoc && (
@@ -803,7 +959,7 @@ const CarregamentoDetalhe = () => {
                       setStageFileXml(file);
                     }}
                     className="w-full text-sm"
-                    disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                   />
                 </div>
               )}
@@ -818,7 +974,7 @@ const CarregamentoDetalhe = () => {
                   onChange={e => setStageObs(e.target.value)}
                   rows={2}
                   className="text-sm"
-                  disabled={proximaEtapaMutation.isPending} // 🚀 DESABILITAR DURANTE LOADING
+                  disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                 />
               </div>
             </div>
@@ -993,6 +1149,7 @@ const CarregamentoDetalhe = () => {
       </div>
     );
   }
+  
   if (error || !carregamento) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -1042,11 +1199,26 @@ const CarregamentoDetalhe = () => {
           </Button>
         }
       />
+      
       <div className="max-w-[1050px] mx-auto space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
         {renderInformacoesProcesso()}
       </div>
+
+      {/* 🆕 Modal de captura de foto */}
+      {showPhotoCapture && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-2xl">
+            <PhotoCaptureMethod
+              onFileSelect={handlePhotoCapture}
+              onCancel={handleCancelPhotoCapture}
+              isUploading={isUploadingPhoto}
+              accept="image/*"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
