@@ -279,7 +279,7 @@ const EstoqueDetalhe = () => {
                 description="XML"
                 variant="button"
                 size="md"
-                showPreview={false}
+                showPreview={true}
               />
             </div>
           </div>
