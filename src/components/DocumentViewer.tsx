@@ -205,7 +205,7 @@ export const DocumentViewer = ({
     );
   }
 
-  // Variant 'button' (padrão) - sem alterações
+  // Variant 'button' (padrão)
   const sizeClasses = {
     sm: 'h-8 px-2 text-xs',
     md: 'h-auto p-3',
