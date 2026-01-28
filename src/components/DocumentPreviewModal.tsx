@@ -1,6 +1,6 @@
 // src/components/DocumentPreviewModal.tsx
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, AlertCircle, ExternalLink, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,31 @@ interface DocumentPreviewModalProps {
   bucket: DocumentBucket;
   title: string;
 }
+
+// Função para formatar XML com indentação básica
+const formatXML = (xmlString: string): string => {
+  const PADDING = '  '; // 2 espaços para indentação
+  const reg = /(>)(<)(\/*)/g;
+  let formatted = xmlString.replace(reg, '$1\n$2$3');
+  
+  let pad = 0;
+  return formatted.split('\n').map((line) => {
+    let indent = 0;
+    if (line.match(/.+<\/\w[^>]*>$/)) {
+      indent = 0;
+    } else if (line.match(/^<\/\w/) && pad > 0) {
+      pad -= 1;
+    } else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
+      indent = 1;
+    } else {
+      indent = 0;
+    }
+    
+    const padding = PADDING.repeat(pad);
+    pad += indent;
+    return padding + line;
+  }).join('\n');
+};
 
 export const DocumentPreviewModal = ({
   isOpen,
@@ -78,7 +103,8 @@ export const DocumentPreviewModal = ({
         try {
           const response = await fetch(signedData?.signedUrl || url);
           const xmlText = await response.text();
-          setXmlContent(xmlText);
+          const formattedXml = formatXML(xmlText);
+          setXmlContent(formattedXml);
         } catch (xmlError) {
           console.warn('⚠️ [WARN] Erro ao buscar conteúdo XML:', xmlError);
           setXmlContent(null);
@@ -196,10 +222,23 @@ export const DocumentPreviewModal = ({
         return (
           <div className="w-full h-[70vh] border rounded-md overflow-hidden bg-white">
             {xmlContent ? (
-              <div className="h-full overflow-auto p-4">
-                <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-gray-50 p-4 rounded border">
-                  <code className="language-xml">{xmlContent}</code>
-                </pre>
+              <div className="h-full overflow-auto">
+                <div className="sticky top-0 bg-gray-100 px-4 py-2 border-b text-sm font-medium text-gray-700">
+                  📄 Conteúdo XML - {title}
+                </div>
+                <div className="p-4">
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-gray-50 p-4 rounded border leading-relaxed">
+                    <code 
+                      className="language-xml text-gray-800"
+                      style={{
+                        color: '#374151',
+                        lineHeight: '1.6'
+                      }}
+                    >
+                      {xmlContent}
+                    </code>
+                  </pre>
+                </div>
               </div>
             ) : (
               <div className="h-full flex items-center justify-center bg-muted/30">
@@ -246,36 +285,35 @@ export const DocumentPreviewModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{title}</DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownload}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Baixar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden" hideClose>
+        {/* Header customizado */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Baixar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </DialogHeader>
+        </div>
         
-        <div className="mt-4">
+        <div className="p-6 pt-0">
           {renderPreviewContent()}
         </div>
       </DialogContent>
