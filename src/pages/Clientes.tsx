@@ -594,19 +594,18 @@ const Clientes = () => {
                         disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
                       />
                     </div>
-                    {/* 🆕 DROPDOWN DE REPRESENTANTE ADICIONADO */}
+                    {/* �� DROPDOWN DE REPRESENTANTE CORRIGIDO */}
                     <div className="col-span-2">
                       <Label htmlFor="representante_id">Representante</Label>
                       <Select
-                        value={novoCliente.representante_id}
-                        onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value })}
+                        value={novoCliente.representante_id || undefined}
+                        onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value || "" })}
                         disabled={isCreating}
                       >
                         <SelectTrigger id="representante_id">
                           <SelectValue placeholder="Selecione um representante (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum representante</SelectItem>
                           {representantes.map((rep) => (
                             <SelectItem key={rep.id} value={rep.id}>
                               <div className="flex items-center gap-2">
@@ -615,8 +614,24 @@ const Clientes = () => {
                               </div>
                             </SelectItem>
                           ))}
+                          {representantes.length === 0 && (
+                            <SelectItem value="no-representantes" disabled>
+                              Nenhum representante disponível
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
+                      {novoCliente.representante_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
+                          className="mt-1 h-6 px-2 text-xs"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Remover representante
+                        </Button>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="telefone">Telefone</Label>
