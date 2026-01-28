@@ -145,7 +145,7 @@ const Estoque = () => {
   const { data: estoqueData, isLoading, error } = useQuery({
     queryKey: ["estoque", currentArmazem?.id, userRole],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Estoque.tsx - queryFn executada");
+      console.log("�� [DEBUG] Estoque.tsx - queryFn executada");
       console.log("🔍 [DEBUG] Estoque.tsx - Condições queryFn:", {
         userRole,
         currentArmazem,
@@ -302,10 +302,19 @@ const Estoque = () => {
   const [search, setSearch] = useState("");
   const [selectedProdutos, setSelectedProdutos] = useState<string[]>([]);
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
-
   const [selectedStatuses, setSelectedStatuses] = useState<StockStatus[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  // 🆕 FUNÇÃO PARA LIMPAR FILTROS (SEGUINDO PADRÃO CARREGAMENTOS)
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedProdutos([]);
+    setSelectedWarehouses([]);
+    setSelectedStatuses([]);
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const filteredArmazens = useMemo(() => {
     return estoquePorArmazem
@@ -1005,7 +1014,7 @@ const Estoque = () => {
       {/* 🎯 INTERFACE CONDICIONAL: SIMPLIFICADA PARA ARMAZÉM, COMPLETA PARA ADMIN/LOGÍSTICA */}
       {userRole === "armazem" ? (
         <>
-          {/* Busca simples para armazém */}
+          {/* 🆕 BARRA DE FILTROS SIMPLIFICADA PARA ARMAZÉM (PADRÃO CARREGAMENTOS) */}
           <div className="flex items-center gap-3">
             <Input
               className="h-9 flex-1"
@@ -1016,13 +1025,32 @@ const Estoque = () => {
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
             </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="whitespace-nowrap" 
+              onClick={() => setFiltersOpen((v) => !v)}
+            >
+              <FilterIcon className="h-4 w-4 mr-1" />
+              Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
+              {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters} 
+              className="gap-1"
+            >
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
           </div>
 
-          {/* Filtros simplificados para armazém */}
+          {/* 🆕 FILTROS SIMPLIFICADOS PARA ARMAZÉM SEM BOTÃO LIMPAR INTERNO */}
           {filtersOpen && (
-            <div className="rounded-md border p-3 space-y-2 relative">
+            <div className="rounded-md border p-3 space-y-6">
               <div>
-                <Label className="text-sm mb-1">Produtos</Label>
+                <Label className="text-sm font-semibold mb-1">Produtos</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {produtosUnicos.map((p) => (
                     <Badge
@@ -1037,8 +1065,8 @@ const Estoque = () => {
                   ))}
                 </div>
               </div>
-              <div className="mt-3">
-                <Label className="text-sm mb-1">Status de estoque</Label>
+              <div>
+                <Label className="text-sm font-semibold mb-1">Status de estoque</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {["normal", "baixo"].map((st) => {
                     const active = selectedStatuses.includes(st as StockStatus);
@@ -1058,21 +1086,11 @@ const Estoque = () => {
                   })}
                 </div>
               </div>
-              <div className="mt-3 flex gap-4 items-center">
-                <Label>Período</Label>
+              <div className="flex items-center gap-4">
+                <Label className="text-sm font-semibold">Período</Label>
                 <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
                 <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              </div>
-              <div className="flex justify-end mt-4 absolute right-4 bottom-4">
-                <Button variant="ghost" size="sm" onClick={() => {
-                  setSearch("");
-                  setSelectedProdutos([]);
-                  setSelectedStatuses([]);
-                  setDateFrom("");
-                  setDateTo("");
-                }}>
-                  <X className="h-4 w-4" /> Limpar Filtros
-                </Button>
+                <div className="flex-1"></div>
               </div>
             </div>
           )}
@@ -1082,7 +1100,7 @@ const Estoque = () => {
         </>
       ) : (
         <>
-          {/* Interface completa para admin/logística */}
+          {/* 🆕 BARRA DE FILTROS COMPLETA PARA ADMIN/LOGÍSTICA (PADRÃO CARREGAMENTOS) */}
           <div className="flex items-center gap-3">
             <Input
               className="h-9 flex-1"
@@ -1093,17 +1111,32 @@ const Estoque = () => {
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
             </span>
-            <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => setFiltersOpen((v) => !v)}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="whitespace-nowrap" 
+              onClick={() => setFiltersOpen((v) => !v)}
+            >
               <FilterIcon className="h-4 w-4 mr-1" />
               Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
               {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters} 
+              className="gap-1"
+            >
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
           </div>
 
+          {/* 🆕 FILTROS COMPLETOS SEM BOTÃO LIMPAR INTERNO */}
           {filtersOpen && (
-            <div className="rounded-md border p-3 space-y-2 relative">
+            <div className="rounded-md border p-3 space-y-6">
               <div>
-                <Label className="text-sm mb-1">Produtos</Label>
+                <Label className="text-sm font-semibold mb-1">Produtos</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {produtosUnicos.map((p) => (
                     <Badge
@@ -1118,8 +1151,8 @@ const Estoque = () => {
                   ))}
                 </div>
               </div>
-              <div className="mt-3">
-                <Label className="text-sm mb-1">Armazéns</Label>
+              <div>
+                <Label className="text-sm font-semibold mb-1">Armazéns</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {armazensUnicos.map((a) => (
                     <Badge
@@ -1134,8 +1167,8 @@ const Estoque = () => {
                   ))}
                 </div>
               </div>
-              <div className="mt-3">
-                <Label className="text-sm mb-1">Status de estoque</Label>
+              <div>
+                <Label className="text-sm font-semibold mb-1">Status de estoque</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {["normal", "baixo"].map((st) => {
                     const active = selectedStatuses.includes(st as StockStatus);
@@ -1155,22 +1188,11 @@ const Estoque = () => {
                   })}
                 </div>
               </div>
-              <div className="mt-3 flex gap-4 items-center">
-                <Label>Período</Label>
+              <div className="flex items-center gap-4">
+                <Label className="text-sm font-semibold">Período</Label>
                 <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
                 <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              </div>
-              <div className="flex justify-end mt-4 absolute right-4 bottom-4">
-                <Button variant="ghost" size="sm" onClick={() => {
-                  setSearch("");
-                  setSelectedProdutos([]);
-                  setSelectedWarehouses([]);
-                  setSelectedStatuses([]);
-                  setDateFrom("");
-                  setDateTo("");
-                }}>
-                  <X className="h-4 w-4" /> Limpar Filtros
-                </Button>
+                <div className="flex-1"></div>
               </div>
             </div>
           )}
