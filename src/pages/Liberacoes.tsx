@@ -456,6 +456,9 @@ const Liberacoes = () => {
     (selectedStatuses.length ? 1 : 0) +
     (selectedArmazens.length ? 1 : 0) +
     (dateFrom || dateTo ? 1 : 0);
+  
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = search.trim() || selectedStatuses.length > 0 || selectedArmazens.length > 0 || dateFrom || dateTo;
 
   const resetFormNovaLiberacao = () => {
     setNovaLiberacao({ produto: "", armazem: "", cliente_id: "", pedido: "", quantidade: "" });
@@ -937,10 +940,12 @@ const Liberacoes = () => {
             Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
 
         {filtersOpen && (
@@ -1075,8 +1080,24 @@ const Liberacoes = () => {
           <div className="grid gap-4">
             {liberacoesAtivas.map(renderLiberacaoCard)}
             {liberacoesAtivas.length === 0 && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                {search.trim() ? "Nenhuma liberação ativa encontrada." : "Nenhuma liberação ativa no momento."}
+              <div className="text-center py-8">
+                <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {hasActiveFilters
+                    ? "Nenhuma liberação ativa encontrada com os filtros aplicados"
+                    : "Nenhuma liberação ativa no momento"}
+                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="mt-2"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -1111,8 +1132,24 @@ const Liberacoes = () => {
 
         {/* Mensagem quando não há dados */}
         {liberacoesAtivas.length === 0 && liberacoesFinalizadas.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">
-            Nenhuma liberação encontrada.
+          <div className="text-center py-12">
+            <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {hasActiveFilters
+                ? "Nenhuma liberação encontrada com os filtros aplicados"
+                : "Nenhuma liberação cadastrada ainda"}
+            </p>
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+                className="mt-2"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar Filtros
+              </Button>
+            )}
           </div>
         )}
       </div>
