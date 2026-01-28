@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCheck, Plus, Filter as FilterIcon, Key, Loader2, X } from "lucide-react";
+import { UserCheck, Plus, Filter as FilterIcon, Key, Loader2, X, Users, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,8 +24,17 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
+// 🆕 TIPO MODIFICADO PARA INCLUIR CLIENTES
 type Representante = Database['public']['Tables']['representantes']['Row'] & {
   temp_password?: string | null;
+  clientes_count?: number;
+  clientes?: Array<{
+    id: string;
+    nome: string;
+    email: string;
+    cnpj_cpf: string;
+    ativo: boolean;
+  }>;
 };
 
 // Helpers de formatação
@@ -34,6 +43,14 @@ const formatCPF = (cpf: string) =>
     .padStart(11, "0")
     .slice(0, 11)
     .replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+
+const formatCPFCNPJ = (value: string) => {
+  const onlyDigits = value.replace(/\D/g, "");
+  if (onlyDigits.length <= 11) {
+    return formatCPF(onlyDigits);
+  }
+  return onlyDigits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+};
 
 function maskCpfInput(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -101,6 +118,21 @@ const Representantes = () => {
   });
 
   const [detalhesRepresentante, setDetalhesRepresentante] = useState<Representante | null>(null);
+  
+  // 🆕 MODAL PARA CLIENTES DO REPRESENTANTE
+  const [clientesModal, setClientesModal] = useState({
+    show: false,
+    representante: null as Representante | null,
+    clientes: [] as Array<{
+      id: string;
+      nome: string;
+      email: string;
+      cnpj_cpf: string;
+      ativo: boolean;
+    }>,
+    loading: false,
+  });
+
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -118,14 +150,20 @@ const Representantes = () => {
     });
   };
 
+  // 🆕 QUERY MODIFICADA PARA INCLUIR CONTAGEM DE CLIENTES
   const fetchRepresentantes = async () => {
     setLoading(true);
     setError(null);
     try {
       const { data, error } = await supabase
         .from("representantes")
-        .select("*, temp_password")
+        .select(`
+          *, 
+          temp_password,
+          clientes:clientes!representante_id(count)
+        `)
         .order("nome", { ascending: true });
+      
       if (error) {
         setError(error.message);
         toast({
@@ -136,7 +174,14 @@ const Representantes = () => {
         setLoading(false);
         return;
       }
-      setRepresentantes(data as Representante[]);
+
+      // 🆕 PROCESSAR DADOS PARA INCLUIR CONTAGEM
+      const representantesComContagem = data?.map(rep => ({
+        ...rep,
+        clientes_count: rep.clientes?.[0]?.count || 0
+      })) || [];
+
+      setRepresentantes(representantesComContagem as Representante[]);
       setLoading(false);
     } catch (err) {
       setError("Erro desconhecido");
@@ -146,6 +191,45 @@ const Representantes = () => {
         description: "Erro inesperado ao carregar representantes.",
       });
       setLoading(false);
+    }
+  };
+
+  // 🆕 FUNÇÃO PARA BUSCAR CLIENTES DO REPRESENTANTE
+  const fetchClientesRepresentante = async (representanteId: string, representanteNome: string) => {
+    setClientesModal(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id, nome, email, cnpj_cpf, ativo")
+        .eq("representante_id", representanteId)
+        .order("nome", { ascending: true });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar clientes",
+          description: "Não foi possível carregar os clientes do representante.",
+        });
+        return;
+      }
+
+      const representante = representantes.find(r => r.id === representanteId);
+      
+      setClientesModal({
+        show: true,
+        representante: representante || null,
+        clientes: data || [],
+        loading: false,
+      });
+
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar clientes",
+        description: "Erro inesperado ao carregar clientes do representante.",
+      });
+      setClientesModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -622,6 +706,69 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
+      {/* 🆕 MODAL DE CLIENTES DO REPRESENTANTE */}
+      <Dialog 
+        open={clientesModal.show} 
+        onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Clientes do Representante
+            </DialogTitle>
+            <DialogDescription>
+              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s) atribuído(s)
+            </DialogDescription>
+          </DialogHeader>
+          
+          {clientesModal.loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Carregando clientes...</span>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              {clientesModal.clientes.length > 0 ? (
+                <div className="grid gap-3">
+                  {clientesModal.clientes.map((cliente) => (
+                    <Card key={cliente.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{cliente.nome}</h4>
+                            <Badge variant={cliente.ativo ? "default" : "secondary"}>
+                              {cliente.ativo ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                          <p className="text-sm text-muted-foreground">
+                            CNPJ/CPF: {formatCPFCNPJ(cliente.cnpj_cpf)}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    Nenhum cliente atribuído a este representante
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de detalhes do representante */}
       <Dialog open={!!detalhesRepresentante} onOpenChange={open => !open && setDetalhesRepresentante(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -659,6 +806,27 @@ const Representantes = () => {
                     <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
                     <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                   </div>
+                  {/* 🆕 INFORMAÇÃO DE CLIENTES ADICIONADA */}
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {detalhesRepresentante.clientes_count || 0} cliente(s)
+                      </Badge>
+                      {(detalhesRepresentante.clientes_count || 0) > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchClientesRepresentante(detalhesRepresentante.id, detalhesRepresentante.nome)}
+                          className="text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Ver Clientes
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -681,7 +849,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Lista de representantes */}
+      {/* 🆕 LISTA DE REPRESENTANTES MODIFICADA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
@@ -694,6 +862,13 @@ const Representantes = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{representante.nome}</h3>
                   <p className="text-sm text-muted-foreground">{representante.email}</p>
+                  {/* 🆕 BADGE COM CONTAGEM DE CLIENTES */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {representante.clientes_count || 0} cliente(s)
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge variant={representante.ativo ? "default" : "secondary"}>
@@ -726,6 +901,25 @@ const Representantes = () => {
                   </>
                 )}
               </div>
+              
+              {/* 🆕 BOTÃO "VER CLIENTES" ADICIONADO */}
+              {(representante.clientes_count || 0) > 0 && (
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetchClientesRepresentante(representante.id, representante.nome);
+                    }}
+                    className="w-full text-xs"
+                  >
+                    <Eye className="h-3 w-3 mr-2" />
+                    Ver Clientes ({representante.clientes_count})
+                  </Button>
+                </div>
+              )}
+              
               {canCreate && (
                 <div className="flex items-center justify-between pt-3 border-t">
                   <Label htmlFor={`switch-${representante.id}`} className="text-sm">
