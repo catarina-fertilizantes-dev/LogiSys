@@ -750,7 +750,7 @@ const CarregamentoDetalhe = () => {
                         description="XML"
                         variant="button"
                         size="md"
-                        showPreview={false}
+                        showPreview={true}
                       />
                     </>
                   ) : (
