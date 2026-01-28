@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, ArrowRight, Download, FileText, Image, User, Truck, Calendar, Hash, Clock, ArrowLeft } from "lucide-react";
+import { DocumentViewer } from "@/components/DocumentViewer";
+import { Loader2, CheckCircle, ArrowRight, User, Truck, Calendar, Hash, Clock, ArrowLeft } from "lucide-react";
 
 const ETAPAS = [
   { 
@@ -458,48 +459,6 @@ const CarregamentoDetalhe = () => {
     };
   };
 
-  // 🆕 FUNÇÃO PARA TESTAR ACESSO AO ARQUIVO
-  const testFileAccess = async (url: string, tipo: string) => {
-    console.log(`🔍 [DEBUG] CarregamentoDetalhe - Testando acesso ao ${tipo}:`, url);
-    
-    try {
-      // Extrair nome do arquivo da URL
-      const fileName = url.split('/').pop();
-      console.log(`🔍 [DEBUG] CarregamentoDetalhe - Nome do arquivo extraído:`, fileName);
-      
-      // Determinar bucket baseado no tipo de arquivo
-      let bucket = '';
-      if (tipo === 'PDF' || tipo === 'XML') {
-        bucket = 'carregamento-documentos';
-      } else {
-        bucket = 'carregamento-fotos';
-      }
-      
-      // Tentar gerar URL assinada
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(fileName!, 3600);
-      
-      if (signedError) {
-        console.error(`❌ [ERROR] CarregamentoDetalhe - Erro ao gerar URL assinada para ${tipo}:`, signedError);
-        
-        // Tentar acesso direto
-        console.log(`🔍 [DEBUG] CarregamentoDetalhe - Tentando acesso direto ao ${tipo}`);
-        window.open(url, '_blank');
-      } else {
-        console.log(`✅ [SUCCESS] CarregamentoDetalhe - URL assinada gerada para ${tipo}:`, signedData.signedUrl);
-        window.open(signedData.signedUrl, '_blank');
-      }
-    } catch (error) {
-      console.error(`❌ [ERROR] CarregamentoDetalhe - Erro inesperado ao acessar ${tipo}:`, error);
-      toast({ 
-        variant: "destructive", 
-        title: `Erro ao acessar ${tipo}`,
-        description: `Não foi possível abrir o ${tipo}. Verifique suas permissões.`
-      });
-    }
-  };
-
   const stats = calcularEstatisticas();
 
   // Função para obter informações da etapa
@@ -768,59 +727,44 @@ const CarregamentoDetalhe = () => {
                   </div>
                 )}
 
-                {/* 🔄 DOCUMENTOS COM BOTÕES E URLs ASSINADAS */}
+                {/* 🔄 DOCUMENTOS COM COMPONENTE UNIVERSAL */}
                 <div className="space-y-2">
                   {isEtapaDoc ? (
-                    // Etapa de documentação - mostrar PDF e XML com botões
+                    // Etapa de documentação - mostrar PDF e XML
                     <>
-                      {etapaData.url_arquivo && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start h-auto p-3"
-                          onClick={() => testFileAccess(etapaData.url_arquivo!, 'PDF')}
-                        >
-                          <FileText className="h-4 w-4 mr-2 text-red-600" />
-                          <div className="text-left flex-1">
-                            <div className="text-sm font-medium">Nota Fiscal</div>
-                            <div className="text-xs text-muted-foreground">PDF</div>
-                          </div>
-                          <Download className="h-3 w-3" />
-                        </Button>
-                      )}
-                      {etapaData.url_xml && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start h-auto p-3"
-                          onClick={() => testFileAccess(etapaData.url_xml!, 'XML')}
-                        >
-                          <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                          <div className="text-left flex-1">
-                            <div className="text-sm font-medium">Arquivo XML</div>
-                            <div className="text-xs text-muted-foreground">XML</div>
-                          </div>
-                          <Download className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <DocumentViewer
+                        url={etapaData.url_arquivo}
+                        type="pdf"
+                        bucket="carregamento-documentos"
+                        title="Nota Fiscal"
+                        description="PDF"
+                        variant="button"
+                        size="md"
+                        showPreview={true}
+                      />
+                      <DocumentViewer
+                        url={etapaData.url_xml}
+                        type="xml"
+                        bucket="carregamento-documentos"
+                        title="Arquivo XML"
+                        description="XML"
+                        variant="button"
+                        size="md"
+                        showPreview={false}
+                      />
                     </>
                   ) : (
-                    // Outras etapas - mostrar foto com botão
-                    etapaData.url_arquivo && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start h-auto p-3"
-                        onClick={() => testFileAccess(etapaData.url_arquivo!, 'Foto')}
-                      >
-                        <Image className="h-4 w-4 mr-2 text-green-600" />
-                        <div className="text-left flex-1">
-                          <div className="text-sm font-medium">Ver foto - {etapa?.nome}</div>
-                          <div className="text-xs text-muted-foreground">Imagem</div>
-                        </div>
-                        <Download className="h-3 w-3" />
-                      </Button>
-                    )
+                    // Outras etapas - mostrar foto
+                    <DocumentViewer
+                      url={etapaData.url_arquivo}
+                      type="image"
+                      bucket="carregamento-fotos"
+                      title={`Foto - ${etapa?.nome}`}
+                      description="Imagem"
+                      variant="button"
+                      size="md"
+                      showPreview={true}
+                    />
                   )}
                 </div>
               </div>
