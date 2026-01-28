@@ -705,6 +705,9 @@ const Agendamentos = () => {
   const showingCount = agendamentosAtivos.length + agendamentosFinalizados.length;
   const totalCount = agendamentos.length;
   const activeAdvancedCount = (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
+  
+  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
+  const hasActiveFilters = search.trim() || selectedStatuses.length > 0 || dateFrom || dateTo;
 
   // Verificar se há liberações disponíveis
   const temLiberacoesDisponiveis = liberacoesDisponiveis && liberacoesDisponiveis.length > 0;
@@ -1135,10 +1138,12 @@ const Agendamentos = () => {
             Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-            <X className="h-4 w-4" /> 
-            Limpar Filtros
-          </Button>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" /> 
+              Limpar Filtros
+            </Button>
+          )}
         </div>
         
         {filtersOpen && (
@@ -1284,8 +1289,24 @@ const Agendamentos = () => {
           <div className="grid gap-4">
             {agendamentosAtivos.map(renderAgendamentoCard)}
             {agendamentosAtivos.length === 0 && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                {search.trim() ? "Nenhum agendamento ativo encontrado." : "Nenhum agendamento ativo no momento."}
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {hasActiveFilters
+                    ? "Nenhum agendamento ativo encontrado com os filtros aplicados"
+                    : "Nenhum agendamento ativo no momento"}
+                </p>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="mt-2"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -1320,8 +1341,24 @@ const Agendamentos = () => {
 
         {/* Mensagem quando não há dados */}
         {agendamentosAtivos.length === 0 && agendamentosFinalizados.length === 0 && (
-          <div className="text-sm text-muted-foreground py-8 text-center">
-            Nenhum agendamento encontrado.
+          <div className="text-center py-12">
+            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {hasActiveFilters
+                ? "Nenhum agendamento encontrado com os filtros aplicados"
+                : "Nenhum agendamento cadastrado ainda"}
+            </p>
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+                className="mt-2"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar Filtros
+              </Button>
+            )}
           </div>
         )}
       </div>
