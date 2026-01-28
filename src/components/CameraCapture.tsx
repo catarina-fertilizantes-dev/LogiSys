@@ -278,17 +278,9 @@ export const CameraCapture = ({
                     </div>
                   </div>
                 )}
-
-                {/* Indicador de câmera ativa */}
-                {isStreaming && (
-                  <div className="absolute top-4 left-4">
-                    <Badge variant="destructive" className="text-xs">
-                      <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse" />
-                      Gravando
-                    </Badge>
-                  </div>
-                )}
-
+          
+                {/* ❌ REMOVIDO: Badge "Gravando" */}
+                
                 {/* Indicador de tipo de câmera */}
                 {isStreaming && isMobile && (
                   <div className="absolute top-4 right-4">
@@ -299,7 +291,7 @@ export const CameraCapture = ({
                 )}
               </div>
             ) : (
-              // Preview da foto capturada
+              // Preview da foto capturada (mantém como está)
               <div className="relative">
                 <img
                   src={capturedImage}
