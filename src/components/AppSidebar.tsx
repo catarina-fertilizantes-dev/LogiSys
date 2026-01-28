@@ -10,6 +10,7 @@ import {
   LogOut,
   BadgeCheck,
   Tag,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -75,6 +76,13 @@ const lowerMenuItems = [
     url: "/clientes",
     icon: Users,
     resource: "clientes" as const,
+  },
+  // 🆕 REPRESENTANTES ADICIONADO
+  {
+    title: "Representantes",
+    url: "/representantes",
+    icon: UserCheck,
+    resource: "representantes" as const,
   },
   {
     title: "Armazéns",
@@ -176,6 +184,13 @@ export function AppSidebar() {
       }
       if (
         item.resource === "clientes" &&
+        (userRole === "admin" || userRole === "logistica")
+      ) {
+        return true;
+      }
+      // 🆕 PERMISSÃO PARA REPRESENTANTES
+      if (
+        item.resource === "representantes" &&
         (userRole === "admin" || userRole === "logistica")
       ) {
         return true;
