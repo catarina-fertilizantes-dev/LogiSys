@@ -1,18 +1,13 @@
 // src/components/DocumentViewer.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   FileText, 
   Image as ImageIcon, 
   Download, 
-  Eye, 
-  AlertCircle,
-  Loader2,
-  X
+  Loader2
 } from "lucide-react";
 
 export type DocumentType = 'pdf' | 'xml' | 'image';
@@ -66,13 +61,10 @@ export const DocumentViewer = ({
   variant = 'button',
   size = 'md',
   className = '',
-  showPreview = true,
   disabled = false
 }: DocumentViewerProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Verificar se documento existe
   if (!url) {
@@ -87,10 +79,13 @@ export const DocumentViewer = ({
     );
   }
 
-  // Função para gerar URL assinada
-  const generateSignedUrl = async (): Promise<string> => {
+  // Função para gerar URL assinada e abrir documento
+  const handleOpenDocument = async () => {
+    if (disabled) return;
+    
+    setIsLoading(true);
     try {
-      console.log(`🔍 [DEBUG] DocumentViewer - Gerando URL assinada para ${type}:`, url);
+      console.log(`🔍 [DEBUG] DocumentViewer - Abrindo ${type}:`, url);
       
       // Extrair nome do arquivo da URL
       const fileName = url.split('/').pop();
@@ -98,7 +93,7 @@ export const DocumentViewer = ({
         throw new Error('Nome do arquivo não encontrado na URL');
       }
 
-      console.log(`🔍 [DEBUG] DocumentViewer - Nome do arquivo extraído:`, fileName);
+      console.log(`🔍 [DEBUG] DocumentViewer - Nome do arquivo:`, fileName);
       console.log(`🔍 [DEBUG] DocumentViewer - Bucket:`, bucket);
 
       // Tentar gerar URL assinada
@@ -107,70 +102,25 @@ export const DocumentViewer = ({
         .createSignedUrl(fileName, 3600); // 1 hora
 
       if (signedError) {
-        console.error(`❌ [ERROR] DocumentViewer - Erro ao gerar URL assinada:`, signedError);
-        
-        // Fallback: tentar URL pública direta
-        console.log(`🔍 [DEBUG] DocumentViewer - Tentando URL pública direta`);
-        return url;
+        console.warn(`⚠️ [WARN] DocumentViewer - Erro ao gerar URL assinada, usando URL pública:`, signedError);
+        // Fallback: usar URL pública direta
+        window.open(url, '_blank');
+      } else {
+        console.log(`✅ [SUCCESS] DocumentViewer - URL assinada gerada`);
+        window.open(signedData.signedUrl, '_blank');
       }
-
-      console.log(`✅ [SUCCESS] DocumentViewer - URL assinada gerada:`, signedData.signedUrl);
-      return signedData.signedUrl;
-    } catch (error) {
-      console.error(`❌ [ERROR] DocumentViewer - Erro inesperado:`, error);
-      // Fallback: retornar URL original
-      return url;
-    }
-  };
-
-  // Função para download direto
-  const handleDownload = async () => {
-    if (disabled) return;
-    
-    setIsLoading(true);
-    try {
-      const signedUrl = await generateSignedUrl();
-      
-      // Abrir em nova aba para download
-      window.open(signedUrl, '_blank');
       
       toast({
-        title: "Download iniciado",
-        description: `${title} será baixado em breve.`
+        title: "Documento aberto",
+        description: `${title} foi aberto em uma nova aba.`
       });
     } catch (error) {
-      console.error(`❌ [ERROR] DocumentViewer - Erro no download:`, error);
+      console.error(`❌ [ERROR] DocumentViewer - Erro ao abrir documento:`, error);
       toast({
         variant: "destructive",
-        title: `Erro ao baixar ${type.toUpperCase()}`,
+        title: `Erro ao abrir ${type.toUpperCase()}`,
         description: "Não foi possível acessar o documento. Verifique suas permissões."
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para preview
-  const handlePreview = async () => {
-    if (disabled || !showPreview) {
-      handleDownload();
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const signedUrl = await generateSignedUrl();
-      setPreviewUrl(signedUrl);
-      setPreviewOpen(true);
-    } catch (error) {
-      console.error(`❌ [ERROR] DocumentViewer - Erro no preview:`, error);
-      toast({
-        variant: "destructive",
-        title: `Erro ao visualizar ${type.toUpperCase()}`,
-        description: "Não foi possível carregar o preview. Tentando download direto."
-      });
-      // Fallback para download
-      handleDownload();
     } finally {
       setIsLoading(false);
     }
@@ -179,86 +129,34 @@ export const DocumentViewer = ({
   // Renderização baseada na variante
   if (variant === 'card') {
     return (
-      <>
-        <div 
-          className={`
-            p-3 border rounded-md cursor-pointer transition-all
-            ${getDocumentColor(type)}
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'}
-            ${className}
-          `}
-          onClick={handlePreview}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {getDocumentIcon(type)}
-              <div>
-                <div className="text-sm font-medium">{title}</div>
-                {description && (
-                  <div className="text-xs text-muted-foreground">{description}</div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              {isLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <>
-                  {showPreview && type !== 'xml' && (
-                    <Eye className="h-3 w-3" />
-                  )}
-                  <Download className="h-3 w-3" />
-                </>
+      <div 
+        className={`
+          p-3 border rounded-md cursor-pointer transition-all
+          ${getDocumentColor(type)}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'}
+          ${className}
+        `}
+        onClick={handleOpenDocument}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getDocumentIcon(type)}
+            <div>
+              <div className="text-sm font-medium">{title}</div>
+              {description && (
+                <div className="text-xs text-muted-foreground">{description}</div>
               )}
             </div>
           </div>
+          <div className="flex items-center gap-1">
+            {isLoading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Download className="h-3 w-3" />
+            )}
+          </div>
         </div>
-
-        {/* Modal de Preview */}
-        <DocumentPreviewModal
-          isOpen={previewOpen}
-          onClose={() => {
-            setPreviewOpen(false);
-            setPreviewUrl(null);
-          }}
-          url={previewUrl}
-          type={type}
-          title={title}
-        />
-      </>
-    );
-  }
-
-  if (variant === 'inline') {
-    return (
-      <>
-        <Badge 
-          variant="secondary" 
-          className={`cursor-pointer hover:bg-secondary/80 ${className}`}
-          onClick={handlePreview}
-        >
-          {isLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          ) : (
-            <>
-              {getDocumentIcon(type)}
-              <span className="ml-1">{title}</span>
-            </>
-          )}
-        </Badge>
-
-        {/* Modal de Preview */}
-        <DocumentPreviewModal
-          isOpen={previewOpen}
-          onClose={() => {
-            setPreviewOpen(false);
-            setPreviewUrl(null);
-          }}
-          url={previewUrl}
-          type={type}
-          title={title}
-        />
-      </>
+      </div>
     );
   }
 
@@ -270,50 +168,31 @@ export const DocumentViewer = ({
   };
 
   return (
-    <>
-      <Button
-        variant="outline"
-        size={size === 'sm' ? 'sm' : undefined}
-        className={`
-          justify-start ${sizeClasses[size]} w-full
-          ${getDocumentColor(type)}
-          ${className}
-        `}
-        onClick={handlePreview}
-        disabled={disabled || isLoading}
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-        ) : (
-          getDocumentIcon(type)
+    <Button
+      variant="outline"
+      size={size === 'sm' ? 'sm' : undefined}
+      className={`
+        justify-start ${sizeClasses[size]} w-full
+        ${getDocumentColor(type)}
+        ${className}
+      `}
+      onClick={handleOpenDocument}
+      disabled={disabled || isLoading}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      ) : (
+        getDocumentIcon(type)
+      )}
+      <div className="text-left flex-1 ml-2">
+        <div className="text-sm font-medium">{title}</div>
+        {description && size !== 'sm' && (
+          <div className="text-xs text-muted-foreground">{description}</div>
         )}
-        <div className="text-left flex-1 ml-2">
-          <div className="text-sm font-medium">{title}</div>
-          {description && size !== 'sm' && (
-            <div className="text-xs text-muted-foreground">{description}</div>
-          )}
-        </div>
-        {!isLoading && (
-          <div className="flex items-center gap-1 ml-2">
-            {showPreview && type !== 'xml' && (
-              <Eye className="h-3 w-3" />
-            )}
-            <Download className="h-3 w-3" />
-          </div>
-        )}
-      </Button>
-
-      {/* Modal de Preview */}
-      <DocumentPreviewModal
-        isOpen={previewOpen}
-        onClose={() => {
-          setPreviewOpen(false);
-          setPreviewUrl(null);
-        }}
-        url={previewUrl}
-        type={type}
-        title={title}
-      />
-    </>
+      </div>
+      {!isLoading && (
+        <Download className="h-3 w-3 ml-2" />
+      )}
+    </Button>
   );
 };
