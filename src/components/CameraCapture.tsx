@@ -199,7 +199,7 @@ export const CameraCapture = ({
               <Button 
                 variant="outline" 
                 onClick={onCancel}
-                className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                className="border-amber-300 text-amber-800 hover:bg-amber-100 hover:text-amber-900 hover:border-amber-400"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Usar Upload de Arquivo
