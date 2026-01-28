@@ -287,13 +287,14 @@ export const DocumentPreviewModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-8">
             <DialogTitle>{title}</DialogTitle>
             <Button
               variant="outline"
               size="sm"
               onClick={handleDownload}
               disabled={isLoading}
+              className="mr-4"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
