@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, AlertCircle, X, ExternalLink } from "lucide-react";
+import { Loader2, Download, AlertCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentType, DocumentBucket } from "./DocumentViewer";
@@ -28,6 +28,7 @@ export const DocumentPreviewModal = ({
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [xmlContent, setXmlContent] = useState<string | null>(null);
 
   // Gerar URL assinada quando modal abrir
   useEffect(() => {
@@ -37,6 +38,7 @@ export const DocumentPreviewModal = ({
       // Limpar estado quando modal fechar
       setSignedUrl(null);
       setError(null);
+      setXmlContent(null);
     }
   }, [isOpen, url]);
 
@@ -65,16 +67,26 @@ export const DocumentPreviewModal = ({
 
       if (signedError) {
         console.warn(`⚠️ [WARN] DocumentPreviewModal - Erro ao gerar URL assinada, usando URL pública:`, signedError);
-        // Fallback: usar URL pública direta
         setSignedUrl(url);
       } else {
         console.log(`✅ [SUCCESS] DocumentPreviewModal - URL assinada gerada`);
         setSignedUrl(signedData.signedUrl);
       }
+
+      // Se for XML, buscar conteúdo para preview
+      if (type === 'xml' && signedData?.signedUrl) {
+        try {
+          const response = await fetch(signedData.signedUrl);
+          const xmlText = await response.text();
+          setXmlContent(xmlText);
+        } catch (xmlError) {
+          console.warn('⚠️ [WARN] Erro ao buscar conteúdo XML:', xmlError);
+          setXmlContent(null);
+        }
+      }
     } catch (error) {
       console.error(`❌ [ERROR] DocumentPreviewModal - Erro ao gerar URL assinada:`, error);
       setError('Erro ao carregar documento para preview');
-      // Fallback: usar URL original
       setSignedUrl(url);
     } finally {
       setIsLoading(false);
@@ -182,20 +194,30 @@ export const DocumentPreviewModal = ({
 
       case 'xml':
         return (
-          <div className="w-full h-[70vh] border rounded-md overflow-hidden bg-muted/30 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
-              <div>
-                <p className="font-medium">Preview não disponível para XML</p>
-                <p className="text-sm text-muted-foreground">
-                  Arquivos XML são melhor visualizados em editores específicos
-                </p>
+          <div className="w-full h-[70vh] border rounded-md overflow-hidden bg-white">
+            {xmlContent ? (
+              <div className="h-full overflow-auto p-4">
+                <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-gray-50 p-4 rounded border">
+                  <code className="language-xml">{xmlContent}</code>
+                </pre>
               </div>
-              <Button onClick={handleDownload} className="mt-4">
-                <Download className="h-4 w-4 mr-2" />
-                Baixar XML
-              </Button>
-            </div>
+            ) : (
+              <div className="h-full flex items-center justify-center bg-muted/30">
+                <div className="text-center space-y-4">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <div>
+                    <p className="font-medium">Conteúdo XML não disponível</p>
+                    <p className="text-sm text-muted-foreground">
+                      Não foi possível carregar o conteúdo para preview
+                    </p>
+                  </div>
+                  <Button onClick={handleDownload} className="mt-4">
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar XML
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -227,34 +249,20 @@ export const DocumentPreviewModal = ({
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <span>{title}</span>
-              <span className="text-xs bg-muted px-2 py-1 rounded uppercase font-mono">
-                {type}
-              </span>
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownload}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Baixar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle>{title}</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Baixar
+            </Button>
           </div>
         </DialogHeader>
         
