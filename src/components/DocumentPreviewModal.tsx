@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, AlertCircle, ExternalLink } from "lucide-react";
+import { Loader2, Download, AlertCircle, ExternalLink, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentType, DocumentBucket } from "./DocumentViewer";
@@ -74,9 +74,9 @@ export const DocumentPreviewModal = ({
       }
 
       // Se for XML, buscar conteúdo para preview
-      if (type === 'xml' && signedData?.signedUrl) {
+      if (type === 'xml' && (signedData?.signedUrl || url)) {
         try {
-          const response = await fetch(signedData.signedUrl);
+          const response = await fetch(signedData?.signedUrl || url);
           const xmlText = await response.text();
           setXmlContent(xmlText);
         } catch (xmlError) {
@@ -250,19 +250,28 @@ export const DocumentPreviewModal = ({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>{title}</DialogTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Baixar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Baixar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
         
