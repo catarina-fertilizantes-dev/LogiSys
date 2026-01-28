@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck, Edit3, Save } from "lucide-react";
+import { Users, Plus, Filter as FilterIcon, Key, Loader2, X, UserCheck, Edit3, Save, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -166,7 +166,7 @@ const Clientes = () => {
 
   const [detalhesCliente, setDetalhesCliente] = useState<Cliente | null>(null);
   
-  // 🆕 ESTADOS PARA EDIÇÃO DE REPRESENTANTE
+  // Estados para edição de representante
   const [editandoRepresentante, setEditandoRepresentante] = useState(false);
   const [novoRepresentanteId, setNovoRepresentanteId] = useState<string>("");
   const [salvandoRepresentante, setSalvandoRepresentante] = useState(false);
@@ -253,9 +253,9 @@ const Clientes = () => {
   // 🆕 FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE - CORRIGIDA
   const handleSalvarRepresentante = async () => {
     if (!detalhesCliente) return;
-  
+
     setSalvandoRepresentante(true);
-  
+
     try {
       // 🆕 TRATAR O VALOR "sem-representante" COMO NULL
       const representanteIdParaSalvar = novoRepresentanteId === "sem-representante" ? null : novoRepresentanteId;
@@ -267,26 +267,26 @@ const Clientes = () => {
           updated_at: new Date().toISOString()
         })
         .eq("id", detalhesCliente.id);
-  
+
       if (error) {
         throw error;
       }
-  
+
       // Buscar o nome do representante para exibir na mensagem
       const representanteNome = representanteIdParaSalvar 
         ? representantes.find(r => r.id === representanteIdParaSalvar)?.nome 
         : null;
-  
+
       toast({
         title: "Representante atualizado com sucesso!",
         description: representanteNome 
           ? `Cliente agora é representado por ${representanteNome}.`
           : "Representante removido do cliente.",
       });
-  
+
       // Recarregar dados
       await fetchClientes();
-  
+
       // Atualizar o cliente no modal
       const clienteAtualizado = await supabase
         .from("clientes")
@@ -300,15 +300,15 @@ const Clientes = () => {
         `)
         .eq("id", detalhesCliente.id)
         .single();
-  
+
       if (clienteAtualizado.data) {
         setDetalhesCliente(clienteAtualizado.data as Cliente);
       }
-  
+
       // Resetar estados de edição
       setEditandoRepresentante(false);
       setNovoRepresentanteId("");
-  
+
     } catch (err) {
       toast({
         variant: "destructive",
@@ -320,10 +320,10 @@ const Clientes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA CANCELAR EDIÇÃO
+  // Função para cancelar edição
   const handleCancelarEdicao = () => {
     setEditandoRepresentante(false);
-    setNovoRepresentanteId(detalhesCliente?.representante_id || "");
+    setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
   // 🆕 FUNÇÃO PARA INICIAR EDIÇÃO - CORRIGIDA
@@ -951,7 +951,7 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 MODAL DE DETALHES MODIFICADO COM EDIÇÃO DE REPRESENTANTE */}
+      {/* 🆕 MODAL DE DETALHES MODIFICADO COM ALERTA PARA CLIENTE INATIVO */}
       <Dialog open={!!detalhesCliente} onOpenChange={open => {
         if (!open) {
           setDetalhesCliente(null);
@@ -969,6 +969,18 @@ const Clientes = () => {
           <div className="space-y-4 py-4">
             {detalhesCliente && (
               <>
+                {/* 🆕 ALERTA PARA CLIENTE INATIVO */}
+                {!detalhesCliente.ativo && editandoRepresentante && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        <strong>Atenção:</strong> Este cliente está inativo. O representante só poderá acessar informações após a reativação do cliente.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Informações Básicas */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1010,7 +1022,7 @@ const Clientes = () => {
                     </div>
                     
                     {editandoRepresentante ? (
-                      // MODO DE EDIÇÃO
+                      // 🆕 MODO DE EDIÇÃO
                       <div className="space-y-3">
                         <Select
                           value={novoRepresentanteId}
@@ -1066,7 +1078,7 @@ const Clientes = () => {
                         </div>
                       </div>
                     ) : (
-                      // MODO DE VISUALIZAÇÃO - continua igual
+                      // 🆕 MODO DE VISUALIZAÇÃO
                       <div className="mt-1">
                         {detalhesCliente.representantes ? (
                           <div className="flex items-center gap-2">
@@ -1124,7 +1136,7 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Lista de clientes */}
+      {/* 🆕 LISTA DE CLIENTES COM LAYOUT MODIFICADO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClientes.map((cliente) => (
           <Card
@@ -1133,53 +1145,34 @@ const Clientes = () => {
             onClick={() => setDetalhesCliente(cliente)}
           >
             <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{cliente.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{cliente.email}</p>
-                  {cliente.representantes && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <UserCheck className="h-3 w-3 text-primary" />
-                      <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 items-end">
+              {/* 🆕 LAYOUT MODIFICADO CONFORME ESPECIFICADO */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">{cliente.nome}</h3>
+                <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                
+                {/* 🆕 REPRESENTANTE (SE HOUVER) */}
+                {cliente.representantes && (
+                  <div className="flex items-center gap-1">
+                    <UserCheck className="h-3 w-3 text-primary" />
+                    <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
+                  </div>
+                )}
+                
+                {/* 🆕 CNPJ/CPF SEMPRE VISÍVEL */}
+                <p className="text-sm">
+                  <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(cliente.cnpj_cpf)}
+                </p>
+              </div>
+              
+              {/* 🆕 SEPARADOR */}
+              <div className="border-t"></div>
+              
+              {/* 🆕 BADGE E SWITCH NA MESMA LINHA */}
+              {canCreate && (
+                <div className="flex items-center justify-between">
                   <Badge variant={cliente.ativo ? "default" : "secondary"}>
                     {cliente.ativo ? "Ativo" : "Inativo"}
                   </Badge>
-                  {canCreate && cliente.temp_password && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleShowCredentials(cliente);
-                      }}
-                      className="text-xs"
-                    >
-                      <Key className="h-3 w-3 mr-1" />
-                      Credenciais
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(cliente.cnpj_cpf)}
-                </p>
-                {(cliente.telefone || cliente.cep) && (
-                  <>
-                    {cliente.telefone && <p><span className="text-muted-foreground">Telefone:</span> {formatPhone(cliente.telefone)}</p>}
-                    {cliente.cep && <p><span className="text-muted-foreground">CEP:</span> {formatCEP(cliente.cep)}</p>}
-                  </>
-                )}
-              </div>
-              {canCreate && (
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <Label htmlFor={`switch-${cliente.id}`} className="text-sm">
-                    {cliente.ativo ? "Ativo" : "Inativo"}
-                  </Label>
                   <div className="relative">
                     <Switch
                       id={`switch-${cliente.id}`}
