@@ -201,9 +201,14 @@ const Liberacoes = () => {
       if (userRole === "armazem" && currentArmazem?.id) {
         query = query.eq("armazem_id", currentArmazem.id);
       }
-      // 🆕 FILTRO PARA REPRESENTANTE
-      if (userRole === "representante" && clientesDoRepresentante.length > 0) {
-        query = query.in("cliente_id", clientesDoRepresentante);
+      // 🆕 FILTRO SEGURO PARA REPRESENTANTE
+      if (userRole === "representante") {
+        if (clientesDoRepresentante.length > 0) {
+          query = query.in("cliente_id", clientesDoRepresentante);
+        } else {
+          // 🔒 SEGURANÇA: Se não conseguiu buscar clientes, não retorna nada
+          query = query.eq("cliente_id", "00000000-0000-0000-0000-000000000000"); // UUID impossível
+        }
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -212,7 +217,7 @@ const Liberacoes = () => {
     refetchInterval: 30000,
     enabled: (userRole !== "cliente" || !!currentCliente?.id) && 
              (userRole !== "armazem" || !!currentArmazem?.id) &&
-             (userRole !== "representante" || clientesDoRepresentante.length > 0),
+             (userRole !== "representante" || (representanteId !== null && clientesDoRepresentante.length > 0)),
   });
 
   // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO PARA INCLUIR TODOS OS STATUS
