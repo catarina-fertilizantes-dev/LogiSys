@@ -850,9 +850,6 @@ const Armazens = () => {
                   <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
-                  <Badge variant={armazem.ativo ? "default" : "secondary"}>
-                    {armazem.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
                   {canCreate && armazem.temp_password && (
                     <Button
                       variant="outline"
