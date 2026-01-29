@@ -111,7 +111,7 @@ const parseDate = (d: string) => {
 
 const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
-  const { clientesDoRepresentante } = usePermissions();
+  const { clientesDoRepresentante, representanteId } = usePermissions();
   
   // 🚫 PROTEÇÃO ADICIONAL: Redirecionar role 'armazem' para dashboard
   useEffect(() => {
