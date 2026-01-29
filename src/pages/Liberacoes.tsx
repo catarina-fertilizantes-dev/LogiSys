@@ -182,7 +182,7 @@ const Liberacoes = () => {
   
   // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, clientesDoRepresentante],
+    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, clientesDoRepresentante],
     queryFn: async () => {
       let query = supabase
         .from("liberacoes")
@@ -224,12 +224,15 @@ const Liberacoes = () => {
     enabled: (() => {
       const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
       const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
-      const representanteOk = userRole !== "representante" || (representanteId !== null && clientesDoRepresentante.length > 0);
+      // 🔧 CORREÇÃO: Aguardar representanteId ser carregado primeiro
+      const representanteOk = userRole !== "representante" || (representanteId !== null);
       
-      console.log('�� [DEBUG] Enabled conditions:', {
+      console.log('🔍 [DEBUG] Enabled conditions:', {
         clienteOk,
         armazemOk, 
         representanteOk,
+        representanteId,
+        clientesLength: clientesDoRepresentante.length,
         final: clienteOk && armazemOk && representanteOk
       });
       
