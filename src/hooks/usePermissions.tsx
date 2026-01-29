@@ -14,7 +14,7 @@ export type Resource =
   | 'clientes'
   | 'armazens'
   | 'colaboradores'
-  | 'representantes'; // 🆕 ADICIONADO
+  | 'representantes';
 
 export interface Permission {
   can_create: boolean;
@@ -29,6 +29,9 @@ export const usePermissions = () => {
   const [loading, setLoading] = useState(true);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [armazemId, setArmazemId] = useState<string | null>(null);
+  // 🆕 NOVOS ESTADOS PARA REPRESENTANTE
+  const [representanteId, setRepresentanteId] = useState<string | null>(null);
+  const [clientesDoRepresentante, setClientesDoRepresentante] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -89,15 +92,18 @@ export const usePermissions = () => {
     fetchPermissions();
   }, [userRole, user?.id, authLoading]);
 
-  // Novo: busca clienteId/armazemId apenas se for cliente ou armazem!
+  // 🆕 MODIFICADO: busca vínculos para cliente, armazem E representante
   useEffect(() => {
     const fetchVinculos = async () => {
       if (authLoading || !userRole || !user) {
         setClienteId(null);
         setArmazemId(null);
+        setRepresentanteId(null);
+        setClientesDoRepresentante([]);
         return;
       }
 
+      // Cliente
       if (userRole === 'cliente') {
         const { data, error } = await supabase
           .from("clientes")
@@ -109,6 +115,7 @@ export const usePermissions = () => {
         setClienteId(null);
       }
 
+      // Armazém
       if (userRole === 'armazem') {
         const { data, error } = await supabase
           .from("armazens")
@@ -119,20 +126,51 @@ export const usePermissions = () => {
       } else {
         setArmazemId(null);
       }
+
+      // 🆕 REPRESENTANTE
+      if (userRole === 'representante') {
+        try {
+          // Buscar representante
+          const { data: repData, error: repError } = await supabase
+            .from("representantes")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+          
+          setRepresentanteId(repData?.id ?? null);
+          
+          // Buscar clientes do representante
+          if (repData?.id) {
+            const { data: clientesData, error: clientesError } = await supabase
+              .from("clientes")
+              .select("id")
+              .eq("representante_id", repData.id);
+            
+            setClientesDoRepresentante(clientesData?.map(c => c.id) || []);
+            console.log('🔍 [DEBUG] usePermissions - Representante clientes:', clientesData?.map(c => c.id) || []);
+          } else {
+            setClientesDoRepresentante([]);
+          }
+        } catch (error) {
+          console.error('❌ [ERROR] usePermissions - Erro ao buscar dados do representante:', error);
+          setRepresentanteId(null);
+          setClientesDoRepresentante([]);
+        }
+      } else {
+        setRepresentanteId(null);
+        setClientesDoRepresentante([]);
+      }
     };
 
     fetchVinculos();
   }, [userRole, user?.id, authLoading]);
 
-  /**
-   * Permite visualizar ou manipular o recurso clientes apenas para admin ou logistica, sempre.
-   */
   const canAccess = (resource: Resource, action: 'create' | 'read' | 'update' | 'delete' = 'read'): boolean => {
     // Permissão extra: admin ou logistica sempre podem ver "clientes"
     if (resource === "clientes" && (userRole === "admin" || userRole === "logistica")) {
       return true;
     }
-    // 🆕 PERMISSÃO EXTRA: admin ou logistica sempre podem ver "representantes"
+    // Permissão extra: admin ou logistica sempre podem ver "representantes"
     if (resource === "representantes" && (userRole === "admin" || userRole === "logistica")) {
       return true;
     }
@@ -163,5 +201,14 @@ export const usePermissions = () => {
     return hasAccess;
   };
 
-  return { permissions, canAccess, loading, clienteId, armazemId };
+  // 🆕 RETORNO MODIFICADO: incluir representanteId e clientesDoRepresentante
+  return { 
+    permissions, 
+    canAccess, 
+    loading, 
+    clienteId, 
+    armazemId, 
+    representanteId, 
+    clientesDoRepresentante 
+  };
 };
