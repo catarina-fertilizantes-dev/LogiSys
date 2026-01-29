@@ -891,9 +891,9 @@ const Armazens = () => {
               </div>
               {canCreate && (
                 <div className="flex items-center justify-between pt-3 border-t">
-                  <Label htmlFor={`switch-${armazem.id}`} className="text-sm">
+                  <Badge variant={armazem.ativo ? "default" : "secondary"}>
                     {armazem.ativo ? "Ativo" : "Inativo"}
-                  </Label>
+                  </Badge>
                   {/* 🚀 SWITCH COM LOADING STATE */}
                   <div className="relative">
                     <Switch
