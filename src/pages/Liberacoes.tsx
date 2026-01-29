@@ -174,6 +174,12 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
+  // 🔍 ADICIONAR ESTES LOGS ANTES DA QUERY PRINCIPAL
+  console.log('🔍 [DEBUG] Liberacoes - userRole:', userRole);
+  console.log('🔍 [DEBUG] Liberacoes - representanteId:', representanteId);
+  console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante:', clientesDoRepresentante);
+  console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante.length:', clientesDoRepresentante.length);
+  
   // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, clientesDoRepresentante],
@@ -215,9 +221,20 @@ const Liberacoes = () => {
       return data ?? [];
     },
     refetchInterval: 30000,
-    enabled: (userRole !== "cliente" || !!currentCliente?.id) && 
-             (userRole !== "armazem" || !!currentArmazem?.id) &&
-             (userRole !== "representante" || (representanteId !== null && clientesDoRepresentante.length > 0)),
+    enabled: (() => {
+      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
+      const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
+      const representanteOk = userRole !== "representante" || (representanteId !== null && clientesDoRepresentante.length > 0);
+      
+      console.log('�� [DEBUG] Enabled conditions:', {
+        clienteOk,
+        armazemOk, 
+        representanteOk,
+        final: clienteOk && armazemOk && representanteOk
+      });
+      
+      return clienteOk && armazemOk && representanteOk;
+    })(),
   });
 
   // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO PARA INCLUIR TODOS OS STATUS
