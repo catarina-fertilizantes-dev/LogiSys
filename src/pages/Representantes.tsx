@@ -29,7 +29,7 @@ type Representante = Database['public']['Tables']['representantes']['Row'] & {
   clientes_count?: number;
 };
 
-// 🆕 Helpers de formatação para CPF/CNPJ
+// 🔧 HELPERS DE FORMATAÇÃO SEGUROS (baseados no código de Clientes)
 const formatCPF = (cpf: string) =>
   cpf.replace(/\D/g, "")
     .padStart(11, "0")
@@ -42,17 +42,17 @@ const formatCNPJ = (cnpj: string) =>
     .slice(0, 14)
     .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 
-// 🆕 Função para formatar CPF ou CNPJ automaticamente
-const formatCPFCNPJ = (value: string) => {
-  const onlyDigits = value.replace(/\D/g, "");
+function formatCpfCnpj(v: string): string {
+  if (!v) return "—";
+  const onlyDigits = v.replace(/\D/g, "");
   if (onlyDigits.length <= 11) {
     return formatCPF(onlyDigits);
   }
   return formatCNPJ(onlyDigits);
-};
+}
 
-// 🆕 Máscara para CPF/CNPJ no input
 function maskCpfCnpjInput(value: string): string {
+  if (!value) return "";
   const digits = value.replace(/\D/g, "");
   if (digits.length <= 11) {
     // CPF
@@ -80,6 +80,7 @@ function maskCpfCnpjInput(value: string): string {
 }
 
 function formatPhone(phone: string): string {
+  if (!phone) return "—";
   let cleaned = phone.replace(/\D/g, "");
   if (cleaned.length === 11)
     return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
@@ -89,6 +90,7 @@ function formatPhone(phone: string): string {
 }
 
 function maskPhoneInput(value: string): string {
+  if (!value) return "";
   const cleaned = value.replace(/\D/g, "").slice(0, 11);
   if (cleaned.length === 11)
     return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
@@ -116,11 +118,11 @@ const Representantes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Formulário Novo Representante - 🆕 Alterado para aceitar CPF/CNPJ
+  // 🔧 FORMULÁRIO USANDO CAMPO EXISTENTE (cpf) - mantendo compatibilidade com backend
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoRepresentante, setNovoRepresentante] = useState({
     nome: "",
-    cnpj_cpf: "", // 🆕 Alterado de 'cpf' para 'cnpj_cpf'
+    cpf: "", // 🔧 Mantendo 'cpf' para compatibilidade com backend existente
     email: "",
     telefone: "",
     regiao_atuacao: "",
@@ -135,7 +137,7 @@ const Representantes = () => {
 
   const [detalhesRepresentante, setDetalhesRepresentante] = useState<Representante | null>(null);
 
-  // 🆕 MODAL SIMPLIFICADO APENAS PARA VISUALIZAR CLIENTES (READ-ONLY)
+  // MODAL PARA VISUALIZAR CLIENTES ATIVOS
   const [clientesModal, setClientesModal] = useState({
     show: false,
     representante: null as Representante | null,
@@ -159,14 +161,14 @@ const Representantes = () => {
   const resetForm = () => {
     setNovoRepresentante({
       nome: "",
-      cnpj_cpf: "", // 🆕 Alterado
+      cpf: "",
       email: "",
       telefone: "",
       regiao_atuacao: "",
     });
   };
 
-  // 🆕 Query modificada para contar apenas clientes ATIVOS
+  // 🔧 FUNÇÃO PARA BUSCAR REPRESENTANTES COM CONTAGEM DE CLIENTES ATIVOS
   const fetchRepresentantes = async () => {
     setLoading(true);
     setError(null);
@@ -175,8 +177,7 @@ const Representantes = () => {
         .from("representantes")
         .select(`
           *,
-          temp_password,
-          clientes:clientes!representante_id(count)
+          temp_password
         `)
         .order("nome", { ascending: true });
 
@@ -191,14 +192,14 @@ const Representantes = () => {
         return;
       }
 
-      // 🆕 Buscar contagem de clientes ATIVOS separadamente
+      // 🔧 BUSCAR CONTAGEM DE CLIENTES ATIVOS SEPARADAMENTE
       const representantesComContagem = await Promise.all(
         (data || []).map(async (rep) => {
           const { count } = await supabase
             .from("clientes")
             .select("*", { count: "exact", head: true })
             .eq("representante_id", rep.id)
-            .eq("ativo", true); // 🆕 Apenas clientes ativos
+            .eq("ativo", true); // 🔧 Apenas clientes ativos
 
           return {
             ...rep,
@@ -220,7 +221,7 @@ const Representantes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA VISUALIZAR APENAS CLIENTES ATIVOS
+  // 🔧 FUNÇÃO PARA VISUALIZAR APENAS CLIENTES ATIVOS
   const fetchClientesRepresentante = async (representanteId: string, representanteNome: string) => {
     setClientesModal(prev => ({ ...prev, loading: true }));
 
@@ -229,7 +230,7 @@ const Representantes = () => {
         .from("clientes")
         .select("id, nome, email, cnpj_cpf, ativo")
         .eq("representante_id", representanteId)
-        .eq("ativo", true) // 🆕 Apenas clientes ativos
+        .eq("ativo", true) // 🔧 Apenas clientes ativos
         .order("nome", { ascending: true });
 
       if (error) {
@@ -273,8 +274,8 @@ const Representantes = () => {
   }, []);
 
   const handleCreateRepresentante = async () => {
-    const { nome, cnpj_cpf, email, telefone, regiao_atuacao } = novoRepresentante;
-    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
+    const { nome, cpf, email, telefone, regiao_atuacao } = novoRepresentante;
+    if (!nome.trim() || !cpf.trim() || !email.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
@@ -307,8 +308,8 @@ const Representantes = () => {
         return;
       }
 
-      // 🆕 Limpar dados antes de enviar (CPF/CNPJ)
-      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
+      // 🔧 LIMPAR DADOS ANTES DE ENVIAR
+      const cleanCpf = cpf.replace(/\D/g, "");
       const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
 
       const response = await fetch(`${supabaseUrl}/functions/v1/create-representante-user`, {
@@ -320,7 +321,7 @@ const Representantes = () => {
         },
         body: JSON.stringify({
           nome: nome.trim(),
-          cnpj_cpf: cleanCnpjCpf, // 🆕 Alterado de 'cpf' para 'cnpj_cpf'
+          cpf: cleanCpf, // 🔧 Usando 'cpf' para compatibilidade com backend
           email: email.trim(),
           telefone: cleanTelefone,
           regiao_atuacao: regiao_atuacao?.trim() || null,
@@ -473,12 +474,11 @@ const Representantes = () => {
         const matches =
           representante.nome?.toLowerCase().includes(term) ||
           representante.email?.toLowerCase().includes(term) ||
-          representante.cnpj_cpf?.toLowerCase().includes(term) || // 🆕 Alterado de 'cpf'
+          representante.cpf?.toLowerCase().includes(term) ||
           (representante.regiao_atuacao && representante.regiao_atuacao.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
-    });
   }, [representantes, filterStatus, searchTerm]);
 
   // Verificar se há filtros ativos
@@ -545,13 +545,13 @@ const Representantes = () => {
                       />
                     </div>
                     <div>
-                      {/* 🆕 CAMPO ALTERADO PARA CPF/CNPJ */}
-                      <Label htmlFor="cnpj_cpf">CPF/CNPJ *</Label>
+                      {/* 🔧 CAMPO PARA CPF/CNPJ COM MÁSCARA AUTOMÁTICA */}
+                      <Label htmlFor="cpf">CPF/CNPJ *</Label>
                       <Input
-                        id="cnpj_cpf"
-                        value={novoRepresentante.cnpj_cpf}
+                        id="cpf"
+                        value={novoRepresentante.cpf}
                         onChange={(e) =>
-                          setNovoRepresentante({ ...novoRepresentante, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
+                          setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfCnpjInput(e.target.value) })
                         }
                         placeholder="000.000.000-00 ou 00.000.000/0000-00"
                         maxLength={18}
@@ -734,7 +734,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 MODAL SIMPLIFICADO PARA VISUALIZAR APENAS CLIENTES ATIVOS */}
+      {/* 🔧 MODAL PARA VISUALIZAR APENAS CLIENTES ATIVOS */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
@@ -759,7 +759,6 @@ const Representantes = () => {
             <div className="space-y-4 py-4">
               {clientesModal.clientes.length > 0 ? (
                 <>
-                  {/* 🆕 INFORMAÇÃO SOBRE EDIÇÃO */}
                   <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-3">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                       💡 <strong>Dica:</strong> Para alterar o representante de um cliente, acesse a página <strong>Clientes</strong> e edite no modal de detalhes do cliente.
@@ -774,10 +773,9 @@ const Representantes = () => {
                             <h4 className="font-semibold">{cliente.nome}</h4>
                             <p className="text-sm text-muted-foreground">{cliente.email}</p>
                             <p className="text-sm text-muted-foreground">
-                              CNPJ/CPF: {formatCPFCNPJ(cliente.cnpj_cpf)}
+                              CNPJ/CPF: {formatCpfCnpj(cliente.cnpj_cpf)}
                             </p>
                           </div>
-                          {/* 🆕 REMOVIDO O BADGE DE STATUS (apenas clientes ativos são exibidos) */}
                         </div>
                       </Card>
                     ))}
@@ -831,9 +829,8 @@ const Representantes = () => {
                     </div>
                   </div>
                   <div>
-                    {/* 🆕 ALTERADO PARA CPF/CNPJ */}
                     <Label className="text-xs text-muted-foreground">CPF/CNPJ:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.cnpj_cpf ? formatCPFCNPJ(detalhesRepresentante.cnpj_cpf) : "—"}</p>
+                    <p className="font-semibold">{detalhesRepresentante.cpf ? formatCpfCnpj(detalhesRepresentante.cpf) : "—"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Telefone:</Label>
@@ -843,7 +840,6 @@ const Representantes = () => {
                     <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
                     <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                   </div>
-                  {/* 🆕 INFORMAÇÃO DE CLIENTES ATIVOS */}
                   <div className="col-span-2">
                     <Label className="text-xs text-muted-foreground">Clientes Ativos Atribuídos:</Label>
                     <div className="flex items-center gap-2 mt-1">
@@ -886,7 +882,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 LISTA DE REPRESENTANTES COM LAYOUT MODIFICADO */}
+      {/* 🔧 LISTA DE REPRESENTANTES COM LAYOUT MODIFICADO SEGUINDO O PADRÃO DE CLIENTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
@@ -895,15 +891,15 @@ const Representantes = () => {
             onClick={() => setDetalhesRepresentante(representante)}
           >
             <CardContent className="p-4 space-y-3">
-              {/* 🆕 LAYOUT MODIFICADO PARA ALINHAMENTO */}
+              {/* 🔧 LAYOUT MODIFICADO SEGUINDO O PADRÃO DE CLIENTES */}
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">{representante.nome}</h3>
                 <p className="text-sm text-muted-foreground">{representante.email}</p>
                 <p className="text-sm">
-                  <span className="text-muted-foreground">CPF/CNPJ:</span> {formatCPFCNPJ(representante.cnpj_cpf)}
+                  <span className="text-muted-foreground">CPF/CNPJ:</span> {formatCpfCnpj(representante.cpf)}
                 </p>
                 
-                {/* 🆕 ESPAÇO RESERVADO PARA NÚMERO DE CLIENTES - ALTURA FIXA */}
+                {/* 🔧 ESPAÇO RESERVADO PARA NÚMERO DE CLIENTES - ALTURA FIXA */}
                 <div className="h-5 flex items-center">
                   {(representante.clientes_count || 0) > 0 ? (
                     <Button
@@ -919,7 +915,7 @@ const Representantes = () => {
                       {representante.clientes_count} cliente(s)
                     </Button>
                   ) : (
-                    <div></div> // 🆕 DIV VAZIA PARA MANTER ALTURA
+                    <div></div> // 🔧 DIV VAZIA PARA MANTER ALTURA
                   )}
                 </div>
               </div>
@@ -927,7 +923,7 @@ const Representantes = () => {
               {/* Separador */}
               <div className="border-t"></div>
               
-              {/* 🆕 BADGE E SWITCH NA MESMA LINHA */}
+              {/* 🔧 BADGE E SWITCH NA MESMA LINHA */}
               {canCreate && (
                 <div className="flex items-center justify-between">
                   <Badge variant={representante.ativo ? "default" : "secondary"}>
