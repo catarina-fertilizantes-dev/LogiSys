@@ -29,30 +29,54 @@ type Representante = Database['public']['Tables']['representantes']['Row'] & {
   clientes_count?: number;
 };
 
-// Helpers de formatação
+// 🆕 Helpers de formatação para CPF/CNPJ
 const formatCPF = (cpf: string) =>
   cpf.replace(/\D/g, "")
     .padStart(11, "0")
     .slice(0, 11)
     .replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
 
+const formatCNPJ = (cnpj: string) =>
+  cnpj.replace(/\D/g, "")
+    .padStart(14, "0")
+    .slice(0, 14)
+    .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+
+// 🆕 Função para formatar CPF ou CNPJ automaticamente
 const formatCPFCNPJ = (value: string) => {
   const onlyDigits = value.replace(/\D/g, "");
   if (onlyDigits.length <= 11) {
     return formatCPF(onlyDigits);
   }
-  return onlyDigits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  return formatCNPJ(onlyDigits);
 };
 
-function maskCpfInput(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length > 9)
-    return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, "$1.$2.$3-$4");
-  if (digits.length > 6)
-    return digits.replace(/^(\d{3})(\d{3})(\d{0,3})$/, "$1.$2.$3");
-  if (digits.length > 3)
-    return digits.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
-  return digits;
+// 🆕 Máscara para CPF/CNPJ no input
+function maskCpfCnpjInput(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= 11) {
+    // CPF
+    let cpf = digits.slice(0, 11);
+    if (cpf.length > 9)
+      return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, "$1.$2.$3-$4");
+    if (cpf.length > 6)
+      return cpf.replace(/^(\d{3})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+    if (cpf.length > 3)
+      return cpf.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
+    return cpf;
+  } else {
+    // CNPJ
+    let cnpj = digits.slice(0, 14);
+    if (cnpj.length > 12)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, "$1.$2.$3/$4-$5");
+    if (cnpj.length > 8)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})$/, "$1.$2.$3/$4");
+    if (cnpj.length > 5)
+      return cnpj.replace(/^(\d{2})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+    if (cnpj.length > 2)
+      return cnpj.replace(/^(\d{2})(\d{0,3})$/, "$1.$2");
+    return cnpj;
+  }
 }
 
 function formatPhone(phone: string): string {
@@ -92,11 +116,11 @@ const Representantes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Formulário Novo Representante
+  // Formulário Novo Representante - 🆕 Alterado para aceitar CPF/CNPJ
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoRepresentante, setNovoRepresentante] = useState({
     nome: "",
-    cpf: "",
+    cnpj_cpf: "", // 🆕 Alterado de 'cpf' para 'cnpj_cpf'
     email: "",
     telefone: "",
     regiao_atuacao: "",
@@ -110,7 +134,7 @@ const Representantes = () => {
   });
 
   const [detalhesRepresentante, setDetalhesRepresentante] = useState<Representante | null>(null);
-  
+
   // 🆕 MODAL SIMPLIFICADO APENAS PARA VISUALIZAR CLIENTES (READ-ONLY)
   const [clientesModal, setClientesModal] = useState({
     show: false,
@@ -135,14 +159,14 @@ const Representantes = () => {
   const resetForm = () => {
     setNovoRepresentante({
       nome: "",
-      cpf: "",
+      cnpj_cpf: "", // 🆕 Alterado
       email: "",
       telefone: "",
       regiao_atuacao: "",
     });
   };
 
-  // Query modificada para incluir contagem de clientes
+  // 🆕 Query modificada para contar apenas clientes ATIVOS
   const fetchRepresentantes = async () => {
     setLoading(true);
     setError(null);
@@ -150,12 +174,12 @@ const Representantes = () => {
       const { data, error } = await supabase
         .from("representantes")
         .select(`
-          *, 
+          *,
           temp_password,
           clientes:clientes!representante_id(count)
         `)
         .order("nome", { ascending: true });
-      
+
       if (error) {
         setError(error.message);
         toast({
@@ -167,11 +191,21 @@ const Representantes = () => {
         return;
       }
 
-      // Processar dados para incluir contagem
-      const representantesComContagem = data?.map(rep => ({
-        ...rep,
-        clientes_count: rep.clientes?.[0]?.count || 0
-      })) || [];
+      // 🆕 Buscar contagem de clientes ATIVOS separadamente
+      const representantesComContagem = await Promise.all(
+        (data || []).map(async (rep) => {
+          const { count } = await supabase
+            .from("clientes")
+            .select("*", { count: "exact", head: true })
+            .eq("representante_id", rep.id)
+            .eq("ativo", true); // 🆕 Apenas clientes ativos
+
+          return {
+            ...rep,
+            clientes_count: count || 0
+          };
+        })
+      );
 
       setRepresentantes(representantesComContagem as Representante[]);
       setLoading(false);
@@ -186,15 +220,16 @@ const Representantes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO SIMPLIFICADA PARA VISUALIZAR CLIENTES (READ-ONLY)
+  // 🆕 FUNÇÃO PARA VISUALIZAR APENAS CLIENTES ATIVOS
   const fetchClientesRepresentante = async (representanteId: string, representanteNome: string) => {
     setClientesModal(prev => ({ ...prev, loading: true }));
-    
+
     try {
       const { data, error } = await supabase
         .from("clientes")
         .select("id, nome, email, cnpj_cpf, ativo")
         .eq("representante_id", representanteId)
+        .eq("ativo", true) // 🆕 Apenas clientes ativos
         .order("nome", { ascending: true });
 
       if (error) {
@@ -232,14 +267,14 @@ const Representantes = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
-  
+
   useEffect(() => {
     fetchRepresentantes();
   }, []);
 
   const handleCreateRepresentante = async () => {
-    const { nome, cpf, email, telefone, regiao_atuacao } = novoRepresentante;
-    if (!nome.trim() || !cpf.trim() || !email.trim()) {
+    const { nome, cnpj_cpf, email, telefone, regiao_atuacao } = novoRepresentante;
+    if (!nome.trim() || !cnpj_cpf.trim() || !email.trim()) {
       toast({
         variant: "destructive",
         title: "Preencha os campos obrigatórios",
@@ -272,8 +307,8 @@ const Representantes = () => {
         return;
       }
 
-      // Limpar dados antes de enviar
-      const cleanCpf = cpf.replace(/\D/g, "");
+      // 🆕 Limpar dados antes de enviar (CPF/CNPJ)
+      const cleanCnpjCpf = cnpj_cpf.replace(/\D/g, "");
       const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
 
       const response = await fetch(`${supabaseUrl}/functions/v1/create-representante-user`, {
@@ -285,7 +320,7 @@ const Representantes = () => {
         },
         body: JSON.stringify({
           nome: nome.trim(),
-          cpf: cleanCpf,
+          cnpj_cpf: cleanCnpjCpf, // 🆕 Alterado de 'cpf' para 'cnpj_cpf'
           email: email.trim(),
           telefone: cleanTelefone,
           regiao_atuacao: regiao_atuacao?.trim() || null,
@@ -368,7 +403,7 @@ const Representantes = () => {
 
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
-  
+
     try {
       const { data, error } = await supabase
         .from("representantes")
@@ -438,14 +473,14 @@ const Representantes = () => {
         const matches =
           representante.nome?.toLowerCase().includes(term) ||
           representante.email?.toLowerCase().includes(term) ||
-          representante.cpf?.toLowerCase().includes(term) ||
+          representante.cnpj_cpf?.toLowerCase().includes(term) || // 🆕 Alterado de 'cpf'
           (representante.regiao_atuacao && representante.regiao_atuacao.toLowerCase().includes(term));
         if (!matches) return false;
       }
       return true;
     });
   }, [representantes, filterStatus, searchTerm]);
-  
+
   // Verificar se há filtros ativos
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
 
@@ -505,20 +540,21 @@ const Representantes = () => {
                         id="nome"
                         value={novoRepresentante.nome}
                         onChange={(e) => setNovoRepresentante({ ...novoRepresentante, nome: e.target.value })}
-                        placeholder="Nome completo"
+                        placeholder="Nome completo ou razão social"
                         disabled={isCreating}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="cpf">CPF *</Label>
+                      {/* 🆕 CAMPO ALTERADO PARA CPF/CNPJ */}
+                      <Label htmlFor="cnpj_cpf">CPF/CNPJ *</Label>
                       <Input
-                        id="cpf"
-                        value={novoRepresentante.cpf}
+                        id="cnpj_cpf"
+                        value={novoRepresentante.cnpj_cpf}
                         onChange={(e) =>
-                          setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfInput(e.target.value) })
+                          setNovoRepresentante({ ...novoRepresentante, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
                         }
-                        placeholder="000.000.000-00"
-                        maxLength={14}
+                        placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                        maxLength={18}
                         disabled={isCreating}
                       />
                     </div>
@@ -613,7 +649,7 @@ const Representantes = () => {
             </Select>
           </div>
           <Input
-            placeholder="Buscar por nome, email, CPF, região..."
+            placeholder="Buscar por nome, email, CPF/CNPJ, região..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -698,7 +734,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 MODAL SIMPLIFICADO PARA VISUALIZAR CLIENTES (READ-ONLY) */}
+      {/* 🆕 MODAL SIMPLIFICADO PARA VISUALIZAR APENAS CLIENTES ATIVOS */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
@@ -707,10 +743,10 @@ const Representantes = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Clientes do Representante
+              Clientes Ativos do Representante
             </DialogTitle>
             <DialogDescription>
-              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s) atribuído(s)
+              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s) ativo(s)
             </DialogDescription>
           </DialogHeader>
           
@@ -735,17 +771,13 @@ const Representantes = () => {
                       <Card key={cliente.id} className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-semibold">{cliente.nome}</h4>
-                              <Badge variant={cliente.ativo ? "default" : "secondary"}>
-                                {cliente.ativo ? "Ativo" : "Inativo"}
-                              </Badge>
-                            </div>
+                            <h4 className="font-semibold">{cliente.nome}</h4>
                             <p className="text-sm text-muted-foreground">{cliente.email}</p>
                             <p className="text-sm text-muted-foreground">
                               CNPJ/CPF: {formatCPFCNPJ(cliente.cnpj_cpf)}
                             </p>
                           </div>
+                          {/* 🆕 REMOVIDO O BADGE DE STATUS (apenas clientes ativos são exibidos) */}
                         </div>
                       </Card>
                     ))}
@@ -755,7 +787,7 @@ const Representantes = () => {
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Nenhum cliente atribuído a este representante
+                    Nenhum cliente ativo atribuído a este representante
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Para atribuir clientes, acesse a página <strong>Clientes</strong> e selecione o representante no modal de detalhes.
@@ -799,8 +831,9 @@ const Representantes = () => {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">CPF:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.cpf ? formatCPF(detalhesRepresentante.cpf) : "—"}</p>
+                    {/* 🆕 ALTERADO PARA CPF/CNPJ */}
+                    <Label className="text-xs text-muted-foreground">CPF/CNPJ:</Label>
+                    <p className="font-semibold">{detalhesRepresentante.cnpj_cpf ? formatCPFCNPJ(detalhesRepresentante.cnpj_cpf) : "—"}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Telefone:</Label>
@@ -810,13 +843,13 @@ const Representantes = () => {
                     <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
                     <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                   </div>
-                  {/* Informação de clientes */}
+                  {/* 🆕 INFORMAÇÃO DE CLIENTES ATIVOS */}
                   <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
+                    <Label className="text-xs text-muted-foreground">Clientes Ativos Atribuídos:</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {detalhesRepresentante.clientes_count || 0} cliente(s)
+                        {detalhesRepresentante.clientes_count || 0} cliente(s) ativo(s)
                       </Badge>
                       {(detalhesRepresentante.clientes_count || 0) > 0 && (
                         <Button
@@ -853,7 +886,7 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 LISTA DE REPRESENTANTES SIMPLIFICADA */}
+      {/* 🆕 LISTA DE REPRESENTANTES COM LAYOUT MODIFICADO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
@@ -862,73 +895,44 @@ const Representantes = () => {
             onClick={() => setDetalhesRepresentante(representante)}
           >
             <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{representante.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{representante.email}</p>
-                  {/* Badge com contagem de clientes */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {representante.clientes_count || 0} cliente(s)
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <Badge variant={representante.ativo ? "default" : "secondary"}>
-                    {representante.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                  {canCreate && representante.temp_password && (
+              {/* 🆕 LAYOUT MODIFICADO PARA ALINHAMENTO */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">{representante.nome}</h3>
+                <p className="text-sm text-muted-foreground">{representante.email}</p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">CPF/CNPJ:</span> {formatCPFCNPJ(representante.cnpj_cpf)}
+                </p>
+                
+                {/* 🆕 ESPAÇO RESERVADO PARA NÚMERO DE CLIENTES - ALTURA FIXA */}
+                <div className="h-5 flex items-center">
+                  {(representante.clientes_count || 0) > 0 ? (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleShowCredentials(representante);
+                        fetchClientesRepresentante(representante.id, representante.nome);
                       }}
-                      className="text-xs"
+                      className="h-5 px-1 text-xs text-primary hover:text-primary-foreground"
                     >
-                      <Key className="h-3 w-3 mr-1" />
-                      Credenciais
+                      <Users className="h-3 w-3 mr-1" />
+                      {representante.clientes_count} cliente(s)
                     </Button>
+                  ) : (
+                    <div></div> // 🆕 DIV VAZIA PARA MANTER ALTURA
                   )}
                 </div>
               </div>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">CPF:</span> {formatCPF(representante.cpf)}
-                </p>
-                {(representante.telefone || representante.regiao_atuacao) && (
-                  <>
-                    {representante.telefone && <p><span className="text-muted-foreground">Telefone:</span> {formatPhone(representante.telefone)}</p>}
-                    {representante.regiao_atuacao && <p><span className="text-muted-foreground">Região:</span> {representante.regiao_atuacao}</p>}
-                  </>
-                )}
-              </div>
               
-              {/* 🆕 BOTÃO SIMPLIFICADO APENAS PARA VISUALIZAR */}
-              {(representante.clientes_count || 0) > 0 && (
-                <div className="pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fetchClientesRepresentante(representante.id, representante.nome);
-                    }}
-                    className="w-full text-xs"
-                  >
-                    <Eye className="h-3 w-3 mr-2" />
-                    Ver Clientes ({representante.clientes_count})
-                  </Button>
-                </div>
-              )}
+              {/* Separador */}
+              <div className="border-t"></div>
               
+              {/* 🆕 BADGE E SWITCH NA MESMA LINHA */}
               {canCreate && (
-                <div className="flex items-center justify-between pt-3 border-t">
-                  <Label htmlFor={`switch-${representante.id}`} className="text-sm">
+                <div className="flex items-center justify-between">
+                  <Badge variant={representante.ativo ? "default" : "secondary"}>
                     {representante.ativo ? "Ativo" : "Inativo"}
-                  </Label>
+                  </Badge>
                   <div className="relative">
                     <Switch
                       id={`switch-${representante.id}`}
@@ -949,6 +953,7 @@ const Representantes = () => {
           </Card>
         ))}
       </div>
+      
       {filteredRepresentantes.length === 0 && (
         <div className="text-center py-12">
           <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
