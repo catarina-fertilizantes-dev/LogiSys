@@ -747,7 +747,7 @@ const Representantes = () => {
               Clientes Ativos do Representante
             </DialogTitle>
             <DialogDescription>
-              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s) ativo(s)
+              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s)
             </DialogDescription>
           </DialogHeader>
           
@@ -842,11 +842,11 @@ const Representantes = () => {
                     <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                   </div>
                   <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Clientes Ativos Atribuídos:</Label>
+                    <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {detalhesRepresentante.clientes_count || 0} cliente(s) ativo(s)
+                        {detalhesRepresentante.clientes_count || 0} cliente(s)
                       </Badge>
                       {(detalhesRepresentante.clientes_count || 0) > 0 && (
                         <Button
