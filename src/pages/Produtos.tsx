@@ -424,9 +424,6 @@ const Produtos = () => {
                     Unidade: {unidadeLabels[produto.unidade] || produto.unidade}
                   </p>
                 </div>
-                <Badge variant={produto.ativo ? "default" : "secondary"}>
-                  {produto.ativo ? "Ativo" : "Inativo"}
-                </Badge>
               </div>
               <div className="space-y-1 text-sm">
                 <p>
@@ -436,19 +433,17 @@ const Produtos = () => {
               </div>
               {canCreate && (
                 <div className="flex items-center justify-between pt-3 border-t">
-                  <Label htmlFor={`switch-${produto.id}`} className="text-sm">
+                  <Badge variant={produto.ativo ? "default" : "secondary"}>
                     {produto.ativo ? "Ativo" : "Inativo"}
-                  </Label>
-                  {/* 🚀 SWITCH COM LOADING STATE */}
+                  </Badge>
                   <div className="relative">
                     <Switch
                       id={`switch-${produto.id}`}
                       checked={produto.ativo}
                       onCheckedChange={() => handleToggleAtivo(produto.id, produto.ativo)}
                       onClick={e => e.stopPropagation()}
-                      disabled={isTogglingStatus[produto.id]} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isTogglingStatus[produto.id]}
                     />
-                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
                     {isTogglingStatus[produto.id] && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Loader2 className="h-3 w-3 animate-spin" />
