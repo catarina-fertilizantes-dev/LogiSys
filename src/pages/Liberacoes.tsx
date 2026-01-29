@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, ClipboardList, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Calendar, Info, Loader2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -110,6 +111,7 @@ const parseDate = (d: string) => {
 
 const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
+  const { clientesDoRepresentante } = usePermissions();
   
   // 🚫 PROTEÇÃO ADICIONAL: Redirecionar role 'armazem' para dashboard
   useEffect(() => {
@@ -174,7 +176,7 @@ const Liberacoes = () => {
 
   // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id],
+    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, clientesDoRepresentante],
     queryFn: async () => {
       let query = supabase
         .from("liberacoes")
@@ -199,12 +201,18 @@ const Liberacoes = () => {
       if (userRole === "armazem" && currentArmazem?.id) {
         query = query.eq("armazem_id", currentArmazem.id);
       }
+      // 🆕 FILTRO PARA REPRESENTANTE
+      if (userRole === "representante" && clientesDoRepresentante.length > 0) {
+        query = query.in("cliente_id", clientesDoRepresentante);
+      }
       const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 30000, // 🔄 ATUALIZAÇÃO AUTOMÁTICA PARA VER MUDANÇAS DE STATUS
-    enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
+    refetchInterval: 30000,
+    enabled: (userRole !== "cliente" || !!currentCliente?.id) && 
+             (userRole !== "armazem" || !!currentArmazem?.id) &&
+             (userRole !== "representante" || clientesDoRepresentante.length > 0),
   });
 
   // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO PARA INCLUIR TODOS OS STATUS
