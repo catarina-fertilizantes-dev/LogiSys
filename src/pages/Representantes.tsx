@@ -479,6 +479,7 @@ const Representantes = () => {
         if (!matches) return false;
       }
       return true;
+    });
   }, [representantes, filterStatus, searchTerm]);
 
   // Verificar se há filtros ativos
