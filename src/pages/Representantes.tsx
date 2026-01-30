@@ -30,7 +30,6 @@ type Representante = Database['public']['Tables']['representantes']['Row'] & {
   clientes_count?: number;
 };
 
-// 🔧 HELPERS DE FORMATAÇÃO SEGUROS (baseados no código de Clientes)
 const formatCPF = (cpf: string) =>
   cpf.replace(/\D/g, "")
     .padStart(11, "0")
@@ -56,7 +55,6 @@ function maskCpfCnpjInput(value: string): string {
   if (!value) return "";
   const digits = value.replace(/\D/g, "");
   if (digits.length <= 11) {
-    // CPF
     let cpf = digits.slice(0, 11);
     if (cpf.length > 9)
       return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, "$1.$2.$3-$4");
@@ -66,7 +64,6 @@ function maskCpfCnpjInput(value: string): string {
       return cpf.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
     return cpf;
   } else {
-    // CNPJ
     let cnpj = digits.slice(0, 14);
     if (cnpj.length > 12)
       return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, "$1.$2.$3/$4-$5");
@@ -121,11 +118,10 @@ const Representantes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔧 FORMULÁRIO USANDO CAMPO EXISTENTE (cpf) - mantendo compatibilidade com backend
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoRepresentante, setNovoRepresentante] = useState({
     nome: "",
-    cpf: "", // 🔧 Mantendo 'cpf' para compatibilidade com backend existente
+    cpf: "",
     email: "",
     telefone: "",
     regiao_atuacao: "",
@@ -140,7 +136,6 @@ const Representantes = () => {
 
   const [detalhesRepresentante, setDetalhesRepresentante] = useState<Representante | null>(null);
 
-  // MODAL PARA VISUALIZAR CLIENTES ATIVOS
   const [clientesModal, setClientesModal] = useState({
     show: false,
     representante: null as Representante | null,
@@ -157,7 +152,6 @@ const Representantes = () => {
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Estados de loading
   const [isCreating, setIsCreating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
@@ -171,7 +165,6 @@ const Representantes = () => {
     });
   };
 
-  // 🔧 FUNÇÃO PARA BUSCAR REPRESENTANTES COM CONTAGEM DE CLIENTES ATIVOS
   const fetchRepresentantes = async () => {
     setLoading(true);
     setError(null);
@@ -195,14 +188,13 @@ const Representantes = () => {
         return;
       }
 
-      // 🔧 BUSCAR CONTAGEM DE CLIENTES ATIVOS SEPARADAMENTE
       const representantesComContagem = await Promise.all(
         (data || []).map(async (rep) => {
           const { count } = await supabase
             .from("clientes")
             .select("*", { count: "exact", head: true })
             .eq("representante_id", rep.id)
-            .eq("ativo", true); // 🔧 Apenas clientes ativos
+            .eq("ativo", true);
 
           return {
             ...rep,
@@ -224,7 +216,6 @@ const Representantes = () => {
     }
   };
 
-  // 🔧 FUNÇÃO PARA VISUALIZAR APENAS CLIENTES ATIVOS
   const fetchClientesRepresentante = async (representanteId: string, representanteNome: string) => {
     setClientesModal(prev => ({ ...prev, loading: true }));
 
@@ -233,7 +224,7 @@ const Representantes = () => {
         .from("clientes")
         .select("id, nome, email, cnpj_cpf, ativo")
         .eq("representante_id", representanteId)
-        .eq("ativo", true) // 🔧 Apenas clientes ativos
+        .eq("ativo", true)
         .order("nome", { ascending: true });
 
       if (error) {
@@ -311,7 +302,6 @@ const Representantes = () => {
         return;
       }
 
-      // 🔧 LIMPAR DADOS ANTES DE ENVIAR
       const cleanCpf = cpf.replace(/\D/g, "");
       const cleanTelefone = telefone ? telefone.replace(/\D/g, "") : null;
 
@@ -324,7 +314,7 @@ const Representantes = () => {
         },
         body: JSON.stringify({
           nome: nome.trim(),
-          cpf: cleanCpf, // 🔧 Usando 'cpf' para compatibilidade com backend
+          cpf: cleanCpf,
           email: email.trim(),
           telefone: cleanTelefone,
           regiao_atuacao: regiao_atuacao?.trim() || null,
@@ -449,6 +439,7 @@ const Representantes = () => {
     }
   };
 
+  // ✅ FUNÇÃO CORRETA PARA MOSTRAR CREDENCIAIS (igual à de Clientes)
   const handleShowCredentials = (representante: Representante) => {
     if (!representante.temp_password) {
       toast({
@@ -485,9 +476,7 @@ const Representantes = () => {
     });
   }, [representantes, filterStatus, searchTerm]);
 
-  // Verificar se há filtros ativos
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
-
   const canCreate = hasRole("logistica") || hasRole("admin");
 
   if (loading) {
@@ -549,7 +538,6 @@ const Representantes = () => {
                       />
                     </div>
                     <div>
-                      {/* 🔧 CAMPO PARA CPF/CNPJ COM MÁSCARA AUTOMÁTICA */}
                       <Label htmlFor="cpf">CPF/CNPJ *</Label>
                       <Input
                         id="cpf"
@@ -636,7 +624,6 @@ const Representantes = () => {
         }
       />
 
-      {/* Filtros e busca */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex gap-2 items-center">
@@ -675,7 +662,6 @@ const Representantes = () => {
         </div>
       </div>
 
-      {/* Modal credenciais temporárias */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -738,7 +724,6 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🔧 MODAL PARA VISUALIZAR APENAS CLIENTES ATIVOS */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
@@ -807,7 +792,6 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de detalhes do representante */}
       <Dialog open={!!detalhesRepresentante} onOpenChange={open => !open && setDetalhesRepresentante(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -869,6 +853,7 @@ const Representantes = () => {
             )}
           </div>
           <DialogFooter className="flex gap-2">
+            {/* ✅ BOTÃO "VER CREDENCIAIS" - CONDIÇÃO CORRETA */}
             {canCreate && detalhesRepresentante?.temp_password && (
               <Button
                 variant="outline"
@@ -886,7 +871,6 @@ const Representantes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🔧 LISTA DE REPRESENTANTES COM LAYOUT MODIFICADO SEGUINDO O PADRÃO DE CLIENTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
@@ -895,7 +879,6 @@ const Representantes = () => {
             onClick={() => setDetalhesRepresentante(representante)}
           >
             <CardContent className="p-4 space-y-3">
-              {/* 🔧 LAYOUT MODIFICADO SEGUINDO O PADRÃO DE CLIENTES */}
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">{representante.nome}</h3>
                 <p className="text-sm text-muted-foreground">{representante.email}</p>
@@ -903,7 +886,6 @@ const Representantes = () => {
                   <span className="text-muted-foreground">CPF/CNPJ:</span> {formatCpfCnpj(representante.cpf)}
                 </p>
                 
-                {/* 🔧 ESPAÇO RESERVADO PARA NÚMERO DE CLIENTES - ALTURA FIXA */}
                 <div className="h-5 flex items-center">
                   {(representante.clientes_count || 0) > 0 ? (
                     <Button
@@ -919,15 +901,13 @@ const Representantes = () => {
                       {representante.clientes_count} cliente(s)
                     </Button>
                   ) : (
-                    <div></div> // 🔧 DIV VAZIA PARA MANTER ALTURA
+                    <div></div>
                   )}
                 </div>
               </div>
               
-              {/* Separador */}
               <div className="border-t"></div>
               
-              {/* 🔧 BADGE E SWITCH NA MESMA LINHA */}
               {canCreate && (
                 <div className="flex items-center justify-between">
                   <Badge variant={representante.ativo ? "default" : "secondary"}>
