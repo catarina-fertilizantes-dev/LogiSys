@@ -113,6 +113,13 @@ const Carregamentos = () => {
   const { clienteId, armazemId, representanteId } = usePermissions();
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
+  // 🆕 SCROLL PARA O TOPO AO CARREGAR A PÁGINA
+useEffect(() => {
+  if (window.scrollY > 0) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}, []);
+
   // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, representanteId, userRole],
