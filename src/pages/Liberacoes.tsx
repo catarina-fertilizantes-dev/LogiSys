@@ -15,10 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
-// 🎨 ARRAY DE STATUS PARA FILTROS COM CORES
 const STATUS_LIBERACAO = [
   { id: "disponivel", nome: "Disponível", cor: "bg-green-100 text-green-800 hover:bg-green-200" },
   { id: "parcialmente_agendada", nome: "Parcialmente Agendada", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
@@ -38,15 +36,12 @@ interface LiberacaoItem {
   produto_id?: string;
   armazem_id?: string;
   created_at?: string;
-  // 📊 CAMPOS PARA VISUALIZAÇÃO (SEM "DISPONÍVEL")
   quantidadeAgendada: number;
   percentualRetirado: number;
   percentualAgendado: number;
-  // 🆕 CAMPO PARA HISTÓRICO
   finalizada: boolean;
 }
 
-// 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE LIBERAÇÃO
 const getLiberacaoStatusTooltip = (status: StatusLiberacao) => {
   switch (status) {
     case "disponivel":
@@ -60,7 +55,6 @@ const getLiberacaoStatusTooltip = (status: StatusLiberacao) => {
   }
 };
 
-// 🎯 FUNÇÃO PARA TOOLTIPS DA BARRA DE AGENDAMENTO
 const getAgendamentoBarTooltip = (percentualAgendado: number, quantidadeAgendada: number, quantidadeTotal: number) => {
   if (percentualAgendado === 0) {
     return "Nenhuma quantidade desta liberação foi agendada para retirada";
@@ -72,7 +66,6 @@ const getAgendamentoBarTooltip = (percentualAgendado: number, quantidadeAgendada
   }
 };
 
-// Componente para exibir quando não há dados disponíveis
 const EmptyStateCard = ({ 
   title, 
   description, 
@@ -113,23 +106,7 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
-  // 🆕 LOG PARA DEBUG
-  console.log('🔍 [DEBUG] Hook usePermissions retornou:', {
-    clientesDoRepresentante,
-    representanteId,
-    length: clientesDoRepresentante?.length || 0
-  });
-
-  // 🆕 VERIFICAR SE OS DADOS ESTÃO CHEGANDO
-  useEffect(() => {
-    console.log('�� [DEBUG] useEffect - clientesDoRepresentante mudou:', {
-      clientesDoRepresentante,
-      length: clientesDoRepresentante?.length || 0,
-      representanteId
-    });
-  }, [clientesDoRepresentante, representanteId]);
-  
-  // 🚫 PROTEÇÃO ADICIONAL: Redirecionar role 'armazem' para dashboard
+  // Proteção para role 'armazem'
   useEffect(() => {
     if (userRole === "armazem") {
       window.location.href = "/";
@@ -137,7 +114,6 @@ const Liberacoes = () => {
     }
   }, [userRole]);
 
-  // Se for role 'armazem', não renderizar nada enquanto redireciona
   if (userRole === "armazem") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -150,14 +126,8 @@ const Liberacoes = () => {
   const canCreate = hasRole("logistica") || hasRole("admin");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // 🚀 NOVO ESTADO DE LOADING
   const [isCreating, setIsCreating] = useState(false);
-
-  // 🆕 ESTADO PARA MODAL DE DETALHES
   const [detalhesLiberacao, setDetalhesLiberacao] = useState<LiberacaoItem | null>(null);
-
-  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
   const [secaoFinalizadasExpandida, setSecaoFinalizadasExpandida] = useState(false);
 
   const { data: currentCliente } = useQuery({
@@ -190,42 +160,21 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔍 ADICIONAR ESTES LOGS ANTES DA QUERY PRINCIPAL
-  console.log('🔍 [DEBUG] Liberacoes - userRole:', userRole);
-  console.log('🔍 [DEBUG] Liberacoes - representanteId:', representanteId);
-  console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante:', clientesDoRepresentante);
-  console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante.length:', clientesDoRepresentante.length);
-  
-  // 🔄 QUERY PRINCIPAL - VERSÃO SIMPLIFICADA COM FUNCTION
+  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      console.log('�� [DEBUG] Query executando com:', {
-        userRole,
-        representanteId,
-        currentClienteId: currentCliente?.id,
-        currentArmazemId: currentArmazem?.id
-      });
-  
       // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
-        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
-        
         const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
           p_representante_id: representanteId
-        });
-        
-        console.log('🔍 [DEBUG] Function result:', {
-          error: error?.message,
-          dataLength: data?.length || 0,
-          primeiros2: data?.slice(0, 2)
         });
         
         if (error) throw error;
         return data || [];
       }
-  
-      // 🔄 CLIENTE E OUTROS: Query original
+
+      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("liberacoes")
         .select(`
@@ -258,50 +207,34 @@ const Liberacoes = () => {
           created_at
         `)
         .order("data_liberacao", { ascending: false });
-  
-      // Filtro para cliente
+
       if (userRole === "cliente" && currentCliente?.id) {
-        console.log('🔍 [DEBUG] Aplicando filtro cliente:', currentCliente.id);
         query = query.eq("cliente_id", currentCliente.id);
       }
-  
-      // Filtro para armazém
+
       if (userRole === "armazem" && currentArmazem?.id) {
-        console.log('🔍 [DEBUG] Aplicando filtro armazem:', currentArmazem.id);
         query = query.eq("armazem_id", currentArmazem.id);
       }
-  
-      console.log('🔍 [DEBUG] Executando query tradicional...');
+
       const { data, error } = await query;
-      
-      console.log('🔍 [DEBUG] Query tradicional result:', {
-        error: error?.message,
-        dataLength: data?.length || 0,
-        primeiros2: data?.slice(0, 2)
-      });
-      
       if (error) throw error;
       return data || [];
     },
     refetchInterval: 30000,
     enabled: (() => {
-      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
-      const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
-      const representanteOk = userRole !== "representante" || !!representanteId;
+      // 🆕 MESMA LÓGICA ROBUSTA DAS OUTRAS PÁGINAS
+      if (!user || !userRole) return false;
+      if (userRole === "admin" || userRole === "logistica") return true;
       
-      console.log('🔍 [DEBUG] Enabled conditions:', {
-        clienteOk,
-        armazemOk, 
-        representanteOk,
-        representanteId,
-        final: clienteOk && armazemOk && representanteOk
-      });
+      const clienteOk = userRole !== "cliente" || (currentCliente?.id !== undefined);
+      const armazemOk = userRole !== "armazem" || (currentArmazem?.id !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
       return clienteOk && armazemOk && representanteOk;
     })(),
   });
 
-  // 📊 BUSCAR QUANTIDADES AGENDADAS - CAMPOS CORRETOS
+  // Buscar quantidades agendadas (mantida)
   const { data: agendamentosData } = useQuery({
     queryKey: ["agendamentos-totais"],
     queryFn: async () => {
@@ -316,7 +249,6 @@ const Liberacoes = () => {
       
       if (error) throw error;
       
-      // ✅ CORRIGIDO: Agrupar APENAS por liberacao_id (sem status)
       const agrupados = (data || []).reduce((acc: Record<string, number>, item) => {
         acc[item.liberacao_id] = (acc[item.liberacao_id] || 0) + Number(item.quantidade);
         return acc;
@@ -327,7 +259,7 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
+  // Mapeamento (mantido - já está otimizado)
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     
@@ -341,13 +273,10 @@ const Liberacoes = () => {
       const percentualAgendado = item.quantidade_liberada > 0 
         ? Math.round((quantidadeAgendada / item.quantidade_liberada) * 100) 
         : 0;
-  
-      // 🆕 CRITÉRIO DE FINALIZAÇÃO: quantidade_retirada >= quantidade_liberada
+
       const finalizada = quantidadeRetirada >= item.quantidade_liberada;
-  
-      // 🆕 SUPORTE PARA DADOS DA FUNCTION (representante) E QUERY TRADICIONAL (outros)
-      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
-  
+      const isFromFunction = !!item.cliente_nome;
+
       return {
         id: item.id,
         produto: isFromFunction ? item.produto_nome : (item.produtos?.nome || "N/A"),
@@ -371,6 +300,7 @@ const Liberacoes = () => {
     });
   }, [liberacoesData, agendamentosData]);
 
+  // Estados do formulário (mantidos)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novaLiberacao, setNovaLiberacao] = useState({
     produto: "",
@@ -379,12 +309,11 @@ const Liberacoes = () => {
     pedido: "",
     quantidade: "",
   });
-
-  // 🆕 ESTADOS PARA VALIDAÇÃO DE ESTOQUE
   const [quantidadeEstoque, setQuantidadeEstoque] = useState<number>(0);
   const [validandoEstoque, setValidandoEstoque] = useState(false);
   const [temEstoqueCadastrado, setTemEstoqueCadastrado] = useState<boolean | null>(null);
 
+  // Queries de dados (mantidas)
   const { data: produtos } = useQuery({
     queryKey: ["produtos-list"],
     queryFn: async () => {
@@ -422,7 +351,7 @@ const Liberacoes = () => {
     },
   });
 
-  // 🆕 FUNÇÃO PARA VALIDAR ESTOQUE
+  // Funções de validação (mantidas)
   const validarEstoque = async (produtoId: string, armazemId: string) => {
     if (!produtoId || !armazemId) {
       setQuantidadeEstoque(0);
@@ -440,7 +369,6 @@ const Liberacoes = () => {
         .maybeSingle();
 
       if (error) {
-        console.error('Erro ao buscar estoque:', error);
         setQuantidadeEstoque(0);
         setTemEstoqueCadastrado(false);
         return;
@@ -455,7 +383,6 @@ const Liberacoes = () => {
       }
       
     } catch (error) {
-      console.error('Erro ao validar estoque:', error);
       setQuantidadeEstoque(0);
       setTemEstoqueCadastrado(false);
     } finally {
@@ -463,23 +390,20 @@ const Liberacoes = () => {
     }
   };
 
-  // 🆕 VALIDAÇÃO EM TEMPO REAL DA QUANTIDADE
   const quantidadeValida = useMemo(() => {
     const qtd = Number(novaLiberacao.quantidade);
     return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeEstoque;
   }, [novaLiberacao.quantidade, quantidadeEstoque]);
 
+  // useEffects (mantidos)
   useEffect(() => {
-    // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-      // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [canCreate]);
 
-  // 🆕 EFFECT PARA VALIDAR ESTOQUE QUANDO PRODUTO E ARMAZÉM MUDAREM
   useEffect(() => {
     if (novaLiberacao.produto && novaLiberacao.armazem) {
       validarEstoque(novaLiberacao.produto, novaLiberacao.armazem);
@@ -489,7 +413,7 @@ const Liberacoes = () => {
     }
   }, [novaLiberacao.produto, novaLiberacao.armazem]);
   
-  // 🔄 FILTROS ATUALIZADOS PARA NOVOS STATUS
+  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<StatusLiberacao[]>([]);
@@ -515,7 +439,7 @@ const Liberacoes = () => {
     setSelectedArmazens([]);
   };
 
-  // 🆕 SEPARAÇÃO EM ATIVAS E FINALIZADAS + FILTROS
+  // Lógica de filtros (mantida)
   const { liberacoesAtivas, liberacoesFinalizadas } = useMemo(() => {
     const filtered = liberacoes.filter((l) => {
       const term = search.trim().toLowerCase();
@@ -543,7 +467,7 @@ const Liberacoes = () => {
     return { liberacoesAtivas: ativas, liberacoesFinalizadas: finalizadas };
   }, [liberacoes, search, selectedStatuses, selectedArmazens, dateFrom, dateTo]);
 
-  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizadas, expandir automaticamente
+  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && liberacoesFinalizadas.length > 0 && !secaoFinalizadasExpandida) {
       setSecaoFinalizadasExpandida(true);
@@ -557,7 +481,6 @@ const Liberacoes = () => {
     (selectedArmazens.length ? 1 : 0) +
     (dateFrom || dateTo ? 1 : 0);
   
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
   const hasActiveFilters = search.trim() || selectedStatuses.length > 0 || selectedArmazens.length > 0 || dateFrom || dateTo;
 
   const resetFormNovaLiberacao = () => {
@@ -567,7 +490,6 @@ const Liberacoes = () => {
     setValidandoEstoque(false);
   };
 
-  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
   const handleCreateLiberacao = async () => {
     const { produto, armazem, cliente_id, pedido, quantidade } = novaLiberacao;
 
@@ -581,7 +503,6 @@ const Liberacoes = () => {
       return;
     }
 
-    // 🆕 VALIDAÇÃO DE ESTOQUE
     if (!temEstoqueCadastrado) {
       toast({ 
         variant: "destructive", 
@@ -606,7 +527,6 @@ const Liberacoes = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING STATE
     setIsCreating(true);
 
     try {
@@ -648,12 +568,10 @@ const Liberacoes = () => {
         description: err instanceof Error ? err.message : "Erro desconhecido"
       });
     } finally {
-      // 🚀 DESATIVAR LOADING STATE
       setIsCreating(false);
     }
   };
 
-  // 🎨 FUNÇÃO PARA CORES DOS STATUS ATUALIZADA
   const getStatusColor = (status: StatusLiberacao) => {
     switch (status) {
       case "disponivel":
@@ -680,7 +598,7 @@ const Liberacoes = () => {
     }
   };
 
-  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE LIBERAÇÃO
+  // Componente de renderização (mantido - já está ótimo)
   const renderLiberacaoCard = (lib: LiberacaoItem) => (
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -690,18 +608,15 @@ const Liberacoes = () => {
               className="flex items-start gap-4 flex-1"
               onClick={() => setDetalhesLiberacao(lib)}
             >
-              {/* badge ícone à esquerda com cor do Estoque */}
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
                 <ClipboardList className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                {/* 🎯 LAYOUT DO CARD */}
                 <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
                 <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
                 <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
                 <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
                 
-                {/* 📊 INFORMAÇÕES DETALHADAS - SEM "DISPONÍVEL" */}
                 <div className="mt-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-4">
                     <span>
@@ -718,7 +633,6 @@ const Liberacoes = () => {
               </div>
             </div>
             
-            {/* 🎨 BADGE DE STATUS COM TOOLTIP HÍBRIDO */}
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <div 
@@ -737,7 +651,6 @@ const Liberacoes = () => {
             </Tooltip>
           </div>
 
-          {/* 📊 BARRA DE AGENDAMENTOS COM TOOLTIP HÍBRIDO - IMPLEMENTAÇÃO PRINCIPAL */}
           <div 
             className="pt-2 border-t"
             onClick={() => setDetalhesLiberacao(lib)}
@@ -746,7 +659,6 @@ const Liberacoes = () => {
               <Calendar className="h-4 w-4 text-blue-600" />
               <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
               
-              {/* 🎯 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO */}
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
@@ -764,7 +676,6 @@ const Liberacoes = () => {
                 </TooltipContent>
               </Tooltip>
               
-              {/* 🎯 ÍCONE "i" COM TOOLTIP HÍBRIDO */}
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
@@ -781,8 +692,6 @@ const Liberacoes = () => {
                   <p className="text-sm">{getAgendamentoBarTooltip(lib.percentualAgendado, lib.quantidadeAgendada, lib.quantidade)}</p>
                 </TooltipContent>
               </Tooltip>
-              
-              {/* ✅ ITEM 5.3: REMOVIDO O TEXTO "Xt agendada" */}
             </div>
           </div>
         </div>
@@ -790,11 +699,12 @@ const Liberacoes = () => {
     </Card>
   );
 
-  // Verificar se há dados disponíveis
+  // Verificações de dados disponíveis
   const temProdutosDisponiveis = produtos && produtos.length > 0;
   const temArmazensDisponiveis = armazens && armazens.length > 0;
   const temClientesDisponiveis = clientesData && clientesData.length > 0;
 
+  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -828,7 +738,6 @@ const Liberacoes = () => {
           actions={
             canCreate ? (
               <Dialog open={dialogOpen} onOpenChange={(open) => {
-                // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
                 if (!open && isCreating) return;
                 setDialogOpen(open);
               }}>
@@ -939,7 +848,6 @@ const Liberacoes = () => {
                       )}
                     </div>
                     
-                    {/* 🆕 VALIDAÇÃO DE ESTOQUE */}
                     {novaLiberacao.produto && novaLiberacao.armazem && temEstoqueCadastrado === false && (
                       <EmptyStateCard
                         title="Estoque não cadastrado"
@@ -1094,7 +1002,6 @@ const Liberacoes = () => {
           </div>
         )}
 
-        {/* 🆕 MODAL DE DETALHES DA LIBERAÇÃO - ITEM 5.5: LAYOUT COMPACTADO */}
         <Dialog open={!!detalhesLiberacao} onOpenChange={open => !open && setDetalhesLiberacao(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1106,7 +1013,6 @@ const Liberacoes = () => {
             <div className="space-y-4 py-4">
               {detalhesLiberacao && (
                 <>
-                  {/* ✅ ITEM 5.5: LAYOUT COMPACTADO CONFORME ESPECIFICAÇÃO */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Data de Criação:</Label>
@@ -1120,10 +1026,8 @@ const Liberacoes = () => {
                     </div>
                   </div>
 
-                  {/* Separador */}
                   <div className="border-t"></div>
 
-                  {/* Cliente e Armazém */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente:</Label>
@@ -1135,16 +1039,13 @@ const Liberacoes = () => {
                     </div>
                   </div>
 
-                  {/* Separador */}
                   <div className="border-t"></div>
 
-                  {/* Produto */}
                   <div>
                     <Label className="text-xs text-muted-foreground">Produto:</Label>
                     <p className="font-semibold">{detalhesLiberacao.produto}</p>
                   </div>
 
-                  {/* Quantidades em linha */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
@@ -1170,7 +1071,6 @@ const Liberacoes = () => {
           </DialogContent>
         </Dialog>
 
-        {/* 🆕 SEÇÃO DE LIBERAÇÕES ATIVAS */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-primary" />
@@ -1203,7 +1103,6 @@ const Liberacoes = () => {
           </div>
         </div>
 
-        {/* 🆕 SEÇÃO DE LIBERAÇÕES FINALIZADAS (COLAPSÁVEL) */}
         {liberacoesFinalizadas.length > 0 && (
           <div className="space-y-4">
             <Button
@@ -1230,7 +1129,6 @@ const Liberacoes = () => {
           </div>
         )}
 
-        {/* Mensagem quando não há dados */}
         {liberacoesAtivas.length === 0 && liberacoesFinalizadas.length === 0 && (
           <div className="text-center py-12">
             <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
