@@ -14,6 +14,7 @@ import PhotoCaptureMethod from "@/components/PhotoCaptureMethod";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { 
   Loader2, 
   CheckCircle, 
@@ -106,6 +107,8 @@ const formatarTempo = (minutos: number) => {
 const ARROW_HEIGHT = 26;
 
 const CarregamentoDetalhe = () => {
+  useScrollToTop();
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
