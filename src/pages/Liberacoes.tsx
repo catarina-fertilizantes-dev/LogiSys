@@ -109,7 +109,6 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
-  // Proteção para role 'armazem'
   useEffect(() => {
     if (userRole === "armazem") {
       window.location.href = "/";
@@ -163,11 +162,9 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
         const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
           p_representante_id: representanteId
@@ -177,7 +174,6 @@ const Liberacoes = () => {
         return data || [];
       }
 
-      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("liberacoes")
         .select(`
@@ -225,7 +221,6 @@ const Liberacoes = () => {
     },
     refetchInterval: 30000,
     enabled: (() => {
-      // 🆕 MESMA LÓGICA ROBUSTA DAS OUTRAS PÁGINAS
       if (!user || !userRole) return false;
       if (userRole === "admin" || userRole === "logistica") return true;
       
@@ -237,7 +232,6 @@ const Liberacoes = () => {
     })(),
   });
 
-  // Buscar quantidades agendadas (mantida)
   const { data: agendamentosData } = useQuery({
     queryKey: ["agendamentos-totais"],
     queryFn: async () => {
@@ -262,7 +256,6 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // Mapeamento (mantido - já está otimizado)
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     
@@ -303,7 +296,6 @@ const Liberacoes = () => {
     });
   }, [liberacoesData, agendamentosData]);
 
-  // Estados do formulário (mantidos)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novaLiberacao, setNovaLiberacao] = useState({
     produto: "",
@@ -316,7 +308,6 @@ const Liberacoes = () => {
   const [validandoEstoque, setValidandoEstoque] = useState(false);
   const [temEstoqueCadastrado, setTemEstoqueCadastrado] = useState<boolean | null>(null);
 
-  // Queries de dados (mantidas)
   const { data: produtos } = useQuery({
     queryKey: ["produtos-list"],
     queryFn: async () => {
@@ -354,7 +345,6 @@ const Liberacoes = () => {
     },
   });
 
-  // Funções de validação (mantidas)
   const validarEstoque = async (produtoId: string, armazemId: string) => {
     if (!produtoId || !armazemId) {
       setQuantidadeEstoque(0);
@@ -398,7 +388,6 @@ const Liberacoes = () => {
     return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeEstoque;
   }, [novaLiberacao.quantidade, quantidadeEstoque]);
 
-  // useEffects (mantidos)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
@@ -416,7 +405,6 @@ const Liberacoes = () => {
     }
   }, [novaLiberacao.produto, novaLiberacao.armazem]);
   
-  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<StatusLiberacao[]>([]);
@@ -442,7 +430,6 @@ const Liberacoes = () => {
     setSelectedArmazens([]);
   };
 
-  // Lógica de filtros (mantida)
   const { liberacoesAtivas, liberacoesFinalizadas } = useMemo(() => {
     const filtered = liberacoes.filter((l) => {
       const term = search.trim().toLowerCase();
@@ -470,7 +457,6 @@ const Liberacoes = () => {
     return { liberacoesAtivas: ativas, liberacoesFinalizadas: finalizadas };
   }, [liberacoes, search, selectedStatuses, selectedArmazens, dateFrom, dateTo]);
 
-  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && liberacoesFinalizadas.length > 0 && !secaoFinalizadasExpandida) {
       setSecaoFinalizadasExpandida(true);
@@ -601,7 +587,6 @@ const Liberacoes = () => {
     }
   };
 
-  // Componente de renderização (mantido - já está ótimo)
   const renderLiberacaoCard = (lib: LiberacaoItem) => (
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -702,12 +687,10 @@ const Liberacoes = () => {
     </Card>
   );
 
-  // Verificações de dados disponíveis
   const temProdutosDisponiveis = produtos && produtos.length > 0;
   const temArmazensDisponiveis = armazens && armazens.length > 0;
   const temClientesDisponiveis = clientesData && clientesData.length > 0;
 
-  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
