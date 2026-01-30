@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
@@ -109,6 +110,8 @@ const STATUS_CARREGAMENTO = [
 ];
 
 const Carregamentos = () => {
+  useScrollToTop();
+  
   const { userRole, user } = useAuth();
   const { clienteId, armazemId, representanteId } = usePermissions();
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
