@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Check if user needs to change password
           const forceChange = session.user.user_metadata?.force_password_change === true;
           setNeedsPasswordChange(forceChange);
-          console.log('�� [DEBUG] Force password change:', forceChange);
+          console.log('🔍 [DEBUG] Force password change:', forceChange);
         } else {
           setUserRole(null);
           setNeedsPasswordChange(false);
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Check if user needs to change password
         const forceChange = session.user.user_metadata?.force_password_change === true;
         setNeedsPasswordChange(forceChange);
-        console.log('�� [DEBUG] Force password change:', forceChange);
+        console.log('🔍 [DEBUG] Force password change:', forceChange);
       }
       
       setLoading(false);
@@ -132,22 +132,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: errorMessage,
         });
       } else if (data.user) {
-        // ✅ NOVA FUNCIONALIDADE - Limpar senha temporária no primeiro login
-        try {
-          const { data: clearResult, error: clearError } = await supabase.rpc('clear_user_temp_password', {
-            user_email: emailResult.data.toLowerCase()
-          });
-          
-          if (clearError) {
-            console.warn('Could not clear temporary password:', clearError);
-          } else if (clearResult?.cleared_count > 0) {
-            console.log('Temporary password cleared for user:', emailResult.data);
-          }
-        } catch (clearError) {
-          // Não falhar o login se não conseguir limpar a senha temporária
-          console.warn('Error clearing temporary password:', clearError);
-        }
-
         // Verificar se precisa trocar senha
         const needsChange = data.user.user_metadata?.force_password_change === true;
         
