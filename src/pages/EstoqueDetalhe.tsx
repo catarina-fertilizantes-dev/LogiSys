@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { DocumentViewer } from "@/components/DocumentViewer";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -66,6 +67,8 @@ const parseDate = (d: string) => {
 };
 
 const EstoqueDetalhe = () => {
+  useScrollToTop();
+  
   const { produtoId, armazemId } = useParams<{ produtoId: string; armazemId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
