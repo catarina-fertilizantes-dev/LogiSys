@@ -1,3 +1,5 @@
+// usePermissions.tsx - VERSÃO COM DEBUG MELHORADO
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +43,7 @@ export const usePermissions = () => {
       }
 
       if (!userRole || !user) {
-        console.log('🔍 [DEBUG] usePermissions - No user or role after auth loaded, clearing permissions');
+        console.log('�� [DEBUG] usePermissions - No user or role after auth loaded, clearing permissions');
         setPermissions({} as any);
         setLoading(false);
         return;
@@ -95,7 +97,14 @@ export const usePermissions = () => {
   // 🆕 MODIFICADO: busca vínculos para cliente, armazem E representante
   useEffect(() => {
     const fetchVinculos = async () => {
+      console.log('🔍 [DEBUG] fetchVinculos - Starting with:', {
+        authLoading,
+        userRole,
+        userId: user?.id
+      });
+
       if (authLoading || !userRole || !user) {
+        console.log('🔍 [DEBUG] fetchVinculos - Early return due to missing data');
         setClienteId(null);
         setArmazemId(null);
         setRepresentanteId(null);
@@ -105,11 +114,13 @@ export const usePermissions = () => {
 
       // Cliente
       if (userRole === 'cliente') {
+        console.log('🔍 [DEBUG] fetchVinculos - Fetching cliente data...');
         const { data, error } = await supabase
           .from("clientes")
           .select("id")
           .eq("user_id", user.id)
           .single();
+        console.log('🔍 [DEBUG] fetchVinculos - Cliente result:', { data, error });
         setClienteId(data?.id ?? null);
       } else {
         setClienteId(null);
@@ -117,18 +128,22 @@ export const usePermissions = () => {
 
       // Armazém
       if (userRole === 'armazem') {
+        console.log('🔍 [DEBUG] fetchVinculos - Fetching armazem data...');
         const { data, error } = await supabase
           .from("armazens")
           .select("id")
           .eq("user_id", user.id)
           .single();
+        console.log('🔍 [DEBUG] fetchVinculos - Armazem result:', { data, error });
         setArmazemId(data?.id ?? null);
       } else {
         setArmazemId(null);
       }
 
-      // 🆕 REPRESENTANTE
+      // 🆕 REPRESENTANTE - COM DEBUG MELHORADO
       if (userRole === 'representante') {
+        console.log('🔍 [DEBUG] fetchVinculos - Fetching representante data for user:', user.id);
+        
         try {
           // Buscar representante
           const { data: repData, error: repError } = await supabase
@@ -137,22 +152,56 @@ export const usePermissions = () => {
             .eq("user_id", user.id)
             .single();
           
+          console.log('🔍 [DEBUG] fetchVinculos - Representante query result:', {
+            repData,
+            repError,
+            userId: user.id
+          });
+          
+          if (repError) {
+            console.error('❌ [ERROR] fetchVinculos - Erro ao buscar representante:', repError);
+            setRepresentanteId(null);
+            setClientesDoRepresentante([]);
+            return;
+          }
+          
           setRepresentanteId(repData?.id ?? null);
           
           // Buscar clientes do representante
           if (repData?.id) {
+            console.log('🔍 [DEBUG] fetchVinculos - Fetching clientes for representante:', repData.id);
+            
             const { data: clientesData, error: clientesError } = await supabase
               .from("clientes")
               .select("id")
               .eq("representante_id", repData.id);
             
-            setClientesDoRepresentante(clientesData?.map(c => c.id) || []);
-            console.log('🔍 [DEBUG] usePermissions - Representante clientes:', clientesData?.map(c => c.id) || []);
+            console.log('🔍 [DEBUG] fetchVinculos - Clientes query result:', {
+              clientesData,
+              clientesError,
+              representanteId: repData.id
+            });
+            
+            if (clientesError) {
+              console.error('❌ [ERROR] fetchVinculos - Erro ao buscar clientes:', clientesError);
+              setClientesDoRepresentante([]);
+              return;
+            }
+            
+            const clienteIds = clientesData?.map(c => c.id) || [];
+            setClientesDoRepresentante(clienteIds);
+            
+            console.log('✅ [SUCCESS] fetchVinculos - Representante setup complete:', {
+              representanteId: repData.id,
+              clienteIds,
+              clienteIdsLength: clienteIds.length
+            });
           } else {
+            console.log('⚠️ [WARN] fetchVinculos - No representante data found');
             setClientesDoRepresentante([]);
           }
         } catch (error) {
-          console.error('❌ [ERROR] usePermissions - Erro ao buscar dados do representante:', error);
+          console.error('❌ [ERROR] fetchVinculos - Exception ao buscar dados do representante:', error);
           setRepresentanteId(null);
           setClientesDoRepresentante([]);
         }
