@@ -243,9 +243,10 @@ const Liberacoes = () => {
       console.log('🔍 [DEBUG] Resultado da query:', {
         error: error?.message,
         dataLength: data?.length || 0,
-        primeiros2: data?.slice(0, 2)
+        primeiros2: data?.slice(0, 2),
+        dadosCompletos: data  // 🆕 LOG COMPLETO DOS DADOS
       });
-    
+      
       if (error) throw error;
       return data || [];
     },
