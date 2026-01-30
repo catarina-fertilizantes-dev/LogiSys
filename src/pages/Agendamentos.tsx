@@ -278,6 +278,13 @@ const Agendamentos = () => {
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
+      console.log('🚀 [DEBUG] AGENDAMENTOS QUERY INICIOU!', {
+        userRole,
+        representanteId,
+        currentClienteId: currentCliente?.id,
+        currentArmazemId: currentArmazem?.id
+      });
+      
       console.log('🔍 [DEBUG] Agendamentos Query executando com:', {
         userRole,
         representanteId,
@@ -362,16 +369,20 @@ const Agendamentos = () => {
       const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
       const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
       const representanteOk = userRole !== "representante" || !!representanteId;
+      const final = clienteOk && armazemOk && representanteOk;
       
-      console.log('🔍 [DEBUG] Agendamentos Enabled conditions:', {
+      console.log('�� [DEBUG] Agendamentos Enabled conditions:', {
+        userRole,
         clienteOk,
         armazemOk, 
         representanteOk,
         representanteId,
-        final: clienteOk && armazemOk && representanteOk
+        currentClienteId: currentCliente?.id,
+        currentArmazemId: currentArmazem?.id,
+        final
       });
       
-      return clienteOk && armazemOk && representanteOk;
+      return final;
     })(),
   });
 
