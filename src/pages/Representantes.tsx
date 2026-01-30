@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 type Representante = Database['public']['Tables']['representantes']['Row'] & {
   temp_password?: string | null;
@@ -106,6 +107,8 @@ function maskPhoneInput(value: string): string {
 }
 
 const Representantes = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
