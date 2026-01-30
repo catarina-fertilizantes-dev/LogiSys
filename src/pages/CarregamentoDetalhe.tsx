@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import PhotoCaptureMethod from "@/components/PhotoCaptureMethod";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { useAuth } from "@/contexts/AuthContext"; // 🆕 ADICIONAR IMPORT
+import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
 import { 
   Loader2, 
   CheckCircle, 
@@ -109,10 +111,10 @@ const CarregamentoDetalhe = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [clienteId, setClienteId] = useState<string | null>(null);
-  const [armazemId, setArmazemId] = useState<string | null>(null);
+  // 🔄 USAR HOOKS PADRÃO EM VEZ DE ESTADOS MANUAIS
+  const { userRole, user } = useAuth();
+  const { clienteId, armazemId, representanteId } = usePermissions();
+
   const [stageFile, setStageFile] = useState<File | null>(null);
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
@@ -126,6 +128,14 @@ const CarregamentoDetalhe = () => {
   const { uploadPhoto, isUploading: isUploadingPhoto } = usePhotoUpload({
     bucket: 'carregamento-fotos',
     folder: id || 'unknown'
+  });
+
+  // 🆕 DEBUG TEMPORÁRIO
+  console.log('🔍 [DEBUG] CARREGAMENTO DETALHE - Hook usePermissions retornou:', {
+    representanteId,
+    clienteId,
+    armazemId,
+    userRole
   });
 
   // Função para voltar à página pai
@@ -210,62 +220,9 @@ const CarregamentoDetalhe = () => {
     console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - User ID:", data.user?.id);
-      setUserId(data.user?.id ?? null);
-    });
-
-    const fetchRoles = async () => {
-      if (!userId) return;
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching roles for user:", userId);
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-      if (data) {
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - User roles:", data.map((r) => r.role));
-        setRoles(data.map((r) => r.role));
-      }
-    };
-    fetchRoles();
-  }, [userId]);
-
-  useEffect(() => {
-    const fetchVinculos = async () => {
-      if (!userId || roles.length === 0) return;
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching vínculos for roles:", roles);
-      
-      if (roles.includes("cliente")) {
-        const { data: cliente } = await supabase
-          .from("clientes")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Cliente ID:", cliente?.id);
-        setClienteId(cliente?.id ?? null);
-      } else {
-        setClienteId(null);
-      }
-      if (roles.includes("armazem")) {
-        const { data: armazem } = await supabase
-          .from("armazens")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Armazem ID:", armazem?.id);
-        setArmazemId(armazem?.id ?? null);
-      } else {
-        setArmazemId(null);
-      }
-    };
-    fetchVinculos();
-    // eslint-disable-next-line
-  }, [userId, roles]);
-
-  // 🔥 QUERY CORRIGIDA - REMOVIDO HORÁRIO
+  // 🔄 QUERY CORRIGIDA - USAR SISTEMA PADRÃO
   const { data: carregamento, isLoading, error } = useQuery({
-    queryKey: ["carregamento-detalhe", id, clienteId, armazemId, roles],
+    queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching carregamento:", id);
       
@@ -324,13 +281,20 @@ const CarregamentoDetalhe = () => {
       console.log("✅ [SUCCESS] CarregamentoDetalhe - Carregamento carregado:", data);
       return data;
     },
-    enabled:
-      !!id &&
-      userId != null &&
-      roles.length > 0 &&
-      ((!roles.includes("cliente") && !roles.includes("armazem")) ||
-        (roles.includes("cliente") && clienteId !== null) ||
-        (roles.includes("armazem") && armazemId !== null)),
+    enabled: (() => {
+      const clienteOk = userRole !== "cliente" || !!clienteId;
+      const armazemOk = userRole !== "armazem" || !!armazemId;
+      const representanteOk = userRole !== "representante" || !!representanteId;
+      
+      console.log('🔍 [DEBUG] CarregamentoDetalhe Enabled conditions:', {
+        clienteOk,
+        armazemOk, 
+        representanteOk,
+        final: !!id && clienteOk && armazemOk && representanteOk
+      });
+      
+      return !!id && clienteOk && armazemOk && representanteOk;
+    })(),
   });
 
   // 🚀 MUTATION COM LOADING STATES MELHORADOS
@@ -350,7 +314,7 @@ const CarregamentoDetalhe = () => {
       // Preparar dados para atualização
       const updateData: any = {
         etapa_atual: proximaEtapa,
-        updated_by: userId,
+        updated_by: user?.id,
       };
 
       // Definir campo de data baseado na etapa atual
@@ -485,24 +449,28 @@ const CarregamentoDetalhe = () => {
     }
   }, [carregamento]);
 
+  // 🔄 VALIDAÇÃO DE PERMISSÃO ATUALIZADA
   useEffect(() => {
     if (
       !isLoading &&
       carregamento &&
-      userId &&
-      roles.length > 0
+      user &&
+      userRole
     ) {
+      // 🆕 VALIDAÇÃO INCLUINDO REPRESENTANTE
       const hasPermission = 
-        roles.includes("admin") ||
-        roles.includes("logistica") ||
-        (roles.includes("cliente") && clienteId && carregamento.cliente_id === clienteId) ||
-        (roles.includes("armazem") && armazemId && carregamento.armazem_id === armazemId);
+        userRole === "admin" ||
+        userRole === "logistica" ||
+        (userRole === "cliente" && clienteId && carregamento.cliente_id === clienteId) ||
+        (userRole === "armazem" && armazemId && carregamento.armazem_id === armazemId) ||
+        (userRole === "representante" && representanteId && carregamento.cliente_id); // 🆕 REPRESENTANTE: Verificar se cliente existe
       
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Verificação de permissão:", {
         hasPermission,
-        roles,
+        userRole,
         clienteId,
         armazemId,
+        representanteId, // 🆕
         carregamento_cliente_id: carregamento.cliente_id,
         carregamento_armazem_id: carregamento.armazem_id
       });
@@ -513,7 +481,7 @@ const CarregamentoDetalhe = () => {
       }
     }
     // eslint-disable-next-line
-  }, [isLoading, carregamento, userId, roles, clienteId, armazemId, navigate]);
+  }, [isLoading, carregamento, user, userRole, clienteId, armazemId, representanteId, navigate]);
 
   // Calcular estatísticas de tempo
   const calcularEstatisticas = () => {
@@ -711,7 +679,7 @@ const CarregamentoDetalhe = () => {
     const isEtapaFinalizada = selectedEtapa === 6 && etapaAtual === 6;
     
     // Só usuário armazém pode editar a etapa atual
-    const podeEditar = roles.includes("armazem") && 
+    const podeEditar = userRole === "armazem" && 
                       carregamento?.armazem_id === armazemId && 
                       isEtapaAtual && 
                       !isEtapaFinalizada;
@@ -727,7 +695,7 @@ const CarregamentoDetalhe = () => {
       isEtapaFutura,
       podeEditar,
       canUseCamera,
-      roles,
+      userRole,
       armazemId,
       carregamento_armazem_id: carregamento?.armazem_id
     });
@@ -1154,13 +1122,7 @@ const CarregamentoDetalhe = () => {
     );
   };
 
-  if (
-    isLoading ||
-    userId == null ||
-    roles.length === 0 ||
-    (roles.includes("cliente") && clienteId === null) ||
-    (roles.includes("armazem") && armazemId === null)
-  ) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
         <PageHeader 
