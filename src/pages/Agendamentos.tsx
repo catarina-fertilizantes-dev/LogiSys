@@ -12,10 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info, Loader2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 
-// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO (IGUAL À PÁGINA CARREGAMENTOS)
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
     return {
@@ -61,7 +60,6 @@ const getStatusCarregamento = (etapaAtual: number) => {
   }
 };
 
-// 🎯 FUNÇÃO PARA TOOLTIPS DOS STATUS DE AGENDAMENTO
 const getAgendamentoStatusTooltip = (status: string) => {
   switch (status) {
     case "pendente":
@@ -75,14 +73,12 @@ const getAgendamentoStatusTooltip = (status: string) => {
   }
 };
 
-// 🎨 ARRAY DE STATUS PARA FILTROS COM CORES
 const STATUS_AGENDAMENTO = [
   { id: "pendente", nome: "Pendente", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
   { id: "em_andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
   { id: "concluido", nome: "Concluído", cor: "bg-green-100 text-green-800 hover:bg-green-200" },
 ];
 
-// Componente para exibir quando não há dados disponíveis - COM LINK
 const EmptyStateCardWithAction = ({ 
   title, 
   description, 
@@ -114,7 +110,6 @@ const EmptyStateCardWithAction = ({
   </div>
 );
 
-// Componente para exibir quando não há dados disponíveis - SEM LINK (para clientes)
 const EmptyStateCardWithoutAction = ({ 
   title, 
   description 
@@ -133,7 +128,6 @@ const EmptyStateCardWithoutAction = ({
   </div>
 );
 
-// Funções de máscaras/formatadores
 function maskPlaca(value: string): string {
   let up = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (up.length > 7) up = up.slice(0, 7);
@@ -146,9 +140,11 @@ function maskPlaca(value: string): string {
   if (up.length > 3) return `${up.slice(0, 3)}-${up.slice(3)}`;
   return up;
 }
+
 function formatPlaca(placa: string) {
   return maskPlaca(placa ?? "");
 }
+
 function maskCPF(value: string): string {
   let cleaned = value.replace(/\D/g, "").slice(0, 11);
   if (cleaned.length > 9)
@@ -159,6 +155,7 @@ function maskCPF(value: string): string {
     return cleaned.replace(/^(\d{3})(\d{0,3})$/, "$1.$2");
   return cleaned;
 }
+
 function formatCPF(cpf: string) {
   const cleaned = (cpf ?? "").replace(/\D/g, "").slice(0, 11);
   if (cleaned.length < 11) return maskCPF(cleaned);
@@ -170,10 +167,8 @@ const parseDate = (d: string) => {
   return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
 };
 
-// 🔄 TIPOS ATUALIZADOS PARA NOVO SISTEMA
 type AgendamentoStatus = "pendente" | "em_andamento" | "concluido";
 
-// 🆕 INTERFACE ATUALIZADA COM CAMPO DE FINALIZAÇÃO
 interface AgendamentoItem {
   id: string;
   cliente: string;
@@ -197,17 +192,14 @@ interface AgendamentoItem {
   percentual_carregamento: number;
   cor_carregamento: string;
   tooltip_carregamento: string;
-  // 🆕 CAMPO PARA HISTÓRICO
   finalizado: boolean;
 }
 
-// 🔄 VALIDAÇÃO ATUALIZADA
 const validateAgendamento = (ag: any, quantidadeDisponivel: number) => {
   const errors = [];
   if (!ag.liberacao) errors.push("Liberação");
   if (!ag.quantidade || Number(ag.quantidade) <= 0) errors.push("Quantidade");
   
-  // Validação de quantidade disponível
   const qtdSolicitada = Number(ag.quantidade);
   if (qtdSolicitada > quantidadeDisponivel) {
     errors.push(`Quantidade excede o disponível (${quantidadeDisponivel}t)`);
@@ -231,27 +223,12 @@ function validatePlaca(placa: string) {
 const Agendamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { hasRole, userRole, user } = useAuth(); // 🔄 REMOVER representanteId daqui
-  
-  // 🆕 USAR usePermissions IGUAL LIBERAÇÕES
+  const { hasRole, userRole, user } = useAuth();
   const { representanteId, clientesDoRepresentante } = usePermissions();
   
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
-
-  // 🆕 DEBUG TEMPORÁRIO
-  console.log('🔍 [DEBUG] AGENDAMENTOS - Hook usePermissions retornou:', {
-    representanteId,
-    clientesDoRepresentante: clientesDoRepresentante?.length || 0,
-    userRole
-  });
-
-  // 🚀 NOVO ESTADO DE LOADING
   const [isCreating, setIsCreating] = useState(false);
-
-  // 🆕 ESTADO PARA MODAL DE DETALHES
   const [detalhesAgendamento, setDetalhesAgendamento] = useState<AgendamentoItem | null>(null);
-
-  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
   // Buscar cliente atual vinculado ao usuário logado
@@ -286,43 +263,21 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY PRINCIPAL - VERSÃO COM FUNCTION PARA REPRESENTANTES
+  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      console.log('🚀 [DEBUG] AGENDAMENTOS QUERY INICIOU!', {
-        userRole,
-        representanteId,
-        currentClienteId: currentCliente?.id,
-        currentArmazemId: currentArmazem?.id
-      });
-      
-      console.log('🔍 [DEBUG] Agendamentos Query executando com:', {
-        userRole,
-        representanteId,
-        currentClienteId: currentCliente?.id,
-        currentArmazemId: currentArmazem?.id
-      });
-  
       // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
-        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
-        
         const { data, error } = await supabase.rpc('get_agendamentos_by_representante', {
           p_representante_id: representanteId
-        });
-        
-        console.log('🔍 [DEBUG] Agendamentos Function result:', {
-          error: error?.message,
-          dataLength: data?.length || 0,
-          primeiros2: data?.slice(0, 2)
         });
         
         if (error) throw error;
         return data || [];
       }
-  
-      // 🔄 CLIENTE E OUTROS: Query original
+
+      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("agendamentos")
         .select(`
@@ -354,54 +309,33 @@ const Agendamentos = () => {
           )
         `)
         .order("created_at", { ascending: false });
-  
+
       if (userRole === "cliente" && currentCliente?.id) {
-        console.log('🔍 [DEBUG] Aplicando filtro cliente:', currentCliente.id);
         query = query.eq("cliente_id", currentCliente.id);
       }
       if (userRole === "armazem" && currentArmazem?.id) {
-        console.log('🔍 [DEBUG] Aplicando filtro armazem:', currentArmazem.id);
         query = query.eq("armazem_id", currentArmazem.id);
       }
-  
-      console.log('🔍 [DEBUG] Executando query tradicional...');
+
       const { data, error } = await query;
-      
-      console.log('🔍 [DEBUG] Agendamentos Query tradicional result:', {
-        error: error?.message,
-        dataLength: data?.length || 0,
-        primeiros2: data?.slice(0, 2)
-      });
-      
       if (error) throw error;
       return data ?? [];
     },
     refetchInterval: 30000,
     enabled: (() => {
-      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
-      const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
-      const representanteOk = userRole !== "representante" || !!representanteId;
-      const final = clienteOk && armazemOk && representanteOk;
+      // 🆕 MESMA LÓGICA ROBUSTA DAS OUTRAS PÁGINAS
+      if (!user || !userRole) return false;
+      if (userRole === "admin" || userRole === "logistica") return true;
       
-      console.log('🔍 [DEBUG] Agendamentos Enabled conditions:', {
-        userRole,
-        representanteId,
-        currentClienteId: currentCliente?.id,
-        currentArmazemId: currentArmazem?.id,
-        final
-      });
+      const clienteOk = userRole !== "cliente" || (currentCliente?.id !== undefined);
+      const armazemOk = userRole !== "armazem" || (currentArmazem?.id !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
-      if (!final) {
-        console.log('❌ [DEBUG] Query AGENDAMENTOS DESABILITADA!');
-      } else {
-        console.log('✅ [DEBUG] Query AGENDAMENTOS HABILITADA!');
-      }
-      
-      return final;
+      return clienteOk && armazemOk && representanteOk;
     })(),
   });
 
-  // Query de agendamentos hoje usando data_retirada
+  // Query de agendamentos hoje (mantida)
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const amanha = new Date(hoje);
@@ -420,28 +354,22 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
+  // Mapeamento (mantido - já está otimizado)
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     
     return agendamentosData.map((item: any): AgendamentoItem => {
-      // 🆕 DETECTAR SE OS DADOS VIERAM DA FUNCTION (representante) OU QUERY TRADICIONAL
-      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
+      const isFromFunction = !!item.cliente_nome;
       
-      // 🚛 DADOS DO CARREGAMENTO
       let etapaAtual = 1;
       if (isFromFunction) {
-        // Da function: etapa_atual vem diretamente
         etapaAtual = item.etapa_atual ?? 1;
       } else {
-        // Da query tradicional: carregamentos é array
         const carregamento = item.carregamentos?.[0];
         etapaAtual = carregamento?.etapa_atual ?? 1;
       }
       
       const statusInfo = getStatusCarregamento(etapaAtual);
-      
-      // 🆕 CRITÉRIO DE FINALIZAÇÃO: status === 'concluido'
       const finalizado = item.status === 'concluido';
       
       return {
@@ -466,18 +394,17 @@ const Agendamentos = () => {
         updated_at: item.updated_at,
         tipo_caminhao: item.tipo_caminhao,
         observacoes: item.observacoes,
-        // 🚛 DADOS DO CARREGAMENTO PARA BARRA DE PROGRESSO
         etapa_carregamento: etapaAtual,
         status_carregamento: statusInfo.status,
         percentual_carregamento: statusInfo.percentual,
         cor_carregamento: statusInfo.cor,
         tooltip_carregamento: statusInfo.tooltip,
-        finalizado, // 🆕 CAMPO PARA SEPARAR SEÇÕES
+        finalizado,
       };
     });
   }, [agendamentosData]);
 
-  // Estado do formulário
+  // Estados do formulário (mantidos)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     liberacao: "",
@@ -490,12 +417,10 @@ const Agendamentos = () => {
     observacoes: "",
   });
   const [formError, setFormError] = useState("");
-  
-  // Estados para validação de quantidade
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  // 🔄 QUERY DE LIBERAÇÕES DISPONÍVEIS ATUALIZADA PARA NOVOS STATUS
+  // Query de liberações (mantida)
   const { data: liberacoesDisponiveis } = useQuery({
     queryKey: ["liberacoes-disponiveis", currentCliente?.id],
     queryFn: async () => {
@@ -524,10 +449,8 @@ const Agendamentos = () => {
       
       if (!data) return [];
 
-      // 📊 CALCULAR DISPONIBILIDADE REAL PARA CADA LIBERAÇÃO
       const liberacoesComDisponibilidade = await Promise.all(
         data.map(async (lib: any) => {
-          // Buscar agendamentos pendentes para esta liberação
           const { data: agendamentosPendentes } = await supabase
             .from("agendamentos")
             .select("quantidade")
@@ -556,12 +479,11 @@ const Agendamentos = () => {
     enabled: userRole !== "cliente" || !!currentCliente?.id,
   });
 
+  // useEffects e funções (mantidos)
   useEffect(() => {
-    // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-      // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [canCreate]);
@@ -582,7 +504,6 @@ const Agendamentos = () => {
     setValidandoQuantidade(false);
   };
 
-  // 🔄 FUNÇÃO CORRIGIDA PARA CALCULAR QUANTIDADE DISPONÍVEL
   const atualizarQuantidadeDisponivel = async (liberacaoId: string) => {
     if (!liberacaoId) {
       setQuantidadeDisponivel(0);
@@ -591,14 +512,12 @@ const Agendamentos = () => {
     
     setValidandoQuantidade(true);
     try {
-      // 1. Buscar dados da liberação
       const liberacao = liberacoesDisponiveis?.find(lib => lib.id === liberacaoId);
       if (!liberacao) {
         setQuantidadeDisponivel(0);
         return;
       }
 
-      // 2. Buscar agendamentos pendentes/em_andamento para esta liberação
       const { data: agendamentosPendentes, error } = await supabase
         .from("agendamentos")
         .select("quantidade")
@@ -606,18 +525,15 @@ const Agendamentos = () => {
         .in("status", ["pendente", "em_andamento"]);
 
       if (error) {
-        console.error('Erro ao buscar agendamentos pendentes:', error);
         setQuantidadeDisponivel(0);
         return;
       }
 
-      // 3. Calcular total agendado (pendente + em_andamento)
       const totalAgendado = (agendamentosPendentes || []).reduce(
         (total, agendamento) => total + (agendamento.quantidade || 0), 
         0
       );
 
-      // 4. Calcular disponível = liberada - retirada - agendado
       const quantidadeLiberada = liberacao.quantidade_liberada || 0;
       const quantidadeRetirada = liberacao.quantidade_retirada || 0;
       const disponivel = Math.max(0, quantidadeLiberada - quantidadeRetirada - totalAgendado);
@@ -625,14 +541,12 @@ const Agendamentos = () => {
       setQuantidadeDisponivel(disponivel);
       
     } catch (error) {
-      console.error('Erro ao calcular quantidade disponível:', error);
       setQuantidadeDisponivel(0);
     } finally {
       setValidandoQuantidade(false);
     }
   };
 
-  // 🚀 FUNÇÃO DE CRIAÇÃO COM LOADING STATE
   const handleCreateAgendamento = async () => {
     setFormError("");
     const erros = validateAgendamento(novoAgendamento, quantidadeDisponivel);
@@ -652,7 +566,6 @@ const Agendamentos = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING STATE
     setIsCreating(true);
 
     try {
@@ -741,12 +654,11 @@ const Agendamentos = () => {
         });
       }
     } finally {
-      // 🚀 DESATIVAR LOADING STATE
       setIsCreating(false);
     }
   };
 
-  // Filtros e busca
+  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<AgendamentoStatus[]>([]);
@@ -757,7 +669,7 @@ const Agendamentos = () => {
   const toggleStatus = (st: AgendamentoStatus) => setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const clearFilters = () => { setSearch(""); setSelectedStatuses([]); setDateFrom(""); setDateTo(""); };
 
-  // 🆕 SEPARAÇÃO EM ATIVOS E FINALIZADOS + FILTROS
+  // Lógica de filtros (mantida)
   const { agendamentosAtivos, agendamentosFinalizados } = useMemo(() => {
     const filtered = agendamentos.filter((a) => {
       const term = search.trim().toLowerCase();
@@ -784,7 +696,7 @@ const Agendamentos = () => {
     return { agendamentosAtivos: ativos, agendamentosFinalizados: finalizados };
   }, [agendamentos, search, selectedStatuses, dateFrom, dateTo]);
 
-  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizados, expandir automaticamente
+  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && agendamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
       setSecaoFinalizadosExpandida(true);
@@ -794,14 +706,9 @@ const Agendamentos = () => {
   const showingCount = agendamentosAtivos.length + agendamentosFinalizados.length;
   const totalCount = agendamentos.length;
   const activeAdvancedCount = (selectedStatuses.length ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0);
-  
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
   const hasActiveFilters = search.trim() || selectedStatuses.length > 0 || dateFrom || dateTo;
-
-  // Verificar se há liberações disponíveis
   const temLiberacoesDisponiveis = liberacoesDisponiveis && liberacoesDisponiveis.length > 0;
 
-  // 🎯 LÓGICA PARA RENDERIZAR CARD PERSONALIZADO BASEADO NO PERFIL
   const renderEmptyLiberacoesCard = () => {
     if (userRole === "cliente") {
       return (
@@ -822,13 +729,11 @@ const Agendamentos = () => {
     }
   };
 
-  // Validação em tempo real da quantidade
   const quantidadeValida = useMemo(() => {
     const qtd = Number(novoAgendamento.quantidade);
     return !isNaN(qtd) && qtd > 0 && qtd <= quantidadeDisponivel;
   }, [novoAgendamento.quantidade, quantidadeDisponivel]);
 
-  // 🎨 FUNÇÃO PARA CORES DOS STATUS DE AGENDAMENTO
   const getStatusColor = (status: AgendamentoStatus) => {
     switch (status) {
       case "pendente":
@@ -855,7 +760,7 @@ const Agendamentos = () => {
     }
   };
 
-  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE AGENDAMENTO
+  // Componente de renderização (mantido - já está ótimo)
   const renderAgendamentoCard = (ag: AgendamentoItem) => (
     <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -869,7 +774,6 @@ const Agendamentos = () => {
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                {/* 🎯 LAYOUT DO CARD COM "QUANTIDADE" */}
                 <h3 className="font-semibold text-foreground">Pedido: {ag.pedido}</h3>
                 <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
                 <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
@@ -878,7 +782,6 @@ const Agendamentos = () => {
               </div>
             </div>
             
-            {/* 🎨 BADGE DE STATUS DO AGENDAMENTO COM TOOLTIP HÍBRIDO */}
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <div 
@@ -897,7 +800,6 @@ const Agendamentos = () => {
             </Tooltip>
           </div>
 
-          {/* 📋 INFORMAÇÕES DO AGENDAMENTO - CLICÁVEL */}
           <div 
             className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2"
             onClick={() => setDetalhesAgendamento(ag)}
@@ -920,7 +822,6 @@ const Agendamentos = () => {
             </div>
           </div>
 
-          {/* 📊 BARRA DE PROGRESSO CORRIGIDA COM TOOLTIP HÍBRIDO E ÍCONE "i" */}
           <div className="pt-2 border-t">
             <div className="flex items-center gap-2">
               <div 
@@ -971,6 +872,7 @@ const Agendamentos = () => {
     </Card>
   );
 
+  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -1004,7 +906,6 @@ const Agendamentos = () => {
           actions={
             canCreate ? (
               <Dialog open={dialogOpen} onOpenChange={(open) => {
-                // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
                 if (!open && isCreating) return;
                 setDialogOpen(open);
               }}>
@@ -1028,7 +929,7 @@ const Agendamentos = () => {
                             setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
                             await atualizarQuantidadeDisponivel(v);
                           }}
-                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                          disabled={isCreating}
                         >
                           <SelectTrigger id="liberacao">
                             <SelectValue placeholder="Selecione a liberação" />
@@ -1085,7 +986,7 @@ const Agendamentos = () => {
                                   ? "border-green-500 focus:border-green-500"
                                   : ""
                               }
-                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                              disabled={isCreating}
                             />
                             {novoAgendamento.quantidade && !quantidadeValida && (
                               <p className="text-xs text-red-600">
@@ -1104,7 +1005,7 @@ const Agendamentos = () => {
                               type="date"
                               value={novoAgendamento.data}
                               onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
-                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                              disabled={isCreating}
                             />
                           </div>
                         </div>
@@ -1125,7 +1026,7 @@ const Agendamentos = () => {
                             autoCapitalize="characters"
                             spellCheck={false}
                             inputMode="text"
-                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                            disabled={isCreating}
                           />
                           <p className="text-xs text-muted-foreground">Formato antigo (ABC-1234) ou Mercosul (ABC-1D23)</p>
                         </div>
@@ -1138,7 +1039,7 @@ const Agendamentos = () => {
                               value={novoAgendamento.motorista}
                               onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
                               placeholder="Ex: João Silva"
-                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                              disabled={isCreating}
                             />
                           </div>
 
@@ -1155,7 +1056,7 @@ const Agendamentos = () => {
                               }
                               placeholder="Ex: 123.456.789-00"
                               maxLength={14}
-                              disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                              disabled={isCreating}
                             />
                           </div>
                         </div>
@@ -1167,7 +1068,7 @@ const Agendamentos = () => {
                             value={novoAgendamento.tipoCaminhao}
                             onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
                             placeholder="Ex: Bitrem, Carreta, Truck"
-                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                            disabled={isCreating}
                           />
                         </div>
 
@@ -1178,7 +1079,7 @@ const Agendamentos = () => {
                             value={novoAgendamento.observacoes}
                             onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
                             placeholder="Informações adicionais sobre o agendamento"
-                            disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                            disabled={isCreating}
                           />
                         </div>
                         
@@ -1194,14 +1095,14 @@ const Agendamentos = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => setDialogOpen(false)}
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isCreating}
                     >
                       Cancelar
                     </Button>
                     <Button 
                       className="bg-gradient-primary" 
                       onClick={handleCreateAgendamento}
-                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade || isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade || isCreating}
                     >
                       {isCreating ? (
                         <>
@@ -1266,7 +1167,6 @@ const Agendamentos = () => {
           </div>
         )}
 
-        {/* ✅ ITEM 5.6: MODAL DE DETALHES DO AGENDAMENTO COMPACTADO */}
         <Dialog open={!!detalhesAgendamento} onOpenChange={open => !open && setDetalhesAgendamento(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1278,7 +1178,6 @@ const Agendamentos = () => {
             <div className="space-y-4 py-4">
               {detalhesAgendamento && (
                 <>
-                  {/* ✅ ITEM 5.6: LAYOUT COMPACTADO CONFORME ESPECIFICAÇÃO */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Data de Retirada:</Label>
@@ -1292,10 +1191,8 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Separador */}
                   <div className="border-t"></div>
 
-                  {/* Cliente e Armazém */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente:</Label>
@@ -1307,10 +1204,8 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Separador */}
                   <div className="border-t"></div>
 
-                  {/* Produto e Quantidade */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Produto:</Label>
@@ -1322,10 +1217,8 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Separador */}
                   <div className="border-t"></div>
 
-                  {/* Informações do Motorista e Veículo */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Nome do Motorista:</Label>
@@ -1345,7 +1238,6 @@ const Agendamentos = () => {
                     </div>
                   </div>
 
-                  {/* Observações (se houver) */}
                   {detalhesAgendamento.observacoes && (
                     <>
                       <div className="border-t"></div>
@@ -1368,7 +1260,6 @@ const Agendamentos = () => {
           </DialogContent>
         </Dialog>
 
-        {/* 🆕 SEÇÃO DE AGENDAMENTOS ATIVOS */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
@@ -1401,7 +1292,6 @@ const Agendamentos = () => {
           </div>
         </div>
 
-        {/* 🆕 SEÇÃO DE AGENDAMENTOS FINALIZADOS (COLAPSÁVEL) */}
         {agendamentosFinalizados.length > 0 && (
           <div className="space-y-4">
             <Button
@@ -1428,7 +1318,6 @@ const Agendamentos = () => {
           </div>
         )}
 
-        {/* Mensagem quando não há dados */}
         {agendamentosAtivos.length === 0 && agendamentosFinalizados.length === 0 && (
           <div className="text-center py-12">
             <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
