@@ -230,7 +230,7 @@ function validatePlaca(placa: string) {
 const Agendamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { hasRole, userRole, user } = useAuth();
+  const { hasRole, userRole, user, representanteId } = useAuth();
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
 
   // 🚀 NOVO ESTADO DE LOADING
@@ -274,10 +274,36 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY CORRIGIDA COM SINTAXE CORRETA DO SUPABASE
+  // 🔄 QUERY PRINCIPAL - VERSÃO COM FUNCTION PARA REPRESENTANTES
   const { data: agendamentosData, isLoading, error } = useQuery({
-    queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id],
+    queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
+      console.log('🔍 [DEBUG] Agendamentos Query executando com:', {
+        userRole,
+        representanteId,
+        currentClienteId: currentCliente?.id,
+        currentArmazemId: currentArmazem?.id
+      });
+  
+      // 🆕 REPRESENTANTE: Usar function específica
+      if (userRole === "representante" && representanteId) {
+        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
+        
+        const { data, error } = await supabase.rpc('get_agendamentos_by_representante', {
+          p_representante_id: representanteId
+        });
+        
+        console.log('🔍 [DEBUG] Agendamentos Function result:', {
+          error: error?.message,
+          dataLength: data?.length || 0,
+          primeiros2: data?.slice(0, 2)
+        });
+        
+        if (error) throw error;
+        return data || [];
+      }
+  
+      // 🔄 CLIENTE E OUTROS: Query original
       let query = supabase
         .from("agendamentos")
         .select(`
@@ -311,17 +337,42 @@ const Agendamentos = () => {
         .order("created_at", { ascending: false });
   
       if (userRole === "cliente" && currentCliente?.id) {
+        console.log('🔍 [DEBUG] Aplicando filtro cliente:', currentCliente.id);
         query = query.eq("cliente_id", currentCliente.id);
       }
       if (userRole === "armazem" && currentArmazem?.id) {
+        console.log('🔍 [DEBUG] Aplicando filtro armazem:', currentArmazem.id);
         query = query.eq("armazem_id", currentArmazem.id);
       }
+  
+      console.log('🔍 [DEBUG] Executando query tradicional...');
       const { data, error } = await query;
+      
+      console.log('🔍 [DEBUG] Agendamentos Query tradicional result:', {
+        error: error?.message,
+        dataLength: data?.length || 0,
+        primeiros2: data?.slice(0, 2)
+      });
+      
       if (error) throw error;
       return data ?? [];
     },
     refetchInterval: 30000,
-    enabled: (userRole !== "cliente" || !!currentCliente?.id) && (userRole !== "armazem" || !!currentArmazem?.id),
+    enabled: (() => {
+      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
+      const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
+      const representanteOk = userRole !== "representante" || !!representanteId;
+      
+      console.log('🔍 [DEBUG] Agendamentos Enabled conditions:', {
+        clienteOk,
+        armazemOk, 
+        representanteOk,
+        representanteId,
+        final: clienteOk && armazemOk && representanteOk
+      });
+      
+      return clienteOk && armazemOk && representanteOk;
+    })(),
   });
 
   // Query de agendamentos hoje usando data_retirada
