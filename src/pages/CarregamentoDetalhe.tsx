@@ -220,7 +220,7 @@ const CarregamentoDetalhe = () => {
     console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
-  // 🔄 QUERY CORRIGIDA - USAR FUNCTION PARA REPRESENTANTES
+  // 🔄 QUERY CORRIGIDA - AGUARDAR usePermissions CARREGAR COMPLETAMENTE
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
@@ -350,18 +350,41 @@ const CarregamentoDetalhe = () => {
       return data;
     },
     enabled: (() => {
-      const clienteOk = userRole !== "cliente" || !!clienteId;
-      const armazemOk = userRole !== "armazem" || !!armazemId;
-      const representanteOk = userRole !== "representante" || !!representanteId;
+      // 🆕 VERIFICAÇÃO MELHORADA: Aguardar dados do usePermissions
+      if (!user || !userRole || !id) {
+        console.log('🔍 [DEBUG] CarregamentoDetalhe - Query desabilitada: dados básicos faltando', {
+          user: !!user,
+          userRole,
+          id
+        });
+        return false;
+      }
+  
+      // Para admin e logistica, pode executar imediatamente
+      if (userRole === "admin" || userRole === "logistica") {
+        console.log('🔍 [DEBUG] CarregamentoDetalhe - Query habilitada: admin/logistica');
+        return true;
+      }
+  
+      // Para outros roles, aguardar dados específicos
+      const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
+      const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
+      
+      const allOk = clienteOk && armazemOk && representanteOk;
       
       console.log('🔍 [DEBUG] CarregamentoDetalhe Enabled conditions:', {
+        userRole,
+        clienteId,
+        armazemId,
+        representanteId,
         clienteOk,
-        armazemOk, 
+        armazemOk,
         representanteOk,
-        final: !!id && clienteOk && armazemOk && representanteOk
+        allOk
       });
       
-      return !!id && clienteOk && armazemOk && representanteOk;
+      return allOk;
     })(),
   });
 
