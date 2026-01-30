@@ -371,16 +371,28 @@ const Agendamentos = () => {
       const representanteOk = userRole !== "representante" || !!representanteId;
       const final = clienteOk && armazemOk && representanteOk;
       
-      console.log('�� [DEBUG] Agendamentos Enabled conditions:', {
+      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO:', {
         userRole,
-        clienteOk,
-        armazemOk, 
-        representanteOk,
         representanteId,
         currentClienteId: currentCliente?.id,
         currentArmazemId: currentArmazem?.id,
+        clienteOk,
+        armazemOk, 
+        representanteOk,
+        'userRole !== "cliente"': userRole !== "cliente",
+        '!!currentCliente?.id': !!currentCliente?.id,
+        'userRole !== "armazem"': userRole !== "armazem",
+        '!!currentArmazem?.id': !!currentArmazem?.id,
+        'userRole !== "representante"': userRole !== "representante",
+        '!!representanteId': !!representanteId,
         final
       });
+      
+      if (!final) {
+        console.log('❌ [DEBUG] Query AGENDAMENTOS DESABILITADA!');
+      } else {
+        console.log('✅ [DEBUG] Query AGENDAMENTOS HABILITADA!');
+      }
       
       return final;
     })(),
