@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { passwordSchema } from "@/lib/validationSchemas";
 import type { Database } from "@/integrations/supabase/types";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -63,6 +64,8 @@ const mapAndFilterColaboradores = (usersData: RpcUserData[]): User[] => {
 };
 
 const Colaboradores = () => {
+  useScrollToTop();
+  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
