@@ -220,12 +220,78 @@ const CarregamentoDetalhe = () => {
     console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
-  // 🔄 QUERY CORRIGIDA - USAR SISTEMA PADRÃO
+  // 🔄 QUERY CORRIGIDA - USAR FUNCTION PARA REPRESENTANTES
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching carregamento:", id);
       
+      // 🆕 REPRESENTANTE: Usar function específica
+      if (userRole === "representante" && representanteId) {
+        console.log('🔍 [DEBUG] CarregamentoDetalhe - Usando function para representante:', representanteId);
+        
+        const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
+          p_representante_id: representanteId,
+          p_carregamento_id: id
+        });
+        
+        console.log('🔍 [DEBUG] CarregamentoDetalhe Function result:', {
+          error: error?.message,
+          data: data?.[0]
+        });
+        
+        if (error) throw error;
+        
+        // Transformar dados da function para o formato esperado
+        if (data && data.length > 0) {
+          const item = data[0];
+          return {
+            id: item.id,
+            etapa_atual: item.etapa_atual,
+            numero_nf: item.numero_nf,
+            data_chegada: item.data_chegada,
+            created_at: item.created_at,
+            cliente_id: item.cliente_id,
+            armazem_id: item.armazem_id,
+            observacao_chegada: item.observacao_chegada,
+            observacao_inicio: item.observacao_inicio,
+            observacao_carregando: item.observacao_carregando,
+            observacao_finalizacao: item.observacao_finalizacao,
+            observacao_documentacao: item.observacao_documentacao,
+            data_inicio: item.data_inicio,
+            data_carregando: item.data_carregando,
+            data_finalizacao: item.data_finalizacao,
+            data_documentacao: item.data_documentacao,
+            url_nota_fiscal: item.url_nota_fiscal,
+            url_xml: item.url_xml,
+            url_foto_chegada: item.url_foto_chegada,
+            url_foto_inicio: item.url_foto_inicio,
+            url_foto_carregando: item.url_foto_carregando,
+            url_foto_finalizacao: item.url_foto_finalizacao,
+            agendamento: {
+              id: item.agendamento_id,
+              data_retirada: item.agendamento_data_retirada,
+              quantidade: item.agendamento_quantidade,
+              placa_caminhao: item.agendamento_placa_caminhao,
+              motorista_nome: item.agendamento_motorista_nome,
+              motorista_documento: item.agendamento_motorista_documento,
+              cliente: {
+                nome: item.cliente_nome
+              },
+              liberacao: {
+                pedido_interno: item.liberacao_pedido_interno,
+                produto: {
+                  nome: item.produto_nome
+                }
+              }
+            }
+          };
+        }
+        
+        return null;
+      }
+  
+      // 🔄 OUTROS ROLES: Query original
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -271,14 +337,16 @@ const CarregamentoDetalhe = () => {
         `)
         .eq("id", id)
         .single();
-
+  
+      console.log('🔍 [DEBUG] CarregamentoDetalhe - Executando query tradicional...');
       const { data, error } = await query;
-      if (error) {
-        console.error("❌ [ERROR] CarregamentoDetalhe - Erro ao buscar carregamento:", error);
-        throw error;
-      }
       
-      console.log("✅ [SUCCESS] CarregamentoDetalhe - Carregamento carregado:", data);
+      console.log('🔍 [DEBUG] CarregamentoDetalhe Query tradicional result:', {
+        error: error?.message,
+        data
+      });
+      
+      if (error) throw error;
       return data;
     },
     enabled: (() => {
@@ -449,7 +517,7 @@ const CarregamentoDetalhe = () => {
     }
   }, [carregamento]);
 
-  // 🔄 VALIDAÇÃO DE PERMISSÃO ATUALIZADA E CORRIGIDA
+  // 🔄 VALIDAÇÃO DE PERMISSÃO SIMPLIFICADA
   useEffect(() => {
     if (
       !isLoading &&
@@ -467,42 +535,8 @@ const CarregamentoDetalhe = () => {
       } else if (userRole === "armazem" && armazemId) {
         hasPermission = carregamento.armazem_id === armazemId;
       } else if (userRole === "representante" && representanteId) {
-        // 🆕 REPRESENTANTE: Verificar se o cliente do carregamento está na lista
-        // Buscar dados adicionais se necessário
-        const verificarAcessoRepresentante = async () => {
-          try {
-            const { data: clienteData, error } = await supabase
-              .from('clientes')
-              .select('representante_id')
-              .eq('id', carregamento.cliente_id)
-              .single();
-            
-            if (error) {
-              console.error('❌ [ERROR] Erro ao verificar cliente do representante:', error);
-              hasPermission = false;
-            } else {
-              hasPermission = clienteData?.representante_id === representanteId;
-            }
-            
-            console.log('🔍 [DEBUG] CarregamentoDetalhe - Verificação representante:', {
-              carregamento_cliente_id: carregamento.cliente_id,
-              cliente_representante_id: clienteData?.representante_id,
-              user_representante_id: representanteId,
-              hasPermission
-            });
-            
-            if (!hasPermission) {
-              console.log('❌ [ERROR] CarregamentoDetalhe - Representante sem permissão, redirecionando');
-              navigate("/carregamentos");
-            }
-          } catch (error) {
-            console.error('❌ [ERROR] Erro na verificação de representante:', error);
-            navigate("/carregamentos");
-          }
-        };
-        
-        verificarAcessoRepresentante();
-        return; // Sair early para aguardar verificação async
+        // 🆕 REPRESENTANTE: Se chegou até aqui via function, já tem permissão
+        hasPermission = true;
       }
       
       console.log('🔍 [DEBUG] CarregamentoDetalhe - Verificação de permissão:', {
