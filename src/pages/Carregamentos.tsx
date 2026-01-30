@@ -11,9 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
+import { usePermissions } from "@/hooks/usePermissions";
 
-// 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
     return {
@@ -59,7 +58,6 @@ const getStatusCarregamento = (etapaAtual: number) => {
   }
 };
 
-// Funções de formatação
 function formatPlaca(placa: string) {
   if (!placa || placa === "N/A") return placa;
   const cleaned = placa.replace(/[^A-Z0-9]/g, "");
@@ -97,16 +95,13 @@ interface CarregamentoItem {
   numero_nf: string | null;
   cliente_id: string | null;
   armazem_id: string | null;
-  // 🎯 CAMPOS PARA O SISTEMA DE STATUS E BARRA DE PROGRESSO
   status_carregamento: string;
   cor_carregamento: string;
   tooltip_carregamento: string;
   percentual_carregamento: number;
-  // 🆕 CAMPO PARA HISTÓRICO
   finalizado: boolean;
 }
 
-// 🎨 ARRAY DE STATUS PARA FILTROS
 const STATUS_CARREGAMENTO = [
   { id: "Aguardando", nome: "Aguardando", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
   { id: "Em Andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
@@ -114,50 +109,25 @@ const STATUS_CARREGAMENTO = [
 ];
 
 const Carregamentos = () => {
-  const { userRole, user } = useAuth(); // 🔄 USAR useAuth PADRÃO
-  const { clienteId, armazemId, representanteId } = usePermissions(); // 🆕 USAR usePermissions
-
-  // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
+  const { userRole, user } = useAuth();
+  const { clienteId, armazemId, representanteId } = usePermissions();
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
-  // 🆕 DEBUG TEMPORÁRIO
-  console.log('🔍 [DEBUG] CARREGAMENTOS - Hook usePermissions retornou:', {
-    representanteId,
-    clienteId,
-    armazemId,
-    userRole
-  });
-
-  // 🔄 QUERY PRINCIPAL - VERSÃO COM FUNCTION PARA REPRESENTANTES
+  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      console.log('🔍 [DEBUG] Carregamentos Query executando com:', {
-        userRole,
-        representanteId,
-        clienteId,
-        armazemId
-      });
-
       // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
-        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
-        
         const { data, error } = await supabase.rpc('get_carregamentos_by_representante', {
           p_representante_id: representanteId
-        });
-        
-        console.log('🔍 [DEBUG] Carregamentos Function result:', {
-          error: error?.message,
-          dataLength: data?.length || 0,
-          primeiros2: data?.slice(0, 2)
         });
         
         if (error) throw error;
         return data || [];
       }
 
-      // 🔄 OUTROS ROLES: Query original
+      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -197,53 +167,38 @@ const Carregamentos = () => {
         `)
         .order("data_chegada", { ascending: false });
 
+      // Aplicar filtros baseados no role
       if (userRole === "cliente" && clienteId) {
-        console.log('🔍 [DEBUG] Aplicando filtro cliente:', clienteId);
         query = query.eq("cliente_id", clienteId);
       } else if (userRole === "armazem" && armazemId) {
-        console.log('🔍 [DEBUG] Aplicando filtro armazem:', armazemId);
         query = query.eq("armazem_id", armazemId);
       }
 
-      console.log('🔍 [DEBUG] Executando query tradicional...');
       const { data, error } = await query;
-      
-      console.log('🔍 [DEBUG] Carregamentos Query tradicional result:', {
-        error: error?.message,
-        dataLength: data?.length || 0,
-        primeiros2: data?.slice(0, 2)
-      });
-      
       if (error) throw error;
       return data || [];
     },
     enabled: (() => {
-      const clienteOk = userRole !== "cliente" || !!clienteId;
-      const armazemOk = userRole !== "armazem" || !!armazemId;
-      const representanteOk = userRole !== "representante" || !!representanteId;
+      // 🆕 MESMA LÓGICA ROBUSTA DA PÁGINA DE DETALHES
+      if (!user || !userRole) return false;
+      if (userRole === "admin" || userRole === "logistica") return true;
       
-      console.log('🔍 [DEBUG] Carregamentos Enabled conditions:', {
-        clienteOk,
-        armazemOk, 
-        representanteOk,
-        representanteId,
-        final: clienteOk && armazemOk && representanteOk
-      });
+      const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
+      const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
       return clienteOk && armazemOk && representanteOk;
     })(),
     refetchInterval: 30000,
   });
 
-  // 🔄 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
+  // 🔄 MAPEAMENTO MANTIDO (JÁ ESTÁ OTIMIZADO)
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     
     return carregamentosData.map((item: any) => {
-      // 🆕 DETECTAR SE OS DADOS VIERAM DA FUNCTION (representante) OU QUERY TRADICIONAL
-      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
+      const isFromFunction = !!item.cliente_nome;
       
-      // Conta quantas fotos existem baseado nas URLs preenchidas
       const fotosCount = [
         item.url_foto_chegada,
         item.url_foto_inicio,
@@ -252,11 +207,7 @@ const Carregamentos = () => {
       ].filter(url => url && url.trim() !== '').length;
 
       const etapaAtual = item.etapa_atual ?? 1;
-      
-      // 🎯 APLICAR NOVO SISTEMA DE STATUS CORRIGIDO
       const statusInfo = getStatusCarregamento(etapaAtual);
-
-      // 🆕 CRITÉRIO DE FINALIZAÇÃO: etapa_atual === 6
       const finalizado = etapaAtual === 6;
 
       return {
@@ -279,17 +230,16 @@ const Carregamentos = () => {
         numero_nf: item.numero_nf || null,
         cliente_id: item.cliente_id ?? null,
         armazem_id: item.armazem_id ?? null,
-        // 🎯 CAMPOS DO SISTEMA DE STATUS E BARRA DE PROGRESSO
         status_carregamento: statusInfo.status,
         cor_carregamento: statusInfo.cor,
         tooltip_carregamento: statusInfo.tooltip,
         percentual_carregamento: statusInfo.percentual,
-        finalizado, // 🆕 CAMPO PARA SEPARAR SEÇÕES
+        finalizado,
       };
     });
   }, [carregamentosData]);
 
-  // 🎯 FILTROS PARA USAR STATUS
+  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
@@ -306,7 +256,7 @@ const Carregamentos = () => {
     setDateTo("");
   };
 
-  // 🆕 SEPARAÇÃO EM ATIVOS E FINALIZADOS + FILTROS
+  // Lógica de filtros (mantida)
   const { carregamentosAtivos, carregamentosFinalizados } = useMemo(() => {
     const filtered = carregamentos.filter((c) => {
       const term = search.trim().toLowerCase();
@@ -314,7 +264,6 @@ const Carregamentos = () => {
         const hay = `${c.cliente} ${c.motorista} ${c.placa} ${c.pedido}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
-      // 🎯 FILTRO PARA USAR STATUS
       if (selectedStatus.length > 0 && !selectedStatus.includes(c.status_carregamento)) return false;
       if (dateFrom) {
         const from = new Date(dateFrom);
@@ -334,7 +283,7 @@ const Carregamentos = () => {
     return { carregamentosAtivos: ativos, carregamentosFinalizados: finalizados };
   }, [carregamentos, search, selectedStatus, dateFrom, dateTo]);
 
-  // 🆕 AUTO-EXPANSÃO: Se busca encontrou resultados em finalizados, expandir automaticamente
+  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && carregamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
       setSecaoFinalizadosExpandida(true);
@@ -347,10 +296,9 @@ const Carregamentos = () => {
     (selectedStatus.length ? 1 : 0) + 
     ((dateFrom || dateTo) ? 1 : 0);
   
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
   const hasActiveFilters = search.trim() || selectedStatus.length > 0 || dateFrom || dateTo;
 
-  // 🆕 COMPONENTE PARA RENDERIZAR CARDS DE CARREGAMENTO
+  // Componente de renderização (mantido - já está ótimo)
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -365,12 +313,10 @@ const Carregamentos = () => {
                 <Truck className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                {/* 🎯 LAYOUT DO CARD */}
                 <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
                 <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
                 <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
                 <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
-                {/* 🆕 INFORMAÇÃO DE QUANTIDADE AGENDADA */}
                 <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
                 {carr.numero_nf && (
                   <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
@@ -379,12 +325,11 @@ const Carregamentos = () => {
             </Link>
             
             <div className="flex flex-col items-end gap-2">
-              {/* 🎯 BADGE COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
                     className="flex items-center gap-1 cursor-help"
-                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
                       {carr.status_carregamento}
@@ -400,7 +345,6 @@ const Carregamentos = () => {
             </div>
           </div>
 
-          {/* 📋 INFORMAÇÕES DO CARREGAMENTO */}
           <Link 
             to={`/carregamentos/${carr.id}`} 
             className="block text-inherit no-underline"
@@ -426,7 +370,6 @@ const Carregamentos = () => {
             </div>
           </Link>
 
-          {/* 🆕 BARRA DE PROGRESSO COM TOOLTIP HÍBRIDO - HOVER + CLIQUE */}
           <div className="pt-2 border-t">
             <div className="flex items-center gap-2">
               <Link 
@@ -442,7 +385,7 @@ const Carregamentos = () => {
                 <TooltipTrigger asChild>
                   <div 
                     className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
-                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <div 
                       className="bg-purple-500 h-2 rounded-full transition-all duration-300" 
@@ -459,7 +402,7 @@ const Carregamentos = () => {
                 <TooltipTrigger asChild>
                   <div 
                     className="flex items-center gap-1 cursor-help"
-                    onClick={(e) => e.stopPropagation()} // Impede navegação
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground font-medium w-12">
@@ -478,6 +421,7 @@ const Carregamentos = () => {
     </Card>
   );
 
+  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -525,7 +469,6 @@ const Carregamentos = () => {
           icon={Truck}
         />
 
-        {/* Barra de busca/filtro */}
         <div className="flex items-center gap-3">
           <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa, motorista ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -544,7 +487,6 @@ const Carregamentos = () => {
           )}
         </div>
 
-        {/* 🎯 FILTROS COM SISTEMA DE STATUS */}
         {filtersOpen && (
           <div className="rounded-md border p-3 space-y-6 relative">
             <div>
@@ -576,7 +518,6 @@ const Carregamentos = () => {
           </div>
         )}
 
-        {/* 🆕 SEÇÃO DE CARREGAMENTOS ATIVOS */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" />
@@ -609,7 +550,6 @@ const Carregamentos = () => {
           </div>
         </div>
 
-        {/* 🆕 SEÇÃO DE CARREGAMENTOS FINALIZADOS (COLAPSÁVEL) */}
         {carregamentosFinalizados.length > 0 && (
           <div className="space-y-4">
             <Button
@@ -636,7 +576,6 @@ const Carregamentos = () => {
           </div>
         )}
 
-        {/* Mensagem quando não há dados */}
         {carregamentosAtivos.length === 0 && carregamentosFinalizados.length === 0 && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
