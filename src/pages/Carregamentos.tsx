@@ -116,18 +116,15 @@ const Carregamentos = () => {
   const { clienteId, armazemId, representanteId } = usePermissions();
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
-  // 🆕 SCROLL PARA O TOPO AO CARREGAR A PÁGINA
-useEffect(() => {
-  if (window.scrollY > 0) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}, []);
+  useEffect(() => {
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
 
-  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
         const { data, error } = await supabase.rpc('get_carregamentos_by_representante', {
           p_representante_id: representanteId
@@ -137,7 +134,6 @@ useEffect(() => {
         return data || [];
       }
 
-      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -177,7 +173,6 @@ useEffect(() => {
         `)
         .order("data_chegada", { ascending: false });
 
-      // Aplicar filtros baseados no role
       if (userRole === "cliente" && clienteId) {
         query = query.eq("cliente_id", clienteId);
       } else if (userRole === "armazem" && armazemId) {
@@ -189,7 +184,6 @@ useEffect(() => {
       return data || [];
     },
     enabled: (() => {
-      // 🆕 MESMA LÓGICA ROBUSTA DA PÁGINA DE DETALHES
       if (!user || !userRole) return false;
       if (userRole === "admin" || userRole === "logistica") return true;
       
@@ -202,7 +196,6 @@ useEffect(() => {
     refetchInterval: 30000,
   });
 
-  // 🔄 MAPEAMENTO MANTIDO (JÁ ESTÁ OTIMIZADO)
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     
@@ -249,7 +242,6 @@ useEffect(() => {
     });
   }, [carregamentosData]);
 
-  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
@@ -266,7 +258,6 @@ useEffect(() => {
     setDateTo("");
   };
 
-  // Lógica de filtros (mantida)
   const { carregamentosAtivos, carregamentosFinalizados } = useMemo(() => {
     const filtered = carregamentos.filter((c) => {
       const term = search.trim().toLowerCase();
@@ -293,7 +284,6 @@ useEffect(() => {
     return { carregamentosAtivos: ativos, carregamentosFinalizados: finalizados };
   }, [carregamentos, search, selectedStatus, dateFrom, dateTo]);
 
-  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && carregamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
       setSecaoFinalizadosExpandida(true);
@@ -308,7 +298,6 @@ useEffect(() => {
   
   const hasActiveFilters = search.trim() || selectedStatus.length > 0 || dateFrom || dateTo;
 
-  // Componente de renderização (mantido - já está ótimo)
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -431,7 +420,6 @@ useEffect(() => {
     </Card>
   );
 
-  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
