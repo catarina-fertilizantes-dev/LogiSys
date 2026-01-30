@@ -260,7 +260,7 @@ const Liberacoes = () => {
         error: error?.message,
         dataLength: data?.length || 0,
         primeiros2: data?.slice(0, 2),
-        dadosCompletos: data  // 🆕 LOG COMPLETO DOS DADOS
+        dadosCompletos: data
       });
       
       if (error) throw error;
