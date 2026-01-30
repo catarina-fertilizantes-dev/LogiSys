@@ -371,7 +371,16 @@ const Agendamentos = () => {
       const representanteOk = userRole !== "representante" || !!representanteId;
       const final = clienteOk && armazemOk && representanteOk;
       
-      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO:', {
+      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO:');
+      console.log('userRole:', userRole);
+      console.log('representanteId:', representanteId);
+      console.log('currentCliente?.id:', currentCliente?.id);
+      console.log('currentArmazem?.id:', currentArmazem?.id);
+      console.log('clienteOk:', clienteOk);
+      console.log('armazemOk:', armazemOk);
+      console.log('representanteOk:', representanteOk);
+      console.log('final:', final);
+      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO OBJETO:', {
         userRole,
         representanteId,
         currentClienteId: currentCliente?.id,
