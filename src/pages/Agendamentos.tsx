@@ -14,6 +14,7 @@ import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDow
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
@@ -221,6 +222,8 @@ function validatePlaca(placa: string) {
 }
 
 const Agendamentos = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
