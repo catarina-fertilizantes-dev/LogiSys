@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import type { Database } from "@/integrations/supabase/types";
 
 // Helpers de máscara e formatação
@@ -119,6 +120,8 @@ type Armazem = {
 };
 
 const Armazens = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
