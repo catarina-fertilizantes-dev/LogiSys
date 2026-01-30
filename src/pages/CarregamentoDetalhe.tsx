@@ -133,15 +133,12 @@ const CarregamentoDetalhe = () => {
   };
 
   const handleStartPhotoCapture = (etapa: number) => {
-    console.log("🔍 [DEBUG] CarregamentoDetalhe - Iniciando captura de foto para etapa:", etapa);
     setCurrentPhotoEtapa(etapa);
     setShowPhotoCapture(true);
   };
 
   const handlePhotoCapture = async (file: File) => {
     if (!currentPhotoEtapa || !id) return;
-    
-    console.log("🔍 [DEBUG] CarregamentoDetalhe - Processando foto capturada:", file.name);
     
     try {
       const result = await uploadPhoto(file, `etapa-${currentPhotoEtapa}-${Date.now()}.jpg`);
@@ -183,39 +180,23 @@ const CarregamentoDetalhe = () => {
 
     if (!campoFoto || !id) return;
 
-    console.log("🔍 [DEBUG] CarregamentoDetalhe - Atualizando campo:", campoFoto, "com URL:", fotoUrl);
-
     const { error } = await supabase
       .from('carregamentos')
       .update({ [campoFoto]: fotoUrl })
       .eq('id', id);
 
     if (error) {
-      console.error("❌ [ERROR] CarregamentoDetalhe - Erro ao salvar foto:", error);
       throw new Error(`Erro ao salvar foto: ${error.message}`);
     }
-
-    console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
-  // 🆕 QUERY UNIFICADA - MESMA LÓGICA DA LISTA
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching carregamento:", id);
-      
-      // 🆕 REPRESENTANTE: Usar mesma function da lista
       if (userRole === "representante" && representanteId) {
-        console.log('🔍 [DEBUG] CarregamentoDetalhe - Usando function para representante:', representanteId);
-        
         const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
           p_representante_id: representanteId,
           p_carregamento_id: id
-        });
-        
-        console.log('🔍 [DEBUG] CarregamentoDetalhe Function result:', {
-          error: error?.message,
-          data: data?.[0]
         });
         
         if (error) throw error;
@@ -268,7 +249,6 @@ const CarregamentoDetalhe = () => {
         return null;
       }
 
-      // 🔄 OUTROS ROLES: Query tradicional com filtros automáticos
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -314,39 +294,23 @@ const CarregamentoDetalhe = () => {
         `)
         .eq("id", id);
 
-      // 🆕 APLICAR MESMOS FILTROS DA LISTA
       if (userRole === "cliente" && clienteId) {
-        console.log('🔍 [DEBUG] CarregamentoDetalhe - Aplicando filtro cliente:', clienteId);
         query = query.eq("cliente_id", clienteId);
       } else if (userRole === "armazem" && armazemId) {
-        console.log('🔍 [DEBUG] CarregamentoDetalhe - Aplicando filtro armazem:', armazemId);
         query = query.eq("armazem_id", armazemId);
       }
 
-      console.log('🔍 [DEBUG] CarregamentoDetalhe - Executando query tradicional...');
       const { data, error } = await query.single();
-      
-      console.log('🔍 [DEBUG] CarregamentoDetalhe Query tradicional result:', {
-        error: error?.message,
-        data
-      });
       
       if (error) throw error;
       return data;
     },
     enabled: (() => {
-      // 🆕 MESMA LÓGICA DA LISTA
       if (!user || !userRole || !id) {
-        console.log('🔍 [DEBUG] CarregamentoDetalhe - Query desabilitada: dados básicos faltando', {
-          user: !!user,
-          userRole,
-          id
-        });
         return false;
       }
       
       if (userRole === "admin" || userRole === "logistica") {
-        console.log('🔍 [DEBUG] CarregamentoDetalhe - Query habilitada: admin/logistica');
         return true;
       }
       
@@ -354,36 +318,19 @@ const CarregamentoDetalhe = () => {
       const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
-      const allOk = clienteOk && armazemOk && representanteOk;
-      
-      console.log('🔍 [DEBUG] CarregamentoDetalhe Enabled conditions:', {
-        userRole,
-        clienteId,
-        armazemId,
-        representanteId,
-        clienteOk,
-        armazemOk,
-        representanteOk,
-        allOk
-      });
-      
-      return allOk;
+      return clienteOk && armazemOk && representanteOk;
     })(),
   });
 
-  // 🚀 MUTATION MANTIDA
   const proximaEtapaMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEtapa || !carregamento) {
-        console.error("❌ [ERROR] CarregamentoDetalhe - Dados inválidos para próxima etapa");
         throw new Error("Dados inválidos");
       }
       
       const etapaAtual = carregamento.etapa_atual;
       const proximaEtapa = etapaAtual + 1;
       const agora = new Date().toISOString();
-      
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Avançando da etapa", etapaAtual, "para", proximaEtapa);
       
       const updateData: any = {
         etapa_atual: proximaEtapa,
@@ -393,16 +340,12 @@ const CarregamentoDetalhe = () => {
       const etapaConfig = ETAPAS.find(e => e.id === etapaAtual);
       if (etapaConfig?.campo_data) {
         updateData[etapaConfig.campo_data] = agora;
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Definindo", etapaConfig.campo_data, "=", agora);
       }
       if (etapaConfig?.campo_obs && stageObs.trim()) {
         updateData[etapaConfig.campo_obs] = stageObs.trim();
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Definindo", etapaConfig.campo_obs, "=", stageObs.trim());
       }
 
       if (stageFile) {
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Fazendo upload do arquivo:", stageFile.name);
-        
         const fileExt = stageFile.name.split('.').pop();
         let bucket = '';
         let fileName = '';
@@ -410,11 +353,9 @@ const CarregamentoDetalhe = () => {
         if (etapaAtual === 5) {
           bucket = 'carregamento-documentos';
           fileName = `${carregamento.id}_nota_fiscal_${Date.now()}.${fileExt}`;
-          console.log("🔍 [DEBUG] CarregamentoDetalhe - Upload para bucket documentos:", fileName);
         } else {
           bucket = 'carregamento-fotos';
           fileName = `${carregamento.id}_etapa_${etapaAtual}_${Date.now()}.${fileExt}`;
-          console.log("🔍 [DEBUG] CarregamentoDetalhe - Upload para bucket fotos:", fileName);
         }
         
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -422,27 +363,19 @@ const CarregamentoDetalhe = () => {
           .upload(fileName, stageFile);
 
         if (uploadError) {
-          console.error("❌ [ERROR] CarregamentoDetalhe - Erro no upload:", uploadError);
           throw uploadError;
         }
-
-        console.log("✅ [SUCCESS] CarregamentoDetalhe - Upload realizado:", uploadData);
 
         const { data: urlData } = supabase.storage
           .from(bucket)
           .getPublicUrl(fileName);
 
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - URL pública gerada:", urlData.publicUrl);
-
         if (etapaConfig?.campo_url) {
           updateData[etapaConfig.campo_url] = urlData.publicUrl;
-          console.log("🔍 [DEBUG] CarregamentoDetalhe - Definindo", etapaConfig.campo_url, "=", urlData.publicUrl);
         }
       }
 
       if (stageFileXml && etapaAtual === 5) {
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - Fazendo upload do XML:", stageFileXml.name);
-        
         const fileName = `${carregamento.id}_xml_${Date.now()}.xml`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -450,20 +383,14 @@ const CarregamentoDetalhe = () => {
           .upload(fileName, stageFileXml);
 
         if (uploadError) {
-          console.error("❌ [ERROR] CarregamentoDetalhe - Erro no upload XML:", uploadError);
           throw uploadError;
         }
-
-        console.log("✅ [SUCCESS] CarregamentoDetalhe - Upload XML realizado:", uploadData);
 
         const { data: urlData } = supabase.storage
           .from('carregamento-documentos')
           .getPublicUrl(fileName);
         updateData.url_xml = urlData.publicUrl;
-        console.log("🔍 [DEBUG] CarregamentoDetalhe - URL XML definida:", urlData.publicUrl);
       }
-
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Dados para atualização:", updateData);
 
       const { error: updateError } = await supabase
         .from('carregamentos')
@@ -471,16 +398,12 @@ const CarregamentoDetalhe = () => {
         .eq('id', carregamento.id);
 
       if (updateError) {
-        console.error("❌ [ERROR] CarregamentoDetalhe - Erro na atualização:", updateError);
         throw updateError;
       }
 
-      console.log("✅ [SUCCESS] CarregamentoDetalhe - Carregamento atualizado com sucesso");
       return { proximaEtapa };
     },
     onSuccess: ({ proximaEtapa }) => {
-      console.log("✅ [SUCCESS] CarregamentoDetalhe - Etapa avançada para:", proximaEtapa);
-      
       toast({
         title: "Etapa avançada com sucesso!",
         description: `Carregamento avançou para: ${ETAPAS.find(e => e.id === proximaEtapa)?.nome}`,
@@ -493,8 +416,6 @@ const CarregamentoDetalhe = () => {
       setSelectedEtapa(proximaEtapa);
     },
     onError: (error) => {
-      console.error("❌ [ERROR] CarregamentoDetalhe - Erro ao avançar etapa:", error);
-      
       toast({
         title: "Erro ao avançar etapa",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -505,13 +426,9 @@ const CarregamentoDetalhe = () => {
 
   useEffect(() => {
     if (carregamento?.etapa_atual != null) {
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Selecionando etapa atual:", carregamento.etapa_atual);
       setSelectedEtapa(carregamento.etapa_atual);
     }
   }, [carregamento]);
-
-  // 🗑️ REMOVIDA TODA VALIDAÇÃO useEffect - DESNECESSÁRIA!
-  // Se a query trouxe dados, o usuário tem permissão
 
   const calcularEstatisticas = () => {
     if (!carregamento) return null;
@@ -649,7 +566,6 @@ const CarregamentoDetalhe = () => {
                   }}
                   onClick={() => {
                     if (podeClicar) {
-                      console.log("🔍 [DEBUG] CarregamentoDetalhe - Etapa selecionada:", etapaIndex);
                       setSelectedEtapa(etapaIndex);
                     }
                   }}
@@ -668,7 +584,6 @@ const CarregamentoDetalhe = () => {
                   }}
                   onClick={() => {
                     if (podeClicar) {
-                      console.log("🔍 [DEBUG] CarregamentoDetalhe - Etapa selecionada (texto):", etapaIndex);
                       setSelectedEtapa(etapaIndex);
                     }
                   }}
@@ -767,7 +682,6 @@ const CarregamentoDetalhe = () => {
                 size="sm"
                 className="px-6"
                 onClick={() => {
-                  console.log("🔍 [DEBUG] CarregamentoDetalhe - Iniciando próxima etapa");
                   proximaEtapaMutation.mutate();
                 }}
               >
@@ -883,7 +797,6 @@ const CarregamentoDetalhe = () => {
                     accept={isEtapaDoc ? ".pdf" : "image/*"}
                     onChange={e => {
                       const file = e.target.files?.[0] ?? null;
-                      console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo selecionado:", file?.name);
                       setStageFile(file);
                     }}
                     className="hidden"
@@ -931,7 +844,6 @@ const CarregamentoDetalhe = () => {
                       accept=".xml"
                       onChange={e => {
                         const file = e.target.files?.[0] ?? null;
-                        console.log("🔍 [DEBUG] CarregamentoDetalhe - Arquivo XML selecionado:", file?.name);
                         setStageFileXml(file);
                       }}
                       className="hidden"
@@ -1103,7 +1015,6 @@ const CarregamentoDetalhe = () => {
     );
   };
 
-  // 🆕 LOADING/ERROR SIMPLIFICADOS
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
