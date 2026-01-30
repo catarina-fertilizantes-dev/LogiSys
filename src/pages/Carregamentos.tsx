@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Truck, X, Filter as FilterIcon, ChevronDown, ChevronUp, Info, Clock, User, ChevronRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
 
 // 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO
 const getStatusCarregamento = (etapaAtual: number) => {
@@ -104,44 +106,7 @@ interface CarregamentoItem {
   finalizado: boolean;
 }
 
-interface SupabaseCarregamentoItem {
-  id: string;
-  etapa_atual: number | null;
-  numero_nf: string | null;
-  data_chegada: string | null;
-  created_at: string | null;
-  cliente_id: string | null;
-  armazem_id: string | null;
-  // URLs das fotos por etapa
-  url_foto_chegada: string | null;
-  url_foto_inicio: string | null;
-  url_foto_carregando: string | null;
-  url_foto_finalizacao: string | null;
-  agendamento: {
-    id: string;
-    data_retirada: string;
-    quantidade: number | null;
-    placa_caminhao: string | null;
-    motorista_nome: string | null;
-    motorista_documento: string | null;
-    liberacao: {
-      pedido_interno: string | null;
-      produto: {
-        nome: string | null;
-      } | null;
-      clientes: {
-        nome: string | null;
-      } | null;
-      armazem: {
-        nome: string | null;
-        cidade: string | null;
-        estado: string | null;
-      } | null;
-    } | null;
-  } | null;
-}
-
-// �� ARRAY DE STATUS PARA FILTROS
+// 🎨 ARRAY DE STATUS PARA FILTROS
 const STATUS_CARREGAMENTO = [
   { id: "Aguardando", nome: "Aguardando", cor: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
   { id: "Em Andamento", nome: "Em Andamento", cor: "bg-blue-100 text-blue-800 hover:bg-blue-200" },
@@ -149,64 +114,50 @@ const STATUS_CARREGAMENTO = [
 ];
 
 const Carregamentos = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [armazemId, setArmazemId] = useState<string | null>(null);
-  const [clienteId, setClienteId] = useState<string | null>(null);
+  const { userRole, user } = useAuth(); // 🔄 USAR useAuth PADRÃO
+  const { clienteId, armazemId, representanteId } = usePermissions(); // 🆕 USAR usePermissions
 
   // 🆕 ESTADOS PARA SEÇÕES COLAPSÁVEIS
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
+  // 🆕 DEBUG TEMPORÁRIO
+  console.log('🔍 [DEBUG] CARREGAMENTOS - Hook usePermissions retornou:', {
+    representanteId,
+    clienteId,
+    armazemId,
+    userRole
+  });
 
-    const fetchRoles = async () => {
-      if (!userId) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-      if (data) setRoles(data.map((r) => r.role));
-    };
-
-    fetchRoles();
-  }, [userId]);
-
-  useEffect(() => {
-    const fetchVinculos = async () => {
-      if (!userId || roles.length === 0) return;
-      if (roles.includes("cliente")) {
-        const { data: cliente } = await supabase
-          .from("clientes")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        setClienteId(cliente?.id ?? null);
-      } else {
-        setClienteId(null);
-      }
-      if (roles.includes("armazem")) {
-        const { data: armazem } = await supabase
-          .from("armazens")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        setArmazemId(armazem?.id ?? null);
-      } else {
-        setArmazemId(null);
-      }
-    };
-
-    fetchVinculos();
-    // eslint-disable-next-line
-  }, [userId, roles]);
-
-  // 🔥 QUERY PARA BUSCAR DADOS COMPLETOS
+  // 🔄 QUERY PRINCIPAL - VERSÃO COM FUNCTION PARA REPRESENTANTES
   const { data: carregamentosData, isLoading, error } = useQuery({
-    queryKey: ["carregamentos", clienteId, armazemId, roles],
+    queryKey: ["carregamentos", clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
+      console.log('🔍 [DEBUG] Carregamentos Query executando com:', {
+        userRole,
+        representanteId,
+        clienteId,
+        armazemId
+      });
+
+      // 🆕 REPRESENTANTE: Usar function específica
+      if (userRole === "representante" && representanteId) {
+        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
+        
+        const { data, error } = await supabase.rpc('get_carregamentos_by_representante', {
+          p_representante_id: representanteId
+        });
+        
+        console.log('🔍 [DEBUG] Carregamentos Function result:', {
+          error: error?.message,
+          dataLength: data?.length || 0,
+          primeiros2: data?.slice(0, 2)
+        });
+        
+        if (error) throw error;
+        return data || [];
+      }
+
+      // 🔄 OUTROS ROLES: Query original
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -246,36 +197,51 @@ const Carregamentos = () => {
         `)
         .order("data_chegada", { ascending: false });
 
-      if (roles.includes("cliente") && clienteId) {
+      if (userRole === "cliente" && clienteId) {
+        console.log('🔍 [DEBUG] Aplicando filtro cliente:', clienteId);
         query = query.eq("cliente_id", clienteId);
-      } else if (roles.includes("armazem") && armazemId) {
+      } else if (userRole === "armazem" && armazemId) {
+        console.log('🔍 [DEBUG] Aplicando filtro armazem:', armazemId);
         query = query.eq("armazem_id", armazemId);
       }
 
+      console.log('🔍 [DEBUG] Executando query tradicional...');
       const { data, error } = await query;
-      if (error) {
-        console.error("[ERROR] Erro ao buscar carregamentos:", error);
-        throw error;
-      }
-      return data;
+      
+      console.log('🔍 [DEBUG] Carregamentos Query tradicional result:', {
+        error: error?.message,
+        dataLength: data?.length || 0,
+        primeiros2: data?.slice(0, 2)
+      });
+      
+      if (error) throw error;
+      return data || [];
     },
-    enabled:
-      userId != null &&
-      roles.length > 0 &&
-      (
-        (!roles.includes("cliente") && !roles.includes("armazem"))
-        || (roles.includes("cliente") && clienteId !== null)
-        || (roles.includes("armazem") && armazemId !== null)
-      ),
+    enabled: (() => {
+      const clienteOk = userRole !== "cliente" || !!clienteId;
+      const armazemOk = userRole !== "armazem" || !!armazemId;
+      const representanteOk = userRole !== "representante" || !!representanteId;
+      
+      console.log('🔍 [DEBUG] Carregamentos Enabled conditions:', {
+        clienteOk,
+        armazemOk, 
+        representanteOk,
+        representanteId,
+        final: clienteOk && armazemOk && representanteOk
+      });
+      
+      return clienteOk && armazemOk && representanteOk;
+    })(),
     refetchInterval: 30000,
   });
 
-  // 🔥 MAPEAMENTO CORRIGIDO COM NOVO SISTEMA DE STATUS + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
+  // 🔄 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
-    return carregamentosData.map((item: SupabaseCarregamentoItem) => {
-      const agendamento = item.agendamento;
-      const liberacao = agendamento?.liberacao;
+    
+    return carregamentosData.map((item: any) => {
+      // 🆕 DETECTAR SE OS DADOS VIERAM DA FUNCTION (representante) OU QUERY TRADICIONAL
+      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
       
       // Conta quantas fotos existem baseado nas URLs preenchidas
       const fotosCount = [
@@ -295,17 +261,19 @@ const Carregamentos = () => {
 
       return {
         id: item.id,
-        cliente: liberacao?.clientes?.nome || "N/A",
-        produto: liberacao?.produto?.nome || "N/A",
-        pedido: liberacao?.pedido_interno || "N/A",
-        armazem: liberacao?.armazem 
-          ? `${liberacao.armazem.nome} - ${liberacao.armazem.cidade}/${liberacao.armazem.estado}`
-          : "N/A",
-        quantidade: agendamento?.quantidade || 0,
-        placa: agendamento?.placa_caminhao || "N/A",
-        motorista: agendamento?.motorista_nome || "N/A",
-        documento: agendamento?.motorista_documento || "N/A",
-        data_retirada: agendamento?.data_retirada || "N/A",
+        cliente: isFromFunction ? item.cliente_nome : (item.agendamento?.liberacao?.clientes?.nome || "N/A"),
+        produto: isFromFunction ? item.produto_nome : (item.agendamento?.liberacao?.produto?.nome || "N/A"),
+        pedido: isFromFunction ? item.pedido_interno : (item.agendamento?.liberacao?.pedido_interno || "N/A"),
+        armazem: isFromFunction 
+          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
+          : (item.agendamento?.liberacao?.armazem 
+            ? `${item.agendamento.liberacao.armazem.nome} - ${item.agendamento.liberacao.armazem.cidade}/${item.agendamento.liberacao.armazem.estado}`
+            : "N/A"),
+        quantidade: isFromFunction ? item.quantidade : (item.agendamento?.quantidade || 0),
+        placa: isFromFunction ? item.placa_caminhao : (item.agendamento?.placa_caminhao || "N/A"),
+        motorista: isFromFunction ? item.motorista_nome : (item.agendamento?.motorista_nome || "N/A"),
+        documento: isFromFunction ? item.motorista_documento : (item.agendamento?.motorista_documento || "N/A"),
+        data_retirada: isFromFunction ? item.data_retirada : (item.agendamento?.data_retirada || "N/A"),
         etapa_atual: etapaAtual,
         fotosTotal: fotosCount,
         numero_nf: item.numero_nf || null,
@@ -510,10 +478,7 @@ const Carregamentos = () => {
     </Card>
   );
 
-  if (isLoading || userId == null || roles.length === 0 ||
-    (roles.includes("cliente") && clienteId === null) ||
-    (roles.includes("armazem") && armazemId === null)
-  ) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
         <PageHeader
