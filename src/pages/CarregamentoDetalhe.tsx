@@ -449,7 +449,7 @@ const CarregamentoDetalhe = () => {
     }
   }, [carregamento]);
 
-  // 🔄 VALIDAÇÃO DE PERMISSÃO ATUALIZADA
+  // 🔄 VALIDAÇÃO DE PERMISSÃO ATUALIZADA E CORRIGIDA
   useEffect(() => {
     if (
       !isLoading &&
@@ -457,26 +457,66 @@ const CarregamentoDetalhe = () => {
       user &&
       userRole
     ) {
-      // 🆕 VALIDAÇÃO INCLUINDO REPRESENTANTE
-      const hasPermission = 
-        userRole === "admin" ||
-        userRole === "logistica" ||
-        (userRole === "cliente" && clienteId && carregamento.cliente_id === clienteId) ||
-        (userRole === "armazem" && armazemId && carregamento.armazem_id === armazemId) ||
-        (userRole === "representante" && representanteId && carregamento.cliente_id); // 🆕 REPRESENTANTE: Verificar se cliente existe
+      let hasPermission = false;
+  
+      // Verificar permissão baseada no role
+      if (userRole === "admin" || userRole === "logistica") {
+        hasPermission = true;
+      } else if (userRole === "cliente" && clienteId) {
+        hasPermission = carregamento.cliente_id === clienteId;
+      } else if (userRole === "armazem" && armazemId) {
+        hasPermission = carregamento.armazem_id === armazemId;
+      } else if (userRole === "representante" && representanteId) {
+        // 🆕 REPRESENTANTE: Verificar se o cliente do carregamento está na lista
+        // Buscar dados adicionais se necessário
+        const verificarAcessoRepresentante = async () => {
+          try {
+            const { data: clienteData, error } = await supabase
+              .from('clientes')
+              .select('representante_id')
+              .eq('id', carregamento.cliente_id)
+              .single();
+            
+            if (error) {
+              console.error('❌ [ERROR] Erro ao verificar cliente do representante:', error);
+              hasPermission = false;
+            } else {
+              hasPermission = clienteData?.representante_id === representanteId;
+            }
+            
+            console.log('🔍 [DEBUG] CarregamentoDetalhe - Verificação representante:', {
+              carregamento_cliente_id: carregamento.cliente_id,
+              cliente_representante_id: clienteData?.representante_id,
+              user_representante_id: representanteId,
+              hasPermission
+            });
+            
+            if (!hasPermission) {
+              console.log('❌ [ERROR] CarregamentoDetalhe - Representante sem permissão, redirecionando');
+              navigate("/carregamentos");
+            }
+          } catch (error) {
+            console.error('❌ [ERROR] Erro na verificação de representante:', error);
+            navigate("/carregamentos");
+          }
+        };
+        
+        verificarAcessoRepresentante();
+        return; // Sair early para aguardar verificação async
+      }
       
-      console.log("🔍 [DEBUG] CarregamentoDetalhe - Verificação de permissão:", {
+      console.log('🔍 [DEBUG] CarregamentoDetalhe - Verificação de permissão:', {
         hasPermission,
         userRole,
         clienteId,
         armazemId,
-        representanteId, // 🆕
+        representanteId,
         carregamento_cliente_id: carregamento.cliente_id,
         carregamento_armazem_id: carregamento.armazem_id
       });
       
       if (!hasPermission) {
-        console.log("❌ [ERROR] CarregamentoDetalhe - Sem permissão, redirecionando");
+        console.log('❌ [ERROR] CarregamentoDetalhe - Sem permissão, redirecionando');
         navigate("/carregamentos");
       }
     }
