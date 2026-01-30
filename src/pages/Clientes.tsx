@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import {
   Dialog,
   DialogContent,
@@ -138,6 +139,8 @@ function maskCEPInput(value: string): string {
 }
 
 const Clientes = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
