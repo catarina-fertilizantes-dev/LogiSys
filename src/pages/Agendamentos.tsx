@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar, Clock, User, Truck, Plus, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Info, Loader2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
 import { useToast } from "@/hooks/use-toast";
 
 // 🎯 FUNÇÃO CORRIGIDA PARA DETERMINAR STATUS DO CARREGAMENTO (IGUAL À PÁGINA CARREGAMENTOS)
@@ -230,8 +231,19 @@ function validatePlaca(placa: string) {
 const Agendamentos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { hasRole, userRole, user, representanteId } = useAuth();
+  const { hasRole, userRole, user } = useAuth(); // 🔄 REMOVER representanteId daqui
+  
+  // 🆕 USAR usePermissions IGUAL LIBERAÇÕES
+  const { representanteId, clientesDoRepresentante } = usePermissions();
+  
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
+
+  // 🆕 DEBUG TEMPORÁRIO
+  console.log('🔍 [DEBUG] AGENDAMENTOS - Hook usePermissions retornou:', {
+    representanteId,
+    clientesDoRepresentante: clientesDoRepresentante?.length || 0,
+    userRole
+  });
 
   // 🚀 NOVO ESTADO DE LOADING
   const [isCreating, setIsCreating] = useState(false);
@@ -371,29 +383,11 @@ const Agendamentos = () => {
       const representanteOk = userRole !== "representante" || !!representanteId;
       const final = clienteOk && armazemOk && representanteOk;
       
-      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO:');
-      console.log('userRole:', userRole);
-      console.log('representanteId:', representanteId);
-      console.log('currentCliente?.id:', currentCliente?.id);
-      console.log('currentArmazem?.id:', currentArmazem?.id);
-      console.log('clienteOk:', clienteOk);
-      console.log('armazemOk:', armazemOk);
-      console.log('representanteOk:', representanteOk);
-      console.log('final:', final);
-      console.log('🔍 [DEBUG] Agendamentos Enabled conditions DETALHADO OBJETO:', {
+      console.log('🔍 [DEBUG] Agendamentos Enabled conditions:', {
         userRole,
         representanteId,
         currentClienteId: currentCliente?.id,
         currentArmazemId: currentArmazem?.id,
-        clienteOk,
-        armazemOk, 
-        representanteOk,
-        'userRole !== "cliente"': userRole !== "cliente",
-        '!!currentCliente?.id': !!currentCliente?.id,
-        'userRole !== "armazem"': userRole !== "armazem",
-        '!!currentArmazem?.id': !!currentArmazem?.id,
-        'userRole !== "representante"': userRole !== "representante",
-        '!!representanteId': !!representanteId,
         final
       });
       
