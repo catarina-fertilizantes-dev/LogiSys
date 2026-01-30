@@ -180,7 +180,7 @@ const Liberacoes = () => {
   console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante:', clientesDoRepresentante);
   console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante.length:', clientesDoRepresentante.length);
   
-  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM QUANTIDADE_RETIRADA CORRETA DO BACKEND
+  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM CAMPOS CORRETOS
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, clientesDoRepresentante],
     queryFn: async () => {
@@ -196,9 +196,9 @@ const Liberacoes = () => {
         .select(`
           id,
           pedido_interno,
-          quantidade,
+          quantidade_liberada,
+          quantidade_retirada,
           data_liberacao,
-          observacoes,
           status,
           cliente_id,
           armazem_id,
@@ -211,12 +211,14 @@ const Liberacoes = () => {
           armazens (
             id,
             nome,
-            endereco
+            endereco,
+            cidade,
+            estado
           ),
           produtos (
             id,
             nome,
-            codigo
+            unidade
           )
         `)
         .order("data_liberacao", { ascending: false });
@@ -251,7 +253,6 @@ const Liberacoes = () => {
     enabled: (() => {
       const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
       const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
-      // 🔧 CORREÇÃO: Aguardar representanteId ser carregado primeiro
       const representanteOk = userRole !== "representante" || (representanteId !== null);
       
       console.log('🔍 [DEBUG] Enabled conditions:', {
@@ -267,7 +268,7 @@ const Liberacoes = () => {
     })(),
   });
 
-  // 📊 BUSCAR QUANTIDADES AGENDADAS - CORRIGIDO PARA INCLUIR TODOS OS STATUS
+  // 📊 BUSCAR QUANTIDADES AGENDADAS - CAMPOS CORRETOS
   const { data: agendamentosData } = useQuery({
     queryKey: ["agendamentos-totais"],
     queryFn: async () => {
@@ -278,7 +279,7 @@ const Liberacoes = () => {
           quantidade,
           status
         `)
-        .in("status", ["pendente", "em_andamento", "concluido"]); // ✅ CORRIGIDO: INCLUIR TODOS OS STATUS
+        .in("status", ["pendente", "em_andamento", "concluido"]);
       
       if (error) throw error;
       
@@ -293,13 +294,11 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO ATUALIZADO - REMOVIDO "DISPONÍVEL" + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
+  // 📊 MAPEAMENTO CORRIGIDO COM CAMPOS REAIS
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     return liberacoesData.map((item: any) => {
-      // ✅ AGORA quantidade_retirada VEM CORRETA DO BACKEND
       const quantidadeRetirada = item.quantidade_retirada || 0;
-      // ✅ AGORA quantidade_agendada INCLUI TODOS OS STATUS
       const quantidadeAgendada = agendamentosData?.[item.id] || 0;
       
       const percentualRetirado = item.quantidade_liberada > 0 
@@ -314,7 +313,7 @@ const Liberacoes = () => {
 
       return {
         id: item.id,
-        produto: item.produto?.nome || "N/A",
+        produto: item.produtos?.nome || "N/A",
         cliente: item.clientes?.nome || "N/A",
         quantidade: item.quantidade_liberada,
         quantidadeRetirada,
@@ -324,11 +323,11 @@ const Liberacoes = () => {
         pedido: item.pedido_interno,
         data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
-        armazem: item.armazem ? `${item.armazem.nome} - ${item.armazem.cidade}/${item.armazem.estado}` : "N/A",
-        produto_id: item.produto?.id,
-        armazem_id: item.armazem?.id,
+        armazem: item.armazens ? `${item.armazens.nome} - ${item.armazens.cidade}/${item.armazens.estado}` : "N/A",
+        produto_id: item.produtos?.id,
+        armazem_id: item.armazens?.id,
         created_at: item.created_at,
-        finalizada, // 🆕 CAMPO PARA SEPARAR SEÇÕES
+        finalizada,
       };
     });
   }, [liberacoesData, agendamentosData]);
@@ -358,6 +357,7 @@ const Liberacoes = () => {
       return data || [];
     },
   });
+  
   const { data: armazens } = useQuery({
     queryKey: ["armazens-list"],
     queryFn: async () => {
@@ -369,6 +369,7 @@ const Liberacoes = () => {
       return data || [];
     },
   });
+  
   const { data: clientesData } = useQuery({
     queryKey: ["clientes-ativos"],
     queryFn: async () => {
@@ -581,7 +582,7 @@ const Liberacoes = () => {
           pedido_interno: pedido.trim(),
           quantidade_liberada: qtdNum,
           quantidade_retirada: 0,
-          status: "disponivel", // 🔄 STATUS PADRÃO ATUALIZADO
+          status: "disponivel",
           data_liberacao: new Date().toISOString().split('T')[0],
           created_by: userData.user?.id,
         })
@@ -810,7 +811,7 @@ const Liberacoes = () => {
                         value={novaLiberacao.pedido}
                         onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
                         placeholder="Ex: PED-2024-001"
-                        disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                        disabled={isCreating}
                       />
                     </div>
                     
@@ -820,7 +821,7 @@ const Liberacoes = () => {
                         <Select 
                           value={novaLiberacao.produto} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }))}
-                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                          disabled={isCreating}
                         >
                           <SelectTrigger id="produto">
                             <SelectValue placeholder="Selecione o produto" />
@@ -847,7 +848,7 @@ const Liberacoes = () => {
                         <Select 
                           value={novaLiberacao.armazem} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }))}
-                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                          disabled={isCreating}
                         >
                           <SelectTrigger id="armazem">
                             <SelectValue placeholder="Selecione o armazém" />
@@ -876,7 +877,7 @@ const Liberacoes = () => {
                         <Select 
                           value={novaLiberacao.cliente_id} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}
-                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                          disabled={isCreating}
                         >
                           <SelectTrigger id="cliente">
                             <SelectValue placeholder="Selecione o cliente" />
@@ -942,7 +943,7 @@ const Liberacoes = () => {
                               ? "border-green-500 focus:border-green-500"
                               : ""
                           }
-                          disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                          disabled={isCreating}
                         />
                         {novaLiberacao.quantidade && !quantidadeValida && (
                           <p className="text-xs text-red-600">
@@ -959,7 +960,7 @@ const Liberacoes = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => setDialogOpen(false)}
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isCreating}
                     >
                       Cancelar
                     </Button>
@@ -973,7 +974,7 @@ const Liberacoes = () => {
                         !temEstoqueCadastrado || 
                         !quantidadeValida || 
                         validandoEstoque ||
-                        isCreating // 🚀 DESABILITAR DURANTE LOADING
+                        isCreating
                       }
                     >
                       {isCreating ? (
