@@ -113,6 +113,22 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
+  // 🆕 LOG PARA DEBUG
+  console.log('🔍 [DEBUG] Hook usePermissions retornou:', {
+    clientesDoRepresentante,
+    representanteId,
+    length: clientesDoRepresentante?.length || 0
+  });
+
+  // 🆕 VERIFICAR SE OS DADOS ESTÃO CHEGANDO
+  useEffect(() => {
+    console.log('�� [DEBUG] useEffect - clientesDoRepresentante mudou:', {
+      clientesDoRepresentante,
+      length: clientesDoRepresentante?.length || 0,
+      representanteId
+    });
+  }, [clientesDoRepresentante, representanteId]);
+  
   // 🚫 PROTEÇÃO ADICIONAL: Redirecionar role 'armazem' para dashboard
   useEffect(() => {
     if (userRole === "armazem") {
