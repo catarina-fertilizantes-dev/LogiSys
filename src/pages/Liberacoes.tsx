@@ -184,41 +184,68 @@ const Liberacoes = () => {
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, clientesDoRepresentante],
     queryFn: async () => {
+      console.log('🔍 [DEBUG] Query executando com:', {
+        userRole,
+        representanteId,
+        clientesDoRepresentante,
+        clientesLength: clientesDoRepresentante.length
+      });
+    
       let query = supabase
         .from("liberacoes")
         .select(`
           id,
           pedido_interno,
-          quantidade_liberada,
-          quantidade_retirada,
-          status,
+          quantidade,
           data_liberacao,
-          created_at,
+          observacoes,
+          status,
           cliente_id,
-          clientes(nome, cnpj_cpf),
-          produto:produtos(id, nome),
-          armazem:armazens(id, nome, cidade, estado)
+          armazem_id,
+          produto_id,
+          clientes (
+            id,
+            nome,
+            cnpj_cpf
+          ),
+          armazens (
+            id,
+            nome,
+            endereco
+          ),
+          produtos (
+            id,
+            nome,
+            codigo
+          )
         `)
-        .order("created_at", { ascending: false });
-
-      if (userRole === "cliente" && currentCliente?.id) {
-        query = query.eq("cliente_id", currentCliente.id);
-      }
-      if (userRole === "armazem" && currentArmazem?.id) {
-        query = query.eq("armazem_id", currentArmazem.id);
-      }
-      // 🆕 FILTRO SEGURO PARA REPRESENTANTE
+        .order("data_liberacao", { ascending: false });
+    
+      console.log('🔍 [DEBUG] Query inicial criada');
+    
+      // 🆕 FILTRO PARA REPRESENTANTE
       if (userRole === "representante") {
+        console.log('🔍 [DEBUG] Aplicando filtro representante...');
         if (clientesDoRepresentante.length > 0) {
+          console.log('🔍 [DEBUG] Filtro IN aplicado:', clientesDoRepresentante);
           query = query.in("cliente_id", clientesDoRepresentante);
         } else {
-          // 🔒 SEGURANÇA: Se não conseguiu buscar clientes, não retorna nada
-          query = query.eq("cliente_id", "00000000-0000-0000-0000-000000000000"); // UUID impossível
+          console.log('🔍 [DEBUG] Filtro de segurança aplicado (UUID impossível)');
+          query = query.eq("cliente_id", "00000000-0000-0000-0000-000000000000");
         }
       }
+    
+      console.log('🔍 [DEBUG] Executando query...');
       const { data, error } = await query;
+      
+      console.log('🔍 [DEBUG] Resultado da query:', {
+        error: error?.message,
+        dataLength: data?.length || 0,
+        primeiros2: data?.slice(0, 2)
+      });
+    
       if (error) throw error;
-      return data ?? [];
+      return data || [];
     },
     refetchInterval: 30000,
     enabled: (() => {
