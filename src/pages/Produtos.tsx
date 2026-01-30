@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 type Unidade = "t" | "kg" | "";
@@ -31,6 +32,8 @@ const unidadeLabels: Record<string, string> = {
 };
 
 const Produtos = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
 
