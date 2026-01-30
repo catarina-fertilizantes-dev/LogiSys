@@ -96,6 +96,24 @@ const ChangePassword = () => {
 
       if (metadataError) throw metadataError;
 
+      // 🆕 ADICIONAR: Limpar temp_password após troca de senha bem-sucedida
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          const { data: clearResult, error: clearError } = await supabase.rpc('clear_user_temp_password', {
+            user_email: user.email.toLowerCase()
+          });
+          
+          if (clearError) {
+            console.warn('Could not clear temporary password:', clearError);
+          } else if (clearResult?.cleared_count > 0) {
+            console.log('Temporary password cleared for user:', user.email);
+          }
+        }
+      } catch (clearError) {
+        console.warn('Error clearing temporary password:', clearError);
+      }
+
       // Clear recovery mode if active
       if (recoveryMode) {
         clearRecoveryMode();
@@ -106,7 +124,7 @@ const ChangePassword = () => {
         description: "Você pode agora acessar o sistema normalmente"
       });
 
-      // **NOVO:** força logout e redireciona para login para evitar conflito de sessão recovery
+      // Força logout e redireciona para login para evitar conflito de sessão recovery
       await supabase.auth.signOut();
       navigate("/auth");
     } catch (error) {
