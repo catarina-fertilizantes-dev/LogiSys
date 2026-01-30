@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 type StockStatus = "normal" | "baixo";
 type Unidade = "t" | "kg";
@@ -96,6 +97,8 @@ const parseDate = (d: string) => {
 };
 
 const Estoque = () => {
+  useScrollToTop();
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
