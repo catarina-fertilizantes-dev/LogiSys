@@ -196,17 +196,36 @@ const Liberacoes = () => {
   console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante:', clientesDoRepresentante);
   console.log('🔍 [DEBUG] Liberacoes - clientesDoRepresentante.length:', clientesDoRepresentante.length);
   
-  // 🔄 QUERY PRINCIPAL - LIBERAÇÕES COM CAMPOS CORRETOS
+  // 🔄 QUERY PRINCIPAL - VERSÃO SIMPLIFICADA COM FUNCTION
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, clientesDoRepresentante],
+    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      console.log('🔍 [DEBUG] Query executando com:', {
+      console.log('�� [DEBUG] Query executando com:', {
         userRole,
         representanteId,
-        clientesDoRepresentante,
-        clientesLength: clientesDoRepresentante.length
+        currentClienteId: currentCliente?.id,
+        currentArmazemId: currentArmazem?.id
       });
-    
+  
+      // 🆕 REPRESENTANTE: Usar function específica
+      if (userRole === "representante" && representanteId) {
+        console.log('🔍 [DEBUG] Usando function para representante:', representanteId);
+        
+        const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
+          p_representante_id: representanteId
+        });
+        
+        console.log('🔍 [DEBUG] Function result:', {
+          error: error?.message,
+          dataLength: data?.length || 0,
+          primeiros2: data?.slice(0, 2)
+        });
+        
+        if (error) throw error;
+        return data || [];
+      }
+  
+      // 🔄 CLIENTE E OUTROS: Query original
       let query = supabase
         .from("liberacoes")
         .select(`
@@ -235,32 +254,30 @@ const Liberacoes = () => {
             id,
             nome,
             unidade
-          )
+          ),
+          created_at
         `)
         .order("data_liberacao", { ascending: false });
-    
-      console.log('🔍 [DEBUG] Query inicial criada');
-    
-      // 🆕 FILTRO PARA REPRESENTANTE
-      if (userRole === "representante") {
-        console.log('🔍 [DEBUG] Aplicando filtro representante...');
-        if (clientesDoRepresentante.length > 0) {
-          console.log('🔍 [DEBUG] Filtro IN aplicado:', clientesDoRepresentante);
-          query = query.in("cliente_id", clientesDoRepresentante);
-        } else {
-          console.log('🔍 [DEBUG] Filtro de segurança aplicado (UUID impossível)');
-          query = query.eq("cliente_id", "00000000-0000-0000-0000-000000000000");
-        }
+  
+      // Filtro para cliente
+      if (userRole === "cliente" && currentCliente?.id) {
+        console.log('🔍 [DEBUG] Aplicando filtro cliente:', currentCliente.id);
+        query = query.eq("cliente_id", currentCliente.id);
       }
-    
-      console.log('🔍 [DEBUG] Executando query...');
+  
+      // Filtro para armazém
+      if (userRole === "armazem" && currentArmazem?.id) {
+        console.log('🔍 [DEBUG] Aplicando filtro armazem:', currentArmazem.id);
+        query = query.eq("armazem_id", currentArmazem.id);
+      }
+  
+      console.log('🔍 [DEBUG] Executando query tradicional...');
       const { data, error } = await query;
       
-      console.log('🔍 [DEBUG] Resultado da query:', {
+      console.log('🔍 [DEBUG] Query tradicional result:', {
         error: error?.message,
         dataLength: data?.length || 0,
-        primeiros2: data?.slice(0, 2),
-        dadosCompletos: data
+        primeiros2: data?.slice(0, 2)
       });
       
       if (error) throw error;
@@ -270,14 +287,13 @@ const Liberacoes = () => {
     enabled: (() => {
       const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
       const armazemOk = userRole !== "armazem" || !!currentArmazem?.id;
-      const representanteOk = userRole !== "representante" || (representanteId !== null);
+      const representanteOk = userRole !== "representante" || !!representanteId;
       
       console.log('🔍 [DEBUG] Enabled conditions:', {
         clienteOk,
         armazemOk, 
         representanteOk,
         representanteId,
-        clientesLength: clientesDoRepresentante.length,
         final: clienteOk && armazemOk && representanteOk
       });
       
@@ -311,9 +327,10 @@ const Liberacoes = () => {
     refetchInterval: 30000,
   });
 
-  // 📊 MAPEAMENTO CORRIGIDO COM CAMPOS REAIS
+  // 📊 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
+    
     return liberacoesData.map((item: any) => {
       const quantidadeRetirada = item.quantidade_retirada || 0;
       const quantidadeAgendada = agendamentosData?.[item.id] || 0;
@@ -324,14 +341,17 @@ const Liberacoes = () => {
       const percentualAgendado = item.quantidade_liberada > 0 
         ? Math.round((quantidadeAgendada / item.quantidade_liberada) * 100) 
         : 0;
-
+  
       // 🆕 CRITÉRIO DE FINALIZAÇÃO: quantidade_retirada >= quantidade_liberada
       const finalizada = quantidadeRetirada >= item.quantidade_liberada;
-
+  
+      // 🆕 SUPORTE PARA DADOS DA FUNCTION (representante) E QUERY TRADICIONAL (outros)
+      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
+  
       return {
         id: item.id,
-        produto: item.produtos?.nome || "N/A",
-        cliente: item.clientes?.nome || "N/A",
+        produto: isFromFunction ? item.produto_nome : (item.produtos?.nome || "N/A"),
+        cliente: isFromFunction ? item.cliente_nome : (item.clientes?.nome || "N/A"),
         quantidade: item.quantidade_liberada,
         quantidadeRetirada,
         quantidadeAgendada,
@@ -340,9 +360,11 @@ const Liberacoes = () => {
         pedido: item.pedido_interno,
         data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
-        armazem: item.armazens ? `${item.armazens.nome} - ${item.armazens.cidade}/${item.armazens.estado}` : "N/A",
-        produto_id: item.produtos?.id,
-        armazem_id: item.armazens?.id,
+        armazem: isFromFunction 
+          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
+          : (item.armazens ? `${item.armazens.nome} - ${item.armazens.cidade}/${item.armazens.estado}` : "N/A"),
+        produto_id: item.produto_id,
+        armazem_id: item.armazem_id,
         created_at: item.created_at,
         finalizada,
       };
