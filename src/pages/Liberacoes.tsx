@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
@@ -103,6 +104,8 @@ const parseDate = (d: string) => {
 };
 
 const Liberacoes = () => {
+  useScrollToTop();
+  
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
