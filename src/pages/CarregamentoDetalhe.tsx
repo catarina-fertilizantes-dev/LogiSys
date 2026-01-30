@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import PhotoCaptureMethod from "@/components/PhotoCaptureMethod";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
-import { useAuth } from "@/contexts/AuthContext"; // 🆕 ADICIONAR IMPORT
-import { usePermissions } from "@/hooks/usePermissions"; // 🆕 ADICIONAR IMPORT
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { 
   Loader2, 
   CheckCircle, 
@@ -110,8 +110,6 @@ const CarregamentoDetalhe = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // 🔄 USAR HOOKS PADRÃO EM VEZ DE ESTADOS MANUAIS
   const { userRole, user } = useAuth();
   const { clienteId, armazemId, representanteId } = usePermissions();
 
@@ -119,38 +117,24 @@ const CarregamentoDetalhe = () => {
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
-
-  // 🆕 Estados para captura de foto
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [currentPhotoEtapa, setCurrentPhotoEtapa] = useState<number | null>(null);
 
-  // 🆕 Hook de upload de fotos
   const { uploadPhoto, isUploading: isUploadingPhoto } = usePhotoUpload({
     bucket: 'carregamento-fotos',
     folder: id || 'unknown'
   });
 
-  // 🆕 DEBUG TEMPORÁRIO
-  console.log('🔍 [DEBUG] CARREGAMENTO DETALHE - Hook usePermissions retornou:', {
-    representanteId,
-    clienteId,
-    armazemId,
-    userRole
-  });
-
-  // Função para voltar à página pai
   const handleGoBack = () => {
     navigate("/carregamentos");
   };
 
-  // 🆕 Função para iniciar captura de foto
   const handleStartPhotoCapture = (etapa: number) => {
     console.log("🔍 [DEBUG] CarregamentoDetalhe - Iniciando captura de foto para etapa:", etapa);
     setCurrentPhotoEtapa(etapa);
     setShowPhotoCapture(true);
   };
 
-  // 🆕 Função para processar foto capturada/selecionada
   const handlePhotoCapture = async (file: File) => {
     if (!currentPhotoEtapa || !id) return;
     
@@ -160,17 +144,10 @@ const CarregamentoDetalhe = () => {
       const result = await uploadPhoto(file, `etapa-${currentPhotoEtapa}-${Date.now()}.jpg`);
       
       if (result) {
-        // Atualizar banco de dados com URL da foto
         await updateCarregamentoFoto(currentPhotoEtapa, result.url);
-        
-        // Definir como arquivo selecionado para o fluxo normal
         setStageFile(file);
-        
-        // Fechar modal e resetar estados
         setShowPhotoCapture(false);
         setCurrentPhotoEtapa(null);
-        
-        // Recarregar dados
         queryClient.invalidateQueries({ queryKey: ["carregamento-detalhe", id] });
         
         toast({
@@ -188,13 +165,11 @@ const CarregamentoDetalhe = () => {
     }
   };
 
-  // 🆕 Função para cancelar captura
   const handleCancelPhotoCapture = () => {
     setShowPhotoCapture(false);
     setCurrentPhotoEtapa(null);
   };
 
-  // 🆕 Função para atualizar foto no banco de dados
   const updateCarregamentoFoto = async (etapa: number, fotoUrl: string) => {
     const campoFoto = {
       1: 'url_foto_chegada',
@@ -220,13 +195,13 @@ const CarregamentoDetalhe = () => {
     console.log("✅ [SUCCESS] CarregamentoDetalhe - Foto salva no banco de dados");
   };
 
-  // 🔄 QUERY CORRIGIDA - AGUARDAR usePermissions CARREGAR COMPLETAMENTE
+  // 🆕 QUERY UNIFICADA - MESMA LÓGICA DA LISTA
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Fetching carregamento:", id);
       
-      // 🆕 REPRESENTANTE: Usar function específica
+      // 🆕 REPRESENTANTE: Usar mesma function da lista
       if (userRole === "representante" && representanteId) {
         console.log('🔍 [DEBUG] CarregamentoDetalhe - Usando function para representante:', representanteId);
         
@@ -242,7 +217,6 @@ const CarregamentoDetalhe = () => {
         
         if (error) throw error;
         
-        // Transformar dados da function para o formato esperado
         if (data && data.length > 0) {
           const item = data[0];
           return {
@@ -290,8 +264,8 @@ const CarregamentoDetalhe = () => {
         
         return null;
       }
-  
-      // 🔄 OUTROS ROLES: Query original
+
+      // 🔄 OUTROS ROLES: Query tradicional com filtros automáticos
       let query = supabase
         .from("carregamentos")
         .select(`
@@ -335,11 +309,19 @@ const CarregamentoDetalhe = () => {
             )
           )
         `)
-        .eq("id", id)
-        .single();
-  
+        .eq("id", id);
+
+      // 🆕 APLICAR MESMOS FILTROS DA LISTA
+      if (userRole === "cliente" && clienteId) {
+        console.log('🔍 [DEBUG] CarregamentoDetalhe - Aplicando filtro cliente:', clienteId);
+        query = query.eq("cliente_id", clienteId);
+      } else if (userRole === "armazem" && armazemId) {
+        console.log('🔍 [DEBUG] CarregamentoDetalhe - Aplicando filtro armazem:', armazemId);
+        query = query.eq("armazem_id", armazemId);
+      }
+
       console.log('🔍 [DEBUG] CarregamentoDetalhe - Executando query tradicional...');
-      const { data, error } = await query;
+      const { data, error } = await query.single();
       
       console.log('🔍 [DEBUG] CarregamentoDetalhe Query tradicional result:', {
         error: error?.message,
@@ -350,7 +332,7 @@ const CarregamentoDetalhe = () => {
       return data;
     },
     enabled: (() => {
-      // 🆕 VERIFICAÇÃO MELHORADA: Aguardar dados do usePermissions
+      // 🆕 MESMA LÓGICA DA LISTA
       if (!user || !userRole || !id) {
         console.log('🔍 [DEBUG] CarregamentoDetalhe - Query desabilitada: dados básicos faltando', {
           user: !!user,
@@ -359,14 +341,12 @@ const CarregamentoDetalhe = () => {
         });
         return false;
       }
-  
-      // Para admin e logistica, pode executar imediatamente
+      
       if (userRole === "admin" || userRole === "logistica") {
         console.log('🔍 [DEBUG] CarregamentoDetalhe - Query habilitada: admin/logistica');
         return true;
       }
-  
-      // Para outros roles, aguardar dados específicos
+      
       const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
       const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
@@ -388,7 +368,7 @@ const CarregamentoDetalhe = () => {
     })(),
   });
 
-  // 🚀 MUTATION COM LOADING STATES MELHORADOS
+  // 🚀 MUTATION MANTIDA
   const proximaEtapaMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEtapa || !carregamento) {
@@ -402,13 +382,11 @@ const CarregamentoDetalhe = () => {
       
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Avançando da etapa", etapaAtual, "para", proximaEtapa);
       
-      // Preparar dados para atualização
       const updateData: any = {
         etapa_atual: proximaEtapa,
         updated_by: user?.id,
       };
 
-      // Definir campo de data baseado na etapa atual
       const etapaConfig = ETAPAS.find(e => e.id === etapaAtual);
       if (etapaConfig?.campo_data) {
         updateData[etapaConfig.campo_data] = agora;
@@ -419,7 +397,6 @@ const CarregamentoDetalhe = () => {
         console.log("🔍 [DEBUG] CarregamentoDetalhe - Definindo", etapaConfig.campo_obs, "=", stageObs.trim());
       }
 
-      // Upload de arquivos se necessário
       if (stageFile) {
         console.log("🔍 [DEBUG] CarregamentoDetalhe - Fazendo upload do arquivo:", stageFile.name);
         
@@ -428,12 +405,10 @@ const CarregamentoDetalhe = () => {
         let fileName = '';
         
         if (etapaAtual === 5) {
-          // Etapa 5: Documentação (PDF)
           bucket = 'carregamento-documentos';
           fileName = `${carregamento.id}_nota_fiscal_${Date.now()}.${fileExt}`;
           console.log("🔍 [DEBUG] CarregamentoDetalhe - Upload para bucket documentos:", fileName);
         } else {
-          // Outras etapas: Fotos
           bucket = 'carregamento-fotos';
           fileName = `${carregamento.id}_etapa_${etapaAtual}_${Date.now()}.${fileExt}`;
           console.log("🔍 [DEBUG] CarregamentoDetalhe - Upload para bucket fotos:", fileName);
@@ -456,14 +431,12 @@ const CarregamentoDetalhe = () => {
 
         console.log("🔍 [DEBUG] CarregamentoDetalhe - URL pública gerada:", urlData.publicUrl);
 
-        // Definir campo URL baseado na etapa
         if (etapaConfig?.campo_url) {
           updateData[etapaConfig.campo_url] = urlData.publicUrl;
           console.log("🔍 [DEBUG] CarregamentoDetalhe - Definindo", etapaConfig.campo_url, "=", urlData.publicUrl);
         }
       }
 
-      // Upload de XML se for etapa 5
       if (stageFileXml && etapaAtual === 5) {
         console.log("🔍 [DEBUG] CarregamentoDetalhe - Fazendo upload do XML:", stageFileXml.name);
         
@@ -489,7 +462,6 @@ const CarregamentoDetalhe = () => {
 
       console.log("🔍 [DEBUG] CarregamentoDetalhe - Dados para atualização:", updateData);
 
-      // Atualizar carregamento
       const { error: updateError } = await supabase
         .from('carregamentos')
         .update(updateData)
@@ -511,15 +483,10 @@ const CarregamentoDetalhe = () => {
         description: `Carregamento avançou para: ${ETAPAS.find(e => e.id === proximaEtapa)?.nome}`,
       });
       
-      // Limpar formulário
       setStageFile(null);
       setStageFileXml(null);
       setStageObs("");
-      
-      // Atualizar dados
       queryClient.invalidateQueries({ queryKey: ["carregamento-detalhe", id] });
-      
-      // Selecionar próxima etapa
       setSelectedEtapa(proximaEtapa);
     },
     onError: (error) => {
@@ -540,47 +507,9 @@ const CarregamentoDetalhe = () => {
     }
   }, [carregamento]);
 
-  // 🔄 VALIDAÇÃO DE PERMISSÃO SIMPLIFICADA
-  useEffect(() => {
-    if (
-      !isLoading &&
-      carregamento &&
-      user &&
-      userRole
-    ) {
-      let hasPermission = false;
-  
-      // Verificar permissão baseada no role
-      if (userRole === "admin" || userRole === "logistica") {
-        hasPermission = true;
-      } else if (userRole === "cliente" && clienteId) {
-        hasPermission = carregamento.cliente_id === clienteId;
-      } else if (userRole === "armazem" && armazemId) {
-        hasPermission = carregamento.armazem_id === armazemId;
-      } else if (userRole === "representante" && representanteId) {
-        // 🆕 REPRESENTANTE: Se chegou até aqui via function, já tem permissão
-        hasPermission = true;
-      }
-      
-      console.log('🔍 [DEBUG] CarregamentoDetalhe - Verificação de permissão:', {
-        hasPermission,
-        userRole,
-        clienteId,
-        armazemId,
-        representanteId,
-        carregamento_cliente_id: carregamento.cliente_id,
-        carregamento_armazem_id: carregamento.armazem_id
-      });
-      
-      if (!hasPermission) {
-        console.log('❌ [ERROR] CarregamentoDetalhe - Sem permissão, redirecionando');
-        navigate("/carregamentos");
-      }
-    }
-    // eslint-disable-next-line
-  }, [isLoading, carregamento, user, userRole, clienteId, armazemId, representanteId, navigate]);
+  // 🗑️ REMOVIDA TODA VALIDAÇÃO useEffect - DESNECESSÁRIA!
+  // Se a query trouxe dados, o usuário tem permissão
 
-  // Calcular estatísticas de tempo
   const calcularEstatisticas = () => {
     if (!carregamento) return null;
 
@@ -597,7 +526,6 @@ const CarregamentoDetalhe = () => {
       ? Math.round((fim.getTime() - inicio.getTime()) / 1000 / 60)
       : null;
 
-    // Calcular tempo por etapa
     const temposPorEtapa = [];
     const datas = [
       carregamento.data_chegada,
@@ -628,7 +556,6 @@ const CarregamentoDetalhe = () => {
 
   const stats = calcularEstatisticas();
 
-  // Função para obter informações da etapa
   const getEtapaInfo = (etapa: number) => {
     const found = ETAPAS.find(e => e.id === etapa);
     return found || { 
@@ -642,9 +569,6 @@ const CarregamentoDetalhe = () => {
     };
   };
 
-  // ----------- COMPONENTES DE LAYOUT -----------
-
-  // Componente de fluxo (setas acima dos círculos)
   const renderEtapasFluxo = () => (
     <div
       className="w-full flex flex-col"
@@ -658,10 +582,8 @@ const CarregamentoDetalhe = () => {
             const isFinalizada = etapaIndex < etapaAtual;
             const isAtual = etapaIndex === etapaAtual;
             const isSelected = selectedEtapa === etapaIndex;
-            // 🚀 DESABILITAR CLIQUES DURANTE LOADING
             const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto;
             
-            // Lógica visual melhorada - prioriza seleção sobre estado atual
             let circleClasses = "rounded-full flex items-center justify-center transition-all";
             let shadowStyle = "none";
             
@@ -681,7 +603,7 @@ const CarregamentoDetalhe = () => {
             } else {
               circleClasses += " cursor-not-allowed opacity-70";
             }
-                  // Obter data da etapa
+
             const getDataEtapa = () => {
               switch (etapaIndex) {
                 case 1: return carregamento?.data_chegada;
@@ -698,7 +620,6 @@ const CarregamentoDetalhe = () => {
                 key={etapa.id}
                 className="flex flex-col items-center flex-1 min-w-[90px] relative"
               >
-                {/* seta entre círculos, exceto o último */}
                 {idx < ETAPAS.length - 1 && (
                   <div
                     style={{
@@ -762,7 +683,6 @@ const CarregamentoDetalhe = () => {
     </div>
   );
 
-  // Área de etapas - interativa baseada na etapa selecionada
   const renderAreaEtapas = () => {
     if (!selectedEtapa) return null;
 
@@ -775,29 +695,13 @@ const CarregamentoDetalhe = () => {
     const isEtapaFutura = selectedEtapa > etapaAtual;
     const isEtapaFinalizada = selectedEtapa === 6 && etapaAtual === 6;
     
-    // Só usuário armazém pode editar a etapa atual
     const podeEditar = userRole === "armazem" && 
                       carregamento?.armazem_id === armazemId && 
                       isEtapaAtual && 
                       !isEtapaFinalizada;
 
-    // 🆕 Verificar se pode usar câmera (só armazém e etapas 1-4)
     const canUseCamera = podeEditar && selectedEtapa >= 1 && selectedEtapa <= 4;
 
-    console.log("🔍 [DEBUG] CarregamentoDetalhe - renderAreaEtapas:", {
-      selectedEtapa,
-      etapaAtual,
-      isEtapaConcluida,
-      isEtapaAtual,
-      isEtapaFutura,
-      podeEditar,
-      canUseCamera,
-      userRole,
-      armazemId,
-      carregamento_armazem_id: carregamento?.armazem_id
-    });
-
-    // Obter dados da etapa
     const getEtapaData = () => {
       switch (selectedEtapa) {
         case 1:
@@ -841,7 +745,6 @@ const CarregamentoDetalhe = () => {
     return (
       <Card className="shadow-sm">
         <CardContent className="p-4 space-y-4">
-          {/* Header com título e botão */}
           <div className="flex items-center justify-between border-b pb-3">
             <div>
               <h2 className="text-lg font-semibold text-foreground">{etapaTitulo}</h2>
@@ -854,7 +757,6 @@ const CarregamentoDetalhe = () => {
             {podeEditar && (
               <Button
                 disabled={
-                  // 🆕 Validação atualizada: Para etapa 5, exige PDF E XML
                   (isEtapaDoc ? (!stageFile || !stageFileXml) : !stageFile) || 
                   proximaEtapaMutation.isPending || 
                   isUploadingPhoto
@@ -879,7 +781,6 @@ const CarregamentoDetalhe = () => {
           </div>
 
           {isEtapaFinalizada ? (
-            // Etapa 6 finalizada - processo concluído
             <div className="text-center py-6">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
               <h3 className="text-base font-medium text-foreground mb-1">Processo Finalizado</h3>
@@ -888,7 +789,6 @@ const CarregamentoDetalhe = () => {
               </p>
             </div>
           ) : isEtapaConcluida ? (
-            // Etapa concluída - mostrar arquivos e observações (somente leitura)
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
@@ -903,10 +803,8 @@ const CarregamentoDetalhe = () => {
                   </div>
                 )}
 
-                {/* 🔄 DOCUMENTOS COM COMPONENTE UNIVERSAL */}
                 <div className="space-y-2">
                   {isEtapaDoc ? (
-                    // Etapa de documentação - mostrar PDF e XML
                     <>
                       <DocumentViewer
                         url={etapaData.url_arquivo}
@@ -930,7 +828,6 @@ const CarregamentoDetalhe = () => {
                       />
                     </>
                   ) : (
-                    // Outras etapas - mostrar foto
                     <DocumentViewer
                       url={etapaData.url_arquivo}
                       type="image"
@@ -946,14 +843,12 @@ const CarregamentoDetalhe = () => {
               </div>
             </div>
           ) : podeEditar ? (
-            // Etapa atual - usuário armazém pode editar
             <div className="space-y-3">             
               <div>
                 <label className="text-sm font-semibold block mb-2">
                   {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
                 </label>
                 
-                {/* Botão para anexar arquivo */}
                 <div className="space-y-3">
                   {canUseCamera ? (
                     <Button
@@ -979,7 +874,6 @@ const CarregamentoDetalhe = () => {
                     </Button>
                   )}
                   
-                  {/* Input de arquivo (oculto) */}
                   <Input
                     id="file-upload-pdf"
                     type="file"
@@ -993,7 +887,6 @@ const CarregamentoDetalhe = () => {
                     disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                   />
                   
-                  {/* Mostrar arquivo selecionado */}
                   {stageFile && (
                     <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1011,7 +904,6 @@ const CarregamentoDetalhe = () => {
                 </div>
               </div>
             
-              {/* 🆕 Seção XML padronizada e obrigatória */}
               {isEtapaDoc && (
                 <div>
                   <label className="text-sm font-semibold block mb-2">
@@ -1030,7 +922,6 @@ const CarregamentoDetalhe = () => {
                       {stageFileXml ? "Alterar XML" : "Anexar XML"}
                     </Button>
                     
-                    {/* Input de arquivo XML (oculto) */}
                     <Input
                       id="file-upload-xml"
                       type="file"
@@ -1044,7 +935,6 @@ const CarregamentoDetalhe = () => {
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                     />
                     
-                    {/* Mostrar arquivo XML selecionado */}
                     {stageFileXml && (
                       <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
                         <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1078,12 +968,10 @@ const CarregamentoDetalhe = () => {
               </div>
             </div>
           ) : isEtapaFutura ? (
-            // Etapa futura - aguardando etapa anterior
             <div className="text-center py-6 text-muted-foreground">
               <p className="text-sm">Aguardando a etapa anterior ser finalizada.</p>
             </div>
           ) : (
-            // Etapa atual mas usuário não pode editar
             <div className="text-center py-6 text-muted-foreground">
               <p className="text-sm">Aguardando execução desta etapa pelo armazém.</p>
             </div>
@@ -1106,7 +994,6 @@ const CarregamentoDetalhe = () => {
           <div className="space-y-4">
             {agendamento && (
               <>
-                {/* Informações do Pedido e Produto */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Pedido:</span>
@@ -1118,10 +1005,8 @@ const CarregamentoDetalhe = () => {
                   </div>
                 </div>
   
-                {/* Separador */}
                 <div className="border-t"></div>
   
-                {/* Informações Básicas */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Cliente:</span>
@@ -1148,10 +1033,8 @@ const CarregamentoDetalhe = () => {
                   </div>
                 </div>
   
-                {/* Separador */}
                 <div className="border-t"></div>
   
-                {/* Data e Status */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Data Agendada:</span>
@@ -1171,7 +1054,6 @@ const CarregamentoDetalhe = () => {
                   </div>
                 </div>
   
-                {/* Nota Fiscal (se existir) */}
                 {carregamento.numero_nf && (
                   <>
                     <div className="border-t"></div>
@@ -1182,7 +1064,6 @@ const CarregamentoDetalhe = () => {
                   </>
                 )}
   
-                {/* Estatísticas de Tempo */}
                 {stats && (
                   <>
                     <div className="border-t"></div>
@@ -1219,6 +1100,7 @@ const CarregamentoDetalhe = () => {
     );
   };
 
+  // 🆕 LOADING/ERROR SIMPLIFICADOS
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
@@ -1263,12 +1145,8 @@ const CarregamentoDetalhe = () => {
         <Card className="border-destructive">
           <CardContent className="p-6">
             <div className="text-center text-destructive">
-              <p className="font-semibold">Erro ao carregar carregamento</p>
-              <p className="text-sm mt-2">
-                {error instanceof Error
-                  ? error.message
-                  : "Erro desconhecido ou sem permissão"}
-              </p>
+              <p className="font-semibold">Carregamento não encontrado</p>
+              <p className="text-sm mt-2">Você não tem permissão ou o carregamento não existe.</p>
             </div>
           </CardContent>
         </Card>
@@ -1299,7 +1177,6 @@ const CarregamentoDetalhe = () => {
         {renderInformacoesProcesso()}
       </div>
 
-      {/* 🆕 Modal de captura de foto */}
       {showPhotoCapture && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-2xl">
