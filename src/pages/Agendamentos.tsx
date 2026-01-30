@@ -394,13 +394,25 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // 🔄 MAPEAMENTO CORRIGIDO + ADICIONADO CRITÉRIO DE FINALIZAÇÃO
+  // 🔄 MAPEAMENTO CORRIGIDO - SUPORTE PARA FUNCTION E QUERY TRADICIONAL
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
+    
     return agendamentosData.map((item: any): AgendamentoItem => {
-      // 🎯 AGORA DEVE ACESSAR COMO ARRAY (relacionamento 1:1)
-      const carregamento = item.carregamentos?.[0]; // ← MUDANÇA AQUI!
-      const etapaAtual = carregamento?.etapa_atual ?? 1;
+      // 🆕 DETECTAR SE OS DADOS VIERAM DA FUNCTION (representante) OU QUERY TRADICIONAL
+      const isFromFunction = !!item.cliente_nome; // Se tem cliente_nome, veio da function
+      
+      // 🚛 DADOS DO CARREGAMENTO
+      let etapaAtual = 1;
+      if (isFromFunction) {
+        // Da function: etapa_atual vem diretamente
+        etapaAtual = item.etapa_atual ?? 1;
+      } else {
+        // Da query tradicional: carregamentos é array
+        const carregamento = item.carregamentos?.[0];
+        etapaAtual = carregamento?.etapa_atual ?? 1;
+      }
+      
       const statusInfo = getStatusCarregamento(etapaAtual);
       
       // 🆕 CRITÉRIO DE FINALIZAÇÃO: status === 'concluido'
@@ -408,8 +420,8 @@ const Agendamentos = () => {
       
       return {
         id: item.id,
-        cliente: item.liberacao?.clientes?.nome || "N/A",
-        produto: item.liberacao?.produto?.nome || "N/A",
+        cliente: isFromFunction ? item.cliente_nome : (item.liberacao?.clientes?.nome || "N/A"),
+        produto: isFromFunction ? item.produto_nome : (item.liberacao?.produto?.nome || "N/A"),
         quantidade: item.quantidade,
         data: item.data_retirada
           ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
@@ -417,14 +429,14 @@ const Agendamentos = () => {
         placa: item.placa_caminhao || "N/A",
         motorista: item.motorista_nome || "N/A",
         documento: item.motorista_documento || "N/A",
-        pedido: item.liberacao?.pedido_interno || "N/A",
+        pedido: isFromFunction ? item.pedido_interno : (item.liberacao?.pedido_interno || "N/A"),
         status: item.status as AgendamentoStatus,
-        armazem: item.liberacao?.armazem
-          ? `${item.liberacao.armazem.nome} - ${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado}`
-          : "N/A",
-        produto_id: item.liberacao?.produto?.id,
-        armazem_id: item.liberacao?.armazem?.id,
-        liberacao_id: item.liberacao?.id,
+        armazem: isFromFunction 
+          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
+          : (item.liberacao?.armazem ? `${item.liberacao.armazem.nome} - ${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado}` : "N/A"),
+        produto_id: isFromFunction ? item.produto_id : item.liberacao?.produto?.id,
+        armazem_id: isFromFunction ? item.armazem_id : item.liberacao?.armazem?.id,
+        liberacao_id: isFromFunction ? item.liberacao_id : item.liberacao?.id,
         updated_at: item.updated_at,
         tipo_caminhao: item.tipo_caminhao,
         observacoes: item.observacoes,
