@@ -229,12 +229,12 @@ const Agendamentos = () => {
   const { hasRole, userRole, user } = useAuth();
   const { representanteId, clientesDoRepresentante } = usePermissions();
   
-  const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente");
+  // 🔧 CORREÇÃO: Representante deve ter mesmas permissões que cliente
+  const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente") || hasRole("representante");
   const [isCreating, setIsCreating] = useState(false);
   const [detalhesAgendamento, setDetalhesAgendamento] = useState<AgendamentoItem | null>(null);
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
-  // Buscar cliente atual vinculado ao usuário logado
   const { data: currentCliente } = useQuery({
     queryKey: ["current-cliente", user?.id],
     queryFn: async () => {
@@ -250,7 +250,6 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "cliente",
   });
 
-  // Buscar armazém atual vinculado ao usuário logado
   const { data: currentArmazem } = useQuery({
     queryKey: ["current-armazem", user?.id],
     queryFn: async () => {
@@ -266,11 +265,9 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔄 QUERY PRINCIPAL - OTIMIZADA
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      // 🆕 REPRESENTANTE: Usar function específica
       if (userRole === "representante" && representanteId) {
         const { data, error } = await supabase.rpc('get_agendamentos_by_representante', {
           p_representante_id: representanteId
@@ -280,7 +277,6 @@ const Agendamentos = () => {
         return data || [];
       }
 
-      // 🔄 OUTROS ROLES: Query tradicional
       let query = supabase
         .from("agendamentos")
         .select(`
@@ -326,7 +322,6 @@ const Agendamentos = () => {
     },
     refetchInterval: 30000,
     enabled: (() => {
-      // 🆕 MESMA LÓGICA ROBUSTA DAS OUTRAS PÁGINAS
       if (!user || !userRole) return false;
       if (userRole === "admin" || userRole === "logistica") return true;
       
@@ -338,7 +333,6 @@ const Agendamentos = () => {
     })(),
   });
 
-  // Query de agendamentos hoje (mantida)
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const amanha = new Date(hoje);
@@ -357,7 +351,6 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
-  // Mapeamento (mantido - já está otimizado)
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     
@@ -407,7 +400,6 @@ const Agendamentos = () => {
     });
   }, [agendamentosData]);
 
-  // Estados do formulário (mantidos)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novoAgendamento, setNovoAgendamento] = useState({
     liberacao: "",
@@ -423,10 +415,65 @@ const Agendamentos = () => {
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  // Query de liberações (mantida)
+  // 🔧 CORREÇÃO: Query de liberações deve incluir representante
   const { data: liberacoesDisponiveis } = useQuery({
-    queryKey: ["liberacoes-disponiveis", currentCliente?.id],
+    queryKey: ["liberacoes-disponiveis", currentCliente?.id, representanteId, userRole],
     queryFn: async () => {
+      // 🔧 REPRESENTANTE: Usar function específica para liberações
+      if (userRole === "representante" && representanteId) {
+        const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
+          p_representante_id: representanteId
+        });
+        
+        if (error) throw error;
+        
+        // Filtrar apenas liberações disponíveis e calcular disponibilidade
+        const liberacoesDisponiveis = (data || []).filter((lib: any) => 
+          lib.status === 'disponivel' || lib.status === 'parcialmente_agendada'
+        );
+
+        const liberacoesComDisponibilidade = await Promise.all(
+          liberacoesDisponiveis.map(async (lib: any) => {
+            const { data: agendamentosPendentes } = await supabase
+              .from("agendamentos")
+              .select("quantidade")
+              .eq("liberacao_id", lib.id)
+              .in("status", ["pendente", "em_andamento"]);
+
+            const totalAgendado = (agendamentosPendentes || []).reduce(
+              (total, ag) => total + (ag.quantidade || 0), 
+              0
+            );
+
+            const disponivel = Math.max(
+              0, 
+              lib.quantidade_liberada - (lib.quantidade_retirada || 0) - totalAgendado
+            );
+
+            return {
+              id: lib.id,
+              pedido_interno: lib.pedido_interno,
+              quantidade_liberada: lib.quantidade_liberada,
+              quantidade_retirada: lib.quantidade_retirada,
+              status: lib.status,
+              cliente_id: lib.cliente_id,
+              clientes: { nome: lib.cliente_nome },
+              produto: { nome: lib.produto_nome },
+              armazem: {
+                id: lib.armazem_id,
+                cidade: lib.armazem_cidade,
+                estado: lib.armazem_estado,
+                nome: lib.armazem_nome
+              },
+              quantidade_disponivel_real: disponivel
+            };
+          })
+        );
+        
+        return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
+      }
+
+      // Query tradicional para outros roles
       let query = supabase
         .from("liberacoes")
         .select(`
@@ -479,10 +526,17 @@ const Agendamentos = () => {
       
       return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
     },
-    enabled: userRole !== "cliente" || !!currentCliente?.id,
+    enabled: (() => {
+      if (!user || !userRole) return false;
+      if (userRole === "admin" || userRole === "logistica") return true;
+      
+      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
+      const representanteOk = userRole !== "representante" || !!representanteId;
+      
+      return clienteOk && representanteOk;
+    })(),
   });
 
-  // useEffects e funções (mantidos)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
@@ -661,7 +715,6 @@ const Agendamentos = () => {
     }
   };
 
-  // Estados de filtros (mantidos)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<AgendamentoStatus[]>([]);
@@ -672,7 +725,6 @@ const Agendamentos = () => {
   const toggleStatus = (st: AgendamentoStatus) => setSelectedStatuses((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const clearFilters = () => { setSearch(""); setSelectedStatuses([]); setDateFrom(""); setDateTo(""); };
 
-  // Lógica de filtros (mantida)
   const { agendamentosAtivos, agendamentosFinalizados } = useMemo(() => {
     const filtered = agendamentos.filter((a) => {
       const term = search.trim().toLowerCase();
@@ -699,7 +751,6 @@ const Agendamentos = () => {
     return { agendamentosAtivos: ativos, agendamentosFinalizados: finalizados };
   }, [agendamentos, search, selectedStatuses, dateFrom, dateTo]);
 
-  // Auto-expansão (mantida)
   useEffect(() => {
     if (search.trim() && agendamentosFinalizados.length > 0 && !secaoFinalizadosExpandida) {
       setSecaoFinalizadosExpandida(true);
@@ -713,7 +764,7 @@ const Agendamentos = () => {
   const temLiberacoesDisponiveis = liberacoesDisponiveis && liberacoesDisponiveis.length > 0;
 
   const renderEmptyLiberacoesCard = () => {
-    if (userRole === "cliente") {
+    if (userRole === "cliente" || userRole === "representante") {
       return (
         <EmptyStateCardWithoutAction
           title="Nenhuma liberação disponível"
@@ -763,7 +814,6 @@ const Agendamentos = () => {
     }
   };
 
-  // Componente de renderização (mantido - já está ótimo)
   const renderAgendamentoCard = (ag: AgendamentoItem) => (
     <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-5">
@@ -875,7 +925,6 @@ const Agendamentos = () => {
     </Card>
   );
 
-  // Estados de loading e erro (mantidos)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6 space-y-6">
