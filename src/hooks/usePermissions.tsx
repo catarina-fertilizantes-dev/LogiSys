@@ -1,5 +1,3 @@
-// usePermissions.tsx - VERSÃO COM DEBUG MELHORADO
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,25 +29,20 @@ export const usePermissions = () => {
   const [loading, setLoading] = useState(true);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [armazemId, setArmazemId] = useState<string | null>(null);
-  // 🆕 NOVOS ESTADOS PARA REPRESENTANTE
   const [representanteId, setRepresentanteId] = useState<string | null>(null);
   const [clientesDoRepresentante, setClientesDoRepresentante] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchPermissions = async () => {
       if (authLoading) {
-        console.log('🔍 [DEBUG] usePermissions - Waiting for auth to load...');
         return;
       }
 
       if (!userRole || !user) {
-        console.log('�� [DEBUG] usePermissions - No user or role after auth loaded, clearing permissions');
         setPermissions({} as any);
         setLoading(false);
         return;
       }
-
-      console.log('🔍 [DEBUG] usePermissions - Fetching permissions for role:', userRole, 'user:', user.id);
 
       try {
         const { data, error } = await supabase
@@ -58,14 +51,12 @@ export const usePermissions = () => {
           .eq('role', userRole as UserRole);
 
         if (error) {
-          console.error('❌ [ERROR] usePermissions - Query error:', error);
           setPermissions({} as any);
           setLoading(false);
           return;
         }
 
         if (!data || data.length === 0) {
-          console.warn('⚠️ [WARN] usePermissions - No permissions found for role:', userRole);
           setPermissions({} as any);
           setLoading(false);
           return;
@@ -81,10 +72,8 @@ export const usePermissions = () => {
           };
         });
 
-        console.log('✅ [SUCCESS] usePermissions - Loaded permissions:', permsMap);
         setPermissions(permsMap as any);
       } catch (err) {
-        console.error('❌ [ERROR] usePermissions - Exception:', err);
         setPermissions({} as any);
       } finally {
         setLoading(false);
@@ -94,17 +83,9 @@ export const usePermissions = () => {
     fetchPermissions();
   }, [userRole, user?.id, authLoading]);
 
-  // 🆕 MODIFICADO: busca vínculos para cliente, armazem E representante
   useEffect(() => {
     const fetchVinculos = async () => {
-      console.log('🔍 [DEBUG] fetchVinculos - Starting with:', {
-        authLoading,
-        userRole,
-        userId: user?.id
-      });
-
       if (authLoading || !userRole || !user) {
-        console.log('🔍 [DEBUG] fetchVinculos - Early return due to missing data');
         setClienteId(null);
         setArmazemId(null);
         setRepresentanteId(null);
@@ -114,13 +95,11 @@ export const usePermissions = () => {
 
       // Cliente
       if (userRole === 'cliente') {
-        console.log('🔍 [DEBUG] fetchVinculos - Fetching cliente data...');
         const { data, error } = await supabase
           .from("clientes")
           .select("id")
           .eq("user_id", user.id)
           .single();
-        console.log('🔍 [DEBUG] fetchVinculos - Cliente result:', { data, error });
         setClienteId(data?.id ?? null);
       } else {
         setClienteId(null);
@@ -128,22 +107,18 @@ export const usePermissions = () => {
 
       // Armazém
       if (userRole === 'armazem') {
-        console.log('🔍 [DEBUG] fetchVinculos - Fetching armazem data...');
         const { data, error } = await supabase
           .from("armazens")
           .select("id")
           .eq("user_id", user.id)
           .single();
-        console.log('🔍 [DEBUG] fetchVinculos - Armazem result:', { data, error });
         setArmazemId(data?.id ?? null);
       } else {
         setArmazemId(null);
       }
 
-      // 🆕 REPRESENTANTE - COM DEBUG MELHORADO
+      // Representante
       if (userRole === 'representante') {
-        console.log('🔍 [DEBUG] fetchVinculos - Fetching representante data for user:', user.id);
-        
         try {
           // Buscar representante
           const { data: repData, error: repError } = await supabase
@@ -152,14 +127,7 @@ export const usePermissions = () => {
             .eq("user_id", user.id)
             .single();
           
-          console.log('🔍 [DEBUG] fetchVinculos - Representante query result:', {
-            repData,
-            repError,
-            userId: user.id
-          });
-          
           if (repError) {
-            console.error('❌ [ERROR] fetchVinculos - Erro ao buscar representante:', repError);
             setRepresentanteId(null);
             setClientesDoRepresentante([]);
             return;
@@ -169,39 +137,22 @@ export const usePermissions = () => {
           
           // Buscar clientes do representante
           if (repData?.id) {
-            console.log('🔍 [DEBUG] fetchVinculos - Fetching clientes for representante:', repData.id);
-            
             const { data: clientesData, error: clientesError } = await supabase
               .from("clientes")
               .select("id")
               .eq("representante_id", repData.id);
             
-            console.log('🔍 [DEBUG] fetchVinculos - Clientes query result:', {
-              clientesData,
-              clientesError,
-              representanteId: repData.id
-            });
-            
             if (clientesError) {
-              console.error('❌ [ERROR] fetchVinculos - Erro ao buscar clientes:', clientesError);
               setClientesDoRepresentante([]);
               return;
             }
             
             const clienteIds = clientesData?.map(c => c.id) || [];
             setClientesDoRepresentante(clienteIds);
-            
-            console.log('✅ [SUCCESS] fetchVinculos - Representante setup complete:', {
-              representanteId: repData.id,
-              clienteIds,
-              clienteIdsLength: clienteIds.length
-            });
           } else {
-            console.log('⚠️ [WARN] fetchVinculos - No representante data found');
             setClientesDoRepresentante([]);
           }
         } catch (error) {
-          console.error('❌ [ERROR] fetchVinculos - Exception ao buscar dados do representante:', error);
           setRepresentanteId(null);
           setClientesDoRepresentante([]);
         }
@@ -225,7 +176,6 @@ export const usePermissions = () => {
     }
     const perm = permissions[resource];
     if (!perm) {
-      console.log(`🔍 [DEBUG] canAccess - No permission found for resource: ${resource}`);
       return false;
     }
 
@@ -246,11 +196,9 @@ export const usePermissions = () => {
       default:
         hasAccess = false;
     }
-    console.log(`🔍 [DEBUG] canAccess - Resource: ${resource}, Action: ${action}, Access: ${hasAccess}`);
     return hasAccess;
   };
 
-  // 🆕 RETORNO MODIFICADO: incluir representanteId e clientesDoRepresentante
   return { 
     permissions, 
     canAccess, 
