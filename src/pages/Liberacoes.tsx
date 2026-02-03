@@ -279,9 +279,13 @@ const Liberacoes = () => {
         cliente: isFromFunction ? item.cliente_nome : (item.clientes?.nome || "N/A"),
         quantidade: item.quantidade_liberada,
         quantidadeRetirada,
-        quantidadeAgendada,
+        quantidadeAgendada: isFromFunction ? 
+          (item.quantidade_liberada - (item.quantidade_disponivel || 0) - quantidadeRetirada) : 
+          quantidadeAgendada, // ✅ Para representante, calcular baseado no campo do backend
         percentualRetirado,
-        percentualAgendado,
+        percentualAgendado: isFromFunction ? 
+          Math.round(((item.quantidade_liberada - (item.quantidade_disponivel || 0) - quantidadeRetirada) / item.quantidade_liberada) * 100) : 
+          percentualAgendado, // ✅ Para representante, calcular baseado no campo do backend
         pedido: item.pedido_interno,
         data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
