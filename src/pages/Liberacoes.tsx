@@ -109,6 +109,13 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
+  // ✅ ADICIONAR ESTES LOGS AQUI:
+  console.log("🔍 [DEBUG] Liberacoes - Estado atual:");
+  console.log("- userRole:", userRole);
+  console.log("- representanteId:", representanteId);
+  console.log("- user:", user);
+  console.log("- clientesDoRepresentante:", clientesDoRepresentante);
+  
   useEffect(() => {
     if (userRole === "armazem") {
       window.location.href = "/";
@@ -165,11 +172,19 @@ const Liberacoes = () => {
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
+      // ✅ ADICIONAR ESTES LOGS:
+      console.log("🔍 [DEBUG] Query liberacoes executando:");
+      console.log("- userRole:", userRole);
+      console.log("- representanteId:", representanteId);
+      console.log("- user:", user);
+      
       if (userRole === "representante" && representanteId) {
+        console.log("🔍 [DEBUG] Chamando RPC com representanteId:", representanteId);
         const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
           p_representante_id: representanteId
         });
         
+        console.log("🔍 [DEBUG] Resultado RPC:", { data, error });
         if (error) throw error;
         return data || [];
       }
