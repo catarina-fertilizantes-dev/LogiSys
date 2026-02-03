@@ -185,6 +185,10 @@ const Liberacoes = () => {
         });
         
         console.log("🔍 [DEBUG] Resultado RPC:", { data, error });
+        // ✅ ADICIONAR ESTES LOGS AQUI:
+        console.log("🔍 [DEBUG] Resultado RPC - Data detalhada:", JSON.stringify(data, null, 2));
+        console.log("�� [DEBUG] Resultado RPC - Error detalhado:", error);
+        
         if (error) throw error;
         return data || [];
       }
