@@ -432,43 +432,23 @@ const Agendamentos = () => {
           lib.status === 'disponivel' || lib.status === 'parcialmente_agendada'
         );
 
-        const liberacoesComDisponibilidade = await Promise.all(
-          liberacoesDisponiveis.map(async (lib: any) => {
-            const { data: agendamentosPendentes } = await supabase
-              .from("agendamentos")
-              .select("quantidade")
-              .eq("liberacao_id", lib.id)
-              .in("status", ["pendente", "em_andamento"]);
-
-            const totalAgendado = (agendamentosPendentes || []).reduce(
-              (total, ag) => total + (ag.quantidade || 0), 
-              0
-            );
-
-            const disponivel = Math.max(
-              0, 
-              lib.quantidade_liberada - (lib.quantidade_retirada || 0) - totalAgendado
-            );
-
-            return {
-              id: lib.id,
-              pedido_interno: lib.pedido_interno,
-              quantidade_liberada: lib.quantidade_liberada,
-              quantidade_retirada: lib.quantidade_retirada,
-              status: lib.status,
-              cliente_id: lib.cliente_id,
-              clientes: { nome: lib.cliente_nome },
-              produto: { nome: lib.produto_nome },
-              armazem: {
-                id: lib.armazem_id,
-                cidade: lib.armazem_cidade,
-                estado: lib.armazem_estado,
-                nome: lib.armazem_nome
-              },
-              quantidade_disponivel_real: disponivel
-            };
-          })
-        );
+        const liberacoesComDisponibilidade = liberacoesDisponiveis.map((lib: any) => ({
+          id: lib.id,
+          pedido_interno: lib.pedido_interno,
+          quantidade_liberada: lib.quantidade_liberada,
+          quantidade_retirada: lib.quantidade_retirada,
+          status: lib.status,
+          cliente_id: lib.cliente_id,
+          clientes: { nome: lib.cliente_nome },
+          produto: { nome: lib.produto_nome },
+          armazem: {
+            id: lib.armazem_id,
+            cidade: lib.armazem_cidade,
+            estado: lib.armazem_estado,
+            nome: lib.armazem_nome
+          },
+          quantidade_disponivel_real: lib.quantidade_disponivel
+        }));
         
         return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
       }
@@ -506,17 +486,17 @@ const Agendamentos = () => {
             .select("quantidade")
             .eq("liberacao_id", lib.id)
             .in("status", ["pendente", "em_andamento"]);
-
+      
           const totalAgendado = (agendamentosPendentes || []).reduce(
             (total, ag) => total + (ag.quantidade || 0), 
             0
           );
-
+      
           const disponivel = Math.max(
             0, 
             lib.quantidade_liberada - (lib.quantidade_retirada || 0) - totalAgendado
           );
-
+      
           return {
             ...lib,
             quantidade_disponivel_real: disponivel
