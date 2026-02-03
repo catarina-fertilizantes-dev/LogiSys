@@ -70,11 +70,43 @@ const ETAPAS = [
   { 
     id: 5, 
     nome: "Documentação", 
-    titulo: "Anexar Documentação", 
+    titulo: "Documentação", 
     campo_data: "data_documentacao", 
     campo_obs: "observacao_documentacao", 
-    campo_url: "docs_retorno_url",
-    cor: "bg-yellow-600 text-white"
+    campo_url: null,
+    cor: "bg-yellow-600 text-white",
+    sub_etapas: [
+      {
+        id: "5a",
+        nome: "Docs. Retorno",
+        titulo: "Documentos de Retorno",
+        campo_url: "docs_retorno_url",
+        campo_xml: "docs_retorno_xml_url",
+        campo_status: "etapa_5a_status",
+        roles_permitidos: ["armazem"],
+        cor: "bg-yellow-600 text-white"
+      },
+      {
+        id: "5b", 
+        nome: "Docs. Venda",
+        titulo: "Documentos de Venda",
+        campo_url: "docs_venda_url",
+        campo_xml: "docs_venda_xml_url", 
+        campo_status: "etapa_5b_status",
+        roles_permitidos: ["admin", "logistica"],
+        cor: "bg-amber-600 text-white"
+      },
+      {
+        id: "5c",
+        nome: "Docs. Remessa", 
+        titulo: "Documentos de Remessa",
+        campo_url: "docs_remessa_url",
+        campo_xml: "docs_remessa_xml_url",
+        campo_status: "etapa_5c_status", 
+        roles_permitidos: ["armazem"],
+        cor: "bg-orange-600 text-white"
+      }
+    ]
   },
   { 
     id: 6, 
@@ -120,6 +152,7 @@ const CarregamentoDetalhe = () => {
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
   const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
+  const [selectedSubEtapa, setSelectedSubEtapa] = useState<string | null>(null);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [currentPhotoEtapa, setCurrentPhotoEtapa] = useState<number | null>(null);
 
@@ -474,9 +507,50 @@ const CarregamentoDetalhe = () => {
     };
   };
 
-  const stats = calcularEstatisticas();
-
-  const getEtapaInfo = (etapa: number) => {
+    const stats = calcularEstatisticas();
+    
+    const getSubEtapaStatus = (subEtapaId: string) => {
+      if (!carregamento) return 'pendente';
+      
+      switch (subEtapaId) {
+        case '5a': return carregamento.etapa_5a_status || 'pendente';
+        case '5b': return carregamento.etapa_5b_status || 'pendente';
+        case '5c': return carregamento.etapa_5c_status || 'pendente';
+        default: return 'pendente';
+      }
+    };
+    
+    const getProximaSubEtapa = () => {
+      if (!carregamento || carregamento.etapa_atual !== 5) return null;
+      
+      const status5a = getSubEtapaStatus('5a');
+      const status5b = getSubEtapaStatus('5b');
+      const status5c = getSubEtapaStatus('5c');
+      
+      if (status5a === 'pendente') return '5a';
+      if (status5a === 'concluida' && status5b === 'pendente') return '5b';
+      if (status5b === 'concluida' && status5c === 'pendente') return '5c';
+      return null; // Todas concluídas
+    };
+    
+    const podeEditarSubEtapa = (subEtapaId: string) => {
+      if (!carregamento || carregamento.etapa_atual !== 5) return false;
+      
+      const etapa5 = ETAPAS.find(e => e.id === 5);
+      const subEtapa = etapa5?.sub_etapas?.find(se => se.id === subEtapaId);
+      
+      if (!subEtapa) return false;
+      
+      // Verificar role
+      const temPermissao = subEtapa.roles_permitidos.includes(userRole) || userRole === 'admin';
+      if (!temPermissao) return false;
+      
+      // Verificar se é a próxima sub-etapa
+      const proximaSubEtapa = getProximaSubEtapa();
+      return proximaSubEtapa === subEtapaId;
+    };
+    
+    const getEtapaInfo = (etapa: number) => {
     const found = ETAPAS.find(e => e.id === etapa);
     return found || { 
       id: etapa, 
