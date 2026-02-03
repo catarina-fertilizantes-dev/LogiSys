@@ -73,7 +73,7 @@ const ETAPAS = [
     titulo: "Anexar Documentação", 
     campo_data: "data_documentacao", 
     campo_obs: "observacao_documentacao", 
-    campo_url: "url_nota_fiscal",
+    campo_url: "docs_retorno_url",
     cor: "bg-yellow-600 text-white"
   },
   { 
@@ -220,8 +220,8 @@ const CarregamentoDetalhe = () => {
             data_carregando: item.data_carregando,
             data_finalizacao: item.data_finalizacao,
             data_documentacao: item.data_documentacao,
-            url_nota_fiscal: item.url_nota_fiscal,
-            url_xml: item.url_xml,
+            docs_retorno_url: item.docs_retorno_url,
+            docs_retorno_xml_url: item.docs_retorno_xml_url,
             url_foto_chegada: item.url_foto_chegada,
             url_foto_inicio: item.url_foto_inicio,
             url_foto_carregando: item.url_foto_carregando,
@@ -268,8 +268,8 @@ const CarregamentoDetalhe = () => {
           data_carregando,
           data_finalizacao,
           data_documentacao,
-          url_nota_fiscal,
-          url_xml,
+          docs_retorno_url,
+          docs_retorno_xml_url,
           url_foto_chegada,
           url_foto_inicio,
           url_foto_carregando,
@@ -389,7 +389,7 @@ const CarregamentoDetalhe = () => {
         const { data: urlData } = supabase.storage
           .from('carregamento-documentos')
           .getPublicUrl(fileName);
-        updateData.url_xml = urlData.publicUrl;
+        updateData.docs_retorno_xml_url = urlData.publicUrl;
       }
 
       const { error: updateError } = await supabase
@@ -650,8 +650,8 @@ const CarregamentoDetalhe = () => {
           return {
             data: carregamento?.data_documentacao,
             observacao: carregamento?.observacao_documentacao,
-            url_arquivo: carregamento?.url_nota_fiscal,
-            url_xml: carregamento?.url_xml
+            url_arquivo: carregamento?.docs_retorno_url,
+            url_xml: carregamento?.docs_retorno_xml_url
           };
         default:
           return { data: null, observacao: null, url_arquivo: null };
