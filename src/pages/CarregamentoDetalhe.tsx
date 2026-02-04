@@ -1001,7 +1001,16 @@ const CarregamentoDetalhe = () => {
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                     <p className="text-sm">
                       {!subEtapa.roles_permitidos.includes(userRole) 
-                        ? `Aguardando ação do ${subEtapa.roles_permitidos.join('/')}`
+                        ? (() => {
+                            // ✅ MENSAGENS PERSONALIZADAS
+                            if (subEtapa.roles_permitidos.includes('admin') || subEtapa.roles_permitidos.includes('logistica')) {
+                              return 'Aguardando ação do time de logística';
+                            } else if (subEtapa.roles_permitidos.includes('armazem')) {
+                              return 'Aguardando ação do armazém';
+                            } else {
+                              return `Aguardando ação do ${subEtapa.roles_permitidos.join('/')}`;
+                            }
+                          })()
                         : 'Aguardando etapa anterior ser concluída'
                       }
                     </p>
