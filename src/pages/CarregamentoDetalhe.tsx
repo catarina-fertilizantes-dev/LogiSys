@@ -665,7 +665,7 @@ const CarregamentoDetalhe = () => {
     if (!subEtapa) return false;
     
     // Verificar role
-    const temPermissao = subEtapa.roles_permitidos.includes(userRole) || userRole === 'admin';
+    const temPermissao = subEtapa.roles_permitidos.includes(userRole);
     if (!temPermissao) return false;
     
     // Verificar se é a próxima sub-etapa
