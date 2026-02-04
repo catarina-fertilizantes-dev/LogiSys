@@ -109,12 +109,15 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
-  // ✅ LOGS DE DEBUG MANTIDOS
+  // ✅ LOGS DE DEBUG EXPANDIDOS
   console.log("🔍 [DEBUG] Liberacoes - Estado atual:");
   console.log("- userRole:", userRole);
   console.log("- representanteId:", representanteId);
+  console.log("- representanteId type:", typeof representanteId);
   console.log("- user:", user);
   console.log("- clientesDoRepresentante:", clientesDoRepresentante);
+  console.log("- currentCliente undefined?", currentCliente === undefined);
+  console.log("- currentCliente value:", currentCliente);
   
   useEffect(() => {
     if (userRole === "armazem") {
@@ -169,9 +172,9 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🚀 MIGRAÇÃO PRINCIPAL - FUNÇÃO UNIVERSAL
+  // 🚀 MIGRAÇÃO PRINCIPAL - FUNÇÃO UNIVERSAL CORRIGIDA
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes-universal", userRole, user?.id],
+    queryKey: ["liberacoes-universal", userRole, user?.id, currentCliente?.id, representanteId],
     queryFn: async () => {
       console.log("🔍 [DEBUG] Chamando função universal:");
       console.log("- userRole:", userRole);
@@ -193,7 +196,43 @@ const Liberacoes = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user && !!userRole,
+    enabled: (() => {
+      console.log("🔍 [DEBUG] Verificando enabled:");
+      console.log("- user:", !!user);
+      console.log("- userRole:", userRole);
+      console.log("- currentCliente query isSuccess:", currentCliente !== undefined);
+      console.log("- representanteId disponível:", representanteId !== undefined);
+      
+      // Básico: precisa de user e userRole
+      if (!user || !userRole) {
+        console.log("🔍 [DEBUG] Query disabled: user ou userRole não disponível");
+        return false;
+      }
+      
+      // Admin e logística podem executar imediatamente
+      if (userRole === "admin" || userRole === "logistica") {
+        console.log("🔍 [DEBUG] Query enabled: admin/logistica");
+        return true;
+      }
+      
+      // Cliente precisa aguardar currentCliente estar disponível
+      if (userRole === "cliente") {
+        const enabled = currentCliente !== undefined;
+        console.log("🔍 [DEBUG] Query enabled para cliente:", enabled, "currentCliente:", currentCliente);
+        return enabled;
+      }
+      
+      // Representante precisa aguardar representanteId estar disponível
+      if (userRole === "representante") {
+        const enabled = representanteId !== undefined;
+        console.log("🔍 [DEBUG] Query enabled para representante:", enabled, "representanteId:", representanteId);
+        return enabled;
+      }
+      
+      // Outros roles
+      console.log("🔍 [DEBUG] Query enabled: outros roles");
+      return true;
+    })(),
     refetchInterval: 30000,
   });
 
