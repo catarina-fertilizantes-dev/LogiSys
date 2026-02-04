@@ -229,14 +229,6 @@ const Agendamentos = () => {
   const { hasRole, userRole, user } = useAuth();
   const { representanteId, clientesDoRepresentante } = usePermissions();
   
-  // ✅ LOGS DE DEBUG EXPANDIDOS
-  console.log("🔍 [DEBUG] Agendamentos - Estado atual:");
-  console.log("- userRole:", userRole);
-  console.log("- representanteId:", representanteId);
-  console.log("- representanteId type:", typeof representanteId);
-  console.log("- user:", user);
-  console.log("- clientesDoRepresentante:", clientesDoRepresentante);
-  
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente") || hasRole("representante");
   const [isCreating, setIsCreating] = useState(false);
   const [detalhesAgendamento, setDetalhesAgendamento] = useState<AgendamentoItem | null>(null);
