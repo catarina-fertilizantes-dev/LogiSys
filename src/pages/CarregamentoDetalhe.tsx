@@ -236,35 +236,163 @@ const CarregamentoDetalhe = () => {
     }
   };
 
-  // Query otimizada: aguarda permissões carregarem, mas sem verificação redundante
   const { data: carregamento, isLoading, error } = useQuery({
-    queryKey: ["carregamento-detalhe", id],
+    queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_carregamento_detalhe_universal', {
-        p_carregamento_id: id,
-        p_user_role: userRole,
-        p_user_id: user?.id,
-        p_cliente_id: clienteId || null,
-        p_armazem_id: armazemId || null,
-        p_representante_id: representanteId || null
-      });
+      console.log("🔍 [DEBUG] CarregamentoDetalhe query executando:");
+      console.log("- id:", id);
+      console.log("- userRole:", userRole);
+      console.log("- clienteId:", clienteId);
+      console.log("- armazemId:", armazemId);
+      console.log("- representanteId:", representanteId);
+      
+      if (userRole === "representante" && representanteId) {
+        console.log("🔍 [DEBUG] Usando query para representante");
+        const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
+          p_representante_id: representanteId,
+          p_carregamento_id: id
+        });
+  
+        if (error) {
+          console.log("🔍 [DEBUG] Erro na query representante:", error);
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          const item = data[0];
+          console.log("🔍 [DEBUG] Dados representante encontrados:", item);
+          return {
+            id: item.id,
+            etapa_atual: item.etapa_atual,
+            numero_nf: item.numero_nf,
+            data_chegada: item.data_chegada,
+            created_at: item.created_at,
+            cliente_id: item.cliente_id,
+            armazem_id: item.armazem_id,
+            observacao_chegada: item.observacao_chegada,
+            observacao_inicio: item.observacao_inicio,
+            observacao_carregando: item.observacao_carregando,
+            observacao_finalizacao: item.observacao_finalizacao,
+            observacao_documentacao: item.observacao_documentacao,
+            data_inicio: item.data_inicio,
+            data_carregando: item.data_carregando,
+            data_finalizacao: item.data_finalizacao,
+            data_documentacao: item.data_documentacao,
+            docs_retorno_url: item.docs_retorno_url,
+            docs_retorno_xml_url: item.docs_retorno_xml_url,
+            docs_venda_url: item.docs_venda_url,
+            docs_venda_xml_url: item.docs_venda_xml_url,
+            docs_remessa_url: item.docs_remessa_url,
+            docs_remessa_xml_url: item.docs_remessa_xml_url,
+            etapa_5a_status: item.etapa_5a_status || 'pendente',
+            etapa_5b_status: item.etapa_5b_status || 'pendente',
+            etapa_5c_status: item.etapa_5c_status || 'pendente',
+            url_foto_chegada: item.url_foto_chegada,
+            url_foto_inicio: item.url_foto_inicio,
+            url_foto_carregando: item.url_foto_carregando,
+            url_foto_finalizacao: item.url_foto_finalizacao,
+            agendamento_id: item.agendamento_id,
+            agendamento_data_retirada: item.agendamento_data_retirada,
+            agendamento_quantidade: item.agendamento_quantidade,
+            agendamento_placa_caminhao: item.agendamento_placa_caminhao,
+            agendamento_motorista_nome: item.agendamento_motorista_nome,
+            agendamento_motorista_documento: item.agendamento_motorista_documento,
+            cliente_nome: item.cliente_nome,
+            liberacao_pedido_interno: item.liberacao_pedido_interno,
+            produto_nome: item.produto_nome
+          };
+        }
+        
+        console.log("🔍 [DEBUG] Nenhum dado encontrado para representante");
+        return null;
+      }
+  
+      console.log("🔍 [DEBUG] Usando query direta (não representante)");
+      let query = supabase
+        .from("carregamentos")
+        .select(`
+          id,
+          etapa_atual,
+          numero_nf,
+          data_chegada,
+          created_at,
+          cliente_id,
+          armazem_id,
+          observacao_chegada,
+          observacao_inicio,
+          observacao_carregando,
+          observacao_finalizacao,
+          observacao_documentacao,
+          data_inicio,
+          data_carregando,
+          data_finalizacao,
+          data_documentacao,
+          docs_retorno_url,
+          docs_retorno_xml_url,
+          docs_venda_url,
+          docs_venda_xml_url,
+          docs_remessa_url,
+          docs_remessa_xml_url,
+          etapa_5a_status,
+          etapa_5b_status,
+          etapa_5c_status,
+          url_foto_chegada,
+          url_foto_inicio,
+          url_foto_carregando,
+          url_foto_finalizacao,
+          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
+            id,
+            data_retirada,
+            quantidade,
+            cliente:clientes!agendamentos_cliente_id_fkey (
+              nome
+            ),
+            placa_caminhao,
+            motorista_nome,
+            motorista_documento,
+            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
+              pedido_interno,
+              produto:produtos!liberacoes_produto_id_fkey (
+                nome
+              )
+            )
+          )
+        `)
+        .eq("id", id);
+  
+      if (userRole === "cliente" && clienteId) {
+        console.log("🔍 [DEBUG] Aplicando filtro de cliente:", clienteId);
+        query = query.eq("cliente_id", clienteId);
+      } else if (userRole === "armazem" && armazemId) {
+        console.log("🔍 [DEBUG] Aplicando filtro de armazém:", armazemId);
+        query = query.eq("armazem_id", armazemId);
+      }
+  
+      const { data, error } = await query.single();
+      
+      console.log("🔍 [DEBUG] Resultado query direta:", { data, error });
       
       if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      return data;
     },
     enabled: (() => {
-      // ✅ Verificação mínima: apenas aguarda os dados carregarem
-      if (!user || !userRole || !id) return false;
+      if (!user || !userRole || !id) {
+        console.log("🔍 [DEBUG] Query desabilitada: faltam dados básicos");
+        return false;
+      }
       
-      // ✅ Para admin/logistica: pode executar imediatamente
-      if (userRole === "admin" || userRole === "logistica") return true;
+      if (userRole === "admin" || userRole === "logistica") {
+        console.log("🔍 [DEBUG] Query habilitada: admin/logistica");
+        return true;
+      }
       
-      // ✅ Para outros roles: aguarda os IDs carregarem (mas sem verificação de permissão)
-      if (userRole === "cliente") return clienteId !== undefined;
-      if (userRole === "armazem") return armazemId !== undefined;
-      if (userRole === "representante") return representanteId !== undefined;
+      const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
+      const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
-      return true;
+      console.log("🔍 [DEBUG] Verificação enabled:", { clienteOk, armazemOk, representanteOk });
+      
+      return clienteOk && armazemOk && representanteOk;
     })(),
   });
 
