@@ -108,14 +108,7 @@ const Liberacoes = () => {
   
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
-  
-  // ✅ LOGS DE DEBUG EXPANDIDOS
-  console.log("🔍 [DEBUG] Liberacoes - Estado atual:");
-  console.log("- userRole:", userRole);
-  console.log("- representanteId:", representanteId);
-  console.log("- representanteId type:", typeof representanteId);
-  console.log("- user:", user);
-  console.log("- clientesDoRepresentante:", clientesDoRepresentante);
+
   
   useEffect(() => {
     if (userRole === "armazem") {
@@ -174,11 +167,7 @@ const Liberacoes = () => {
   const { data: liberacoesData, isLoading, error } = useQuery({
     queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Query liberacoes executando:");
-      console.log("- userRole:", userRole);
-      console.log("- representanteId:", representanteId);
-      console.log("- currentCliente?.id:", currentCliente?.id);
-      console.log("- user:", user);
+
       
       // 🚀 USAR FUNÇÃO UNIVERSAL PARA TODOS OS ROLES
       const { data, error } = await supabase.rpc('get_liberacoes_universal', {
@@ -188,8 +177,6 @@ const Liberacoes = () => {
         p_armazem_id: currentArmazem?.id || null,
         p_representante_id: representanteId || null
       });
-      
-      console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
       
       if (error) throw error;
       return data || [];
@@ -202,8 +189,6 @@ const Liberacoes = () => {
       const clienteOk = userRole !== "cliente" || (currentCliente !== undefined);
       const armazemOk = userRole !== "armazem" || (currentArmazem !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
-      
-      console.log("🔍 [DEBUG] Enabled check:", { clienteOk, armazemOk, representanteOk });
       
       return clienteOk && armazemOk && representanteOk;
     })(),
