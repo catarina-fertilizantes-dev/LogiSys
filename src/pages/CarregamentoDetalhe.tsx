@@ -236,11 +236,10 @@ const CarregamentoDetalhe = () => {
     }
   };
 
-  // Query simplificada: se chegou até aqui, tem permissão
+  // Query otimizada: aguarda permissões carregarem, mas sem verificação redundante
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id],
     queryFn: async () => {
-      // ✅ SEM VERIFICAÇÃO DE PERMISSÃO - se está na listagem, pode ver detalhes
       const { data, error } = await supabase.rpc('get_carregamento_detalhe_universal', {
         p_carregamento_id: id,
         p_user_role: userRole,
@@ -253,7 +252,20 @@ const CarregamentoDetalhe = () => {
       if (error) throw error;
       return data && data.length > 0 ? data[0] : null;
     },
-    enabled: !!(user && userRole && id), // ✅ Verificação mínima apenas
+    enabled: (() => {
+      // ✅ Verificação mínima: apenas aguarda os dados carregarem
+      if (!user || !userRole || !id) return false;
+      
+      // ✅ Para admin/logistica: pode executar imediatamente
+      if (userRole === "admin" || userRole === "logistica") return true;
+      
+      // ✅ Para outros roles: aguarda os IDs carregarem (mas sem verificação de permissão)
+      if (userRole === "cliente") return clienteId !== undefined;
+      if (userRole === "armazem") return armazemId !== undefined;
+      if (userRole === "representante") return representanteId !== undefined;
+      
+      return true;
+    })(),
   });
 
   // Mutation para etapas normais (1-4)
