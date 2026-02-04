@@ -27,7 +27,9 @@ import {
   ArrowLeft,
   Camera,
   Upload,
-  X
+  X,
+  FileText,
+  AlertCircle
 } from "lucide-react";
 
 const ETAPAS = [
@@ -84,7 +86,8 @@ const ETAPAS = [
         campo_xml: "docs_retorno_xml_url",
         campo_status: "etapa_5a_status",
         roles_permitidos: ["armazem"],
-        cor: "bg-yellow-600 text-white"
+        cor: "bg-yellow-600 text-white",
+        descricao: "Armazém anexa Nota de Retorno + XML"
       },
       {
         id: "5b",
@@ -94,7 +97,8 @@ const ETAPAS = [
         campo_xml: "docs_venda_xml_url",
         campo_status: "etapa_5b_status",
         roles_permitidos: ["admin", "logistica"],
-        cor: "bg-amber-600 text-white"
+        cor: "bg-amber-600 text-white",
+        descricao: "Logística anexa Nota de Venda + XML"
       },
       {
         id: "5c",
@@ -104,7 +108,8 @@ const ETAPAS = [
         campo_xml: "docs_remessa_xml_url",
         campo_status: "etapa_5c_status",
         roles_permitidos: ["armazem"],
-        cor: "bg-orange-600 text-white"
+        cor: "bg-orange-600 text-white",
+        descricao: "Armazém anexa Nota de Remessa + XML"
       }
     ]
   },
@@ -148,6 +153,7 @@ const CarregamentoDetalhe = () => {
   const { userRole, user } = useAuth();
   const { clienteId, armazemId, representanteId } = usePermissions();
 
+  // Estados para etapas normais (1-4)
   const [stageFile, setStageFile] = useState<File | null>(null);
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
@@ -155,6 +161,13 @@ const CarregamentoDetalhe = () => {
   const [selectedSubEtapa, setSelectedSubEtapa] = useState<string | null>(null);
   const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [currentPhotoEtapa, setCurrentPhotoEtapa] = useState<number | null>(null);
+
+  // Estados para sub-etapas da etapa 5
+  const [subEtapaFiles, setSubEtapaFiles] = useState<{[key: string]: {pdf: File | null, xml: File | null}}>({
+    '5a': { pdf: null, xml: null },
+    '5b': { pdf: null, xml: null },
+    '5c': { pdf: null, xml: null }
+  });
 
   const { uploadPhoto, isUploading: isUploadingPhoto } = usePhotoUpload({
     bucket: 'carregamento-fotos',
@@ -223,129 +236,25 @@ const CarregamentoDetalhe = () => {
     }
   };
 
+  // Query usando a function universal que já retorna os status das sub-etapas
   const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      if (userRole === "representante" && representanteId) {
-        const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
-          p_representante_id: representanteId,
-          p_carregamento_id: id
-        });
-
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const item = data[0];
-          return {
-            id: item.id,
-            etapa_atual: item.etapa_atual,
-            numero_nf: item.numero_nf,
-            data_chegada: item.data_chegada,
-            created_at: item.created_at,
-            cliente_id: item.cliente_id,
-            armazem_id: item.armazem_id,
-            observacao_chegada: item.observacao_chegada,
-            observacao_inicio: item.observacao_inicio,
-            observacao_carregando: item.observacao_carregando,
-            observacao_finalizacao: item.observacao_finalizacao,
-            observacao_documentacao: item.observacao_documentacao,
-            data_inicio: item.data_inicio,
-            data_carregando: item.data_carregando,
-            data_finalizacao: item.data_finalizacao,
-            data_documentacao: item.data_documentacao,
-            docs_retorno_url: item.docs_retorno_url,
-            docs_retorno_xml_url: item.docs_retorno_xml_url,
-            url_foto_chegada: item.url_foto_chegada,
-            url_foto_inicio: item.url_foto_inicio,
-            url_foto_carregando: item.url_foto_carregando,
-            url_foto_finalizacao: item.url_foto_finalizacao,
-            agendamento: {
-              id: item.agendamento_id,
-              data_retirada: item.agendamento_data_retirada,
-              quantidade: item.agendamento_quantidade,
-              placa_caminhao: item.agendamento_placa_caminhao,
-              motorista_nome: item.agendamento_motorista_nome,
-              motorista_documento: item.agendamento_motorista_documento,
-              cliente: {
-                nome: item.cliente_nome
-              },
-              liberacao: {
-                pedido_interno: item.liberacao_pedido_interno,
-                produto: {
-                  nome: item.produto_nome
-                }
-              }
-            }
-          };
-        }
-        
-        return null;
-      }
-
-      let query = supabase
-        .from("carregamentos")
-        .select(`
-          id,
-          etapa_atual,
-          numero_nf,
-          data_chegada,
-          created_at,
-          cliente_id,
-          armazem_id,
-          observacao_chegada,
-          observacao_inicio,
-          observacao_carregando,
-          observacao_finalizacao,
-          observacao_documentacao,
-          data_inicio,
-          data_carregando,
-          data_finalizacao,
-          data_documentacao,
-          docs_retorno_url,
-          docs_retorno_xml_url,
-          url_foto_chegada,
-          url_foto_inicio,
-          url_foto_carregando,
-          url_foto_finalizacao,
-          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
-            id,
-            data_retirada,
-            quantidade,
-            cliente:clientes!agendamentos_cliente_id_fkey (
-              nome
-            ),
-            placa_caminhao,
-            motorista_nome,
-            motorista_documento,
-            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
-              pedido_interno,
-              produto:produtos!liberacoes_produto_id_fkey (
-                nome
-              )
-            )
-          )
-        `)
-        .eq("id", id);
-
-      if (userRole === "cliente" && clienteId) {
-        query = query.eq("cliente_id", clienteId);
-      } else if (userRole === "armazem" && armazemId) {
-        query = query.eq("armazem_id", armazemId);
-      }
-
-      const { data, error } = await query.single();
+      const { data, error } = await supabase.rpc('get_carregamento_detalhe_universal', {
+        p_carregamento_id: id,
+        p_user_role: userRole,
+        p_user_id: user?.id,
+        p_cliente_id: clienteId || null,
+        p_armazem_id: armazemId || null,
+        p_representante_id: representanteId || null
+      });
       
       if (error) throw error;
-      return data;
+      return data && data.length > 0 ? data[0] : null;
     },
     enabled: (() => {
-      if (!user || !userRole || !id) {
-        return false;
-      }
-      
-      if (userRole === "admin" || userRole === "logistica") {
-        return true;
-      }
+      if (!user || !userRole || !id) return false;
+      if (userRole === "admin" || userRole === "logistica") return true;
       
       const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
       const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
@@ -355,6 +264,7 @@ const CarregamentoDetalhe = () => {
     })(),
   });
 
+  // Mutation para etapas normais (1-4)
   const proximaEtapaMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEtapa || !carregamento) {
@@ -380,16 +290,8 @@ const CarregamentoDetalhe = () => {
 
       if (stageFile) {
         const fileExt = stageFile.name.split('.').pop();
-        let bucket = '';
-        let fileName = '';
-        
-        if (etapaAtual === 5) {
-          bucket = 'carregamento-documentos';
-          fileName = `${carregamento.id}_nota_fiscal_${Date.now()}.${fileExt}`;
-        } else {
-          bucket = 'carregamento-fotos';
-          fileName = `${carregamento.id}_etapa_${etapaAtual}_${Date.now()}.${fileExt}`;
-        }
+        const bucket = 'carregamento-fotos';
+        const fileName = `${carregamento.id}_etapa_${etapaAtual}_${Date.now()}.${fileExt}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(bucket)
@@ -406,23 +308,6 @@ const CarregamentoDetalhe = () => {
         if (etapaConfig?.campo_url) {
           updateData[etapaConfig.campo_url] = urlData.publicUrl;
         }
-      }
-
-      if (stageFileXml && etapaAtual === 5) {
-        const fileName = `${carregamento.id}_xml_${Date.now()}.xml`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('carregamento-documentos')
-          .upload(fileName, stageFileXml);
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('carregamento-documentos')
-          .getPublicUrl(fileName);
-        updateData.docs_retorno_xml_url = urlData.publicUrl;
       }
 
       const { error: updateError } = await supabase
@@ -451,6 +336,112 @@ const CarregamentoDetalhe = () => {
     onError: (error) => {
       toast({
         title: "Erro ao avançar etapa",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation para sub-etapas da etapa 5
+  const subEtapaMutation = useMutation({
+    mutationFn: async (subEtapaId: string) => {
+      if (!carregamento || !subEtapaId) {
+        throw new Error("Dados inválidos");
+      }
+
+      const subEtapa = ETAPAS.find(e => e.id === 5)?.sub_etapas?.find(se => se.id === subEtapaId);
+      if (!subEtapa) {
+        throw new Error("Sub-etapa não encontrada");
+      }
+
+      const files = subEtapaFiles[subEtapaId];
+      if (!files.pdf || !files.xml) {
+        throw new Error("PDF e XML são obrigatórios");
+      }
+
+      const updateData: any = {
+        [subEtapa.campo_status]: 'concluida',
+        updated_by: user?.id,
+      };
+
+      // Upload do PDF
+      const pdfFileName = `${carregamento.id}_${subEtapaId}_nota_${Date.now()}.pdf`;
+      const { data: pdfUploadData, error: pdfUploadError } = await supabase.storage
+        .from('carregamento-documentos')
+        .upload(pdfFileName, files.pdf);
+
+      if (pdfUploadError) {
+        throw new Error(`Erro no upload do PDF: ${pdfUploadError.message}`);
+      }
+
+      const { data: pdfUrlData } = supabase.storage
+        .from('carregamento-documentos')
+        .getPublicUrl(pdfFileName);
+
+      updateData[subEtapa.campo_url] = pdfUrlData.publicUrl;
+
+      // Upload do XML
+      const xmlFileName = `${carregamento.id}_${subEtapaId}_xml_${Date.now()}.xml`;
+      const { data: xmlUploadData, error: xmlUploadError } = await supabase.storage
+        .from('carregamento-documentos')
+        .upload(xmlFileName, files.xml);
+
+      if (xmlUploadError) {
+        throw new Error(`Erro no upload do XML: ${xmlUploadError.message}`);
+      }
+
+      const { data: xmlUrlData } = supabase.storage
+        .from('carregamento-documentos')
+        .getPublicUrl(xmlFileName);
+
+      updateData[subEtapa.campo_xml] = xmlUrlData.publicUrl;
+
+      // Verificar se todas as sub-etapas foram concluídas para finalizar a etapa 5
+      const status5a = subEtapaId === '5a' ? 'concluida' : (carregamento.etapa_5a_status || 'pendente');
+      const status5b = subEtapaId === '5b' ? 'concluida' : (carregamento.etapa_5b_status || 'pendente');
+      const status5c = subEtapaId === '5c' ? 'concluida' : (carregamento.etapa_5c_status || 'pendente');
+
+      if (status5a === 'concluida' && status5b === 'concluida' && status5c === 'concluida') {
+        updateData.etapa_atual = 6;
+        updateData.data_documentacao = new Date().toISOString();
+      }
+
+      const { error: updateError } = await supabase
+        .from('carregamentos')
+        .update(updateData)
+        .eq('id', carregamento.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      return { subEtapaId, finalizada: updateData.etapa_atual === 6 };
+    },
+    onSuccess: ({ subEtapaId, finalizada }) => {
+      const subEtapa = ETAPAS.find(e => e.id === 5)?.sub_etapas?.find(se => se.id === subEtapaId);
+      
+      toast({
+        title: "Documentos enviados com sucesso!",
+        description: finalizada 
+          ? "Carregamento finalizado completamente!" 
+          : `${subEtapa?.nome} concluída. Aguardando próxima etapa.`,
+      });
+      
+      // Limpar arquivos da sub-etapa
+      setSubEtapaFiles(prev => ({
+        ...prev,
+        [subEtapaId]: { pdf: null, xml: null }
+      }));
+      
+      queryClient.invalidateQueries({ queryKey: ["carregamento-detalhe", id] });
+      
+      if (finalizada) {
+        setSelectedEtapa(6);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao enviar documentos",
         description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive",
       });
@@ -576,7 +567,7 @@ const CarregamentoDetalhe = () => {
             const isFinalizada = etapaIndex < etapaAtual;
             const isAtual = etapaIndex === etapaAtual;
             const isSelected = selectedEtapa === etapaIndex;
-            const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto;
+            const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto && !subEtapaMutation.isPending;
             
             let circleClasses = "rounded-full flex items-center justify-center transition-all";
             let shadowStyle = "none";
@@ -675,6 +666,223 @@ const CarregamentoDetalhe = () => {
     </div>
   );
 
+  const renderSubEtapas = () => {
+    if (!carregamento || selectedEtapa !== 5) return null;
+
+    const etapa5 = ETAPAS.find(e => e.id === 5);
+    if (!etapa5?.sub_etapas) return null;
+
+    return (
+      <div className="space-y-4">
+        {etapa5.sub_etapas.map((subEtapa) => {
+          const status = getSubEtapaStatus(subEtapa.id);
+          const podeEditar = podeEditarSubEtapa(subEtapa.id);
+          const isConcluida = status === 'concluida';
+          const files = subEtapaFiles[subEtapa.id];
+
+          const getDocumentUrl = (campo: string) => {
+            switch (campo) {
+              case 'docs_retorno_url': return carregamento.docs_retorno_url;
+              case 'docs_retorno_xml_url': return carregamento.docs_retorno_xml_url;
+              case 'docs_venda_url': return carregamento.docs_venda_url;
+              case 'docs_venda_xml_url': return carregamento.docs_venda_xml_url;
+              case 'docs_remessa_url': return carregamento.docs_remessa_url;
+              case 'docs_remessa_xml_url': return carregamento.docs_remessa_xml_url;
+              default: return null;
+            }
+          };
+
+          return (
+            <Card key={subEtapa.id} className={`transition-all ${isConcluida ? 'border-green-200 bg-green-50' : podeEditar ? 'border-blue-200 bg-blue-50' : 'border-gray-200'}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Badge className={`${subEtapa.cor} border-0 font-medium`}>
+                      {subEtapa.nome}
+                    </Badge>
+                    <div>
+                      <h3 className="font-semibold text-sm">{subEtapa.titulo}</h3>
+                      <p className="text-xs text-muted-foreground">{subEtapa.descricao}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {isConcluida && (
+                      <Badge className="bg-green-100 text-green-800 border-0">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Concluída
+                      </Badge>
+                    )}
+                    
+                    {podeEditar && !isConcluida && (
+                      <Button
+                        size="sm"
+                        disabled={!files.pdf || !files.xml || subEtapaMutation.isPending}
+                        onClick={() => subEtapaMutation.mutate(subEtapa.id)}
+                      >
+                        {subEtapaMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Enviando...
+                          </>
+                        ) : (
+                          'Enviar Documentos'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {isConcluida ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <DocumentViewer
+                        url={getDocumentUrl(subEtapa.campo_url)}
+                        type="pdf"
+                        bucket="carregamento-documentos"
+                        title="Nota Fiscal"
+                        description="PDF"
+                        variant="button"
+                        size="sm"
+                        showPreview={true}
+                      />
+                      <DocumentViewer
+                        url={getDocumentUrl(subEtapa.campo_xml)}
+                        type="xml"
+                        bucket="carregamento-documentos"
+                        title="Arquivo XML"
+                        description="XML"
+                        variant="button"
+                        size="sm"
+                        showPreview={true}
+                      />
+                    </div>
+                  </div>
+                ) : podeEditar ? (
+                  <div className="space-y-3">
+                    {/* Upload PDF */}
+                    <div>
+                      <label className="text-sm font-medium block mb-2">
+                        Nota Fiscal (PDF) *
+                      </label>
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById(`pdf-upload-${subEtapa.id}`)?.click()}
+                          disabled={subEtapaMutation.isPending}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          {files.pdf ? "Alterar PDF" : "Anexar PDF"}
+                        </Button>
+                        
+                        <Input
+                          id={`pdf-upload-${subEtapa.id}`}
+                          type="file"
+                          accept=".pdf"
+                          onChange={e => {
+                            const file = e.target.files?.[0] ?? null;
+                            setSubEtapaFiles(prev => ({
+                              ...prev,
+                              [subEtapa.id]: { ...prev[subEtapa.id], pdf: file }
+                            }));
+                          }}
+                          className="hidden"
+                          disabled={subEtapaMutation.isPending}
+                        />
+                        
+                        {files.pdf && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-700 flex-1">{files.pdf.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSubEtapaFiles(prev => ({
+                                ...prev,
+                                [subEtapa.id]: { ...prev[subEtapa.id], pdf: null }
+                              }))}
+                              disabled={subEtapaMutation.isPending}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload XML */}
+                    <div>
+                      <label className="text-sm font-medium block mb-2">
+                        Arquivo XML *
+                      </label>
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById(`xml-upload-${subEtapa.id}`)?.click()}
+                          disabled={subEtapaMutation.isPending}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          {files.xml ? "Alterar XML" : "Anexar XML"}
+                        </Button>
+                        
+                        <Input
+                          id={`xml-upload-${subEtapa.id}`}
+                          type="file"
+                          accept=".xml"
+                          onChange={e => {
+                            const file = e.target.files?.[0] ?? null;
+                            setSubEtapaFiles(prev => ({
+                              ...prev,
+                              [subEtapa.id]: { ...prev[subEtapa.id], xml: file }
+                            }));
+                          }}
+                          className="hidden"
+                          disabled={subEtapaMutation.isPending}
+                        />
+                        
+                        {files.xml && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-700 flex-1">{files.xml.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSubEtapaFiles(prev => ({
+                                ...prev,
+                                [subEtapa.id]: { ...prev[subEtapa.id], xml: null }
+                              }))}
+                              disabled={subEtapaMutation.isPending}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">
+                      {!subEtapa.roles_permitidos.includes(userRole) 
+                        ? `Aguardando ação do ${subEtapa.roles_permitidos.join('/')}`
+                        : 'Aguardando etapa anterior ser concluída'
+                      }
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderAreaEtapas = () => {
     if (!selectedEtapa) return null;
 
@@ -690,7 +898,8 @@ const CarregamentoDetalhe = () => {
     const podeEditar = userRole === "armazem" && 
                       carregamento?.armazem_id === armazemId && 
                       isEtapaAtual && 
-                      !isEtapaFinalizada;
+                      !isEtapaFinalizada &&
+                      selectedEtapa !== 5; // Etapa 5 tem lógica própria
 
     const canUseCamera = podeEditar && selectedEtapa >= 1 && selectedEtapa <= 4;
 
@@ -724,8 +933,7 @@ const CarregamentoDetalhe = () => {
           return {
             data: carregamento?.data_documentacao,
             observacao: carregamento?.observacao_documentacao,
-            url_arquivo: carregamento?.docs_retorno_url,
-            url_xml: carregamento?.docs_retorno_xml_url
+            url_arquivo: null
           };
         default:
           return { data: null, observacao: null, url_arquivo: null };
@@ -748,11 +956,7 @@ const CarregamentoDetalhe = () => {
             </div>
             {podeEditar && (
               <Button
-                disabled={
-                  (isEtapaDoc ? (!stageFile || !stageFileXml) : !stageFile) || 
-                  proximaEtapaMutation.isPending || 
-                  isUploadingPhoto
-                }
+                disabled={!stageFile || proximaEtapaMutation.isPending || isUploadingPhoto}
                 size="sm"
                 className="px-6"
                 onClick={() => {
@@ -765,7 +969,7 @@ const CarregamentoDetalhe = () => {
                     Processando...
                   </>
                 ) : (
-                  selectedEtapa === 5 ? "Finalizar" : "Próxima"
+                  "Próxima"
                 )}
               </Button>
             )}
@@ -779,6 +983,8 @@ const CarregamentoDetalhe = () => {
                 O carregamento foi concluído com sucesso.
               </p>
             </div>
+          ) : isEtapaDoc ? (
+            renderSubEtapas()
           ) : isEtapaConcluida ? (
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -795,41 +1001,16 @@ const CarregamentoDetalhe = () => {
                 )}
 
                 <div className="space-y-2">
-                  {isEtapaDoc ? (
-                    <>
-                      <DocumentViewer
-                        url={etapaData.url_arquivo}
-                        type="pdf"
-                        bucket="carregamento-documentos"
-                        title="Nota Fiscal"
-                        description="PDF"
-                        variant="button"
-                        size="md"
-                        showPreview={true}
-                      />
-                      <DocumentViewer
-                        url={etapaData.url_xml}
-                        type="xml"
-                        bucket="carregamento-documentos"
-                        title="Arquivo XML"
-                        description="XML"
-                        variant="button"
-                        size="md"
-                        showPreview={true}
-                      />
-                    </>
-                  ) : (
-                    <DocumentViewer
-                      url={etapaData.url_arquivo}
-                      type="image"
-                      bucket="carregamento-fotos"
-                      title={`Foto - ${etapa?.nome}`}
-                      description="Imagem"
-                      variant="button"
-                      size="md"
-                      showPreview={true}
-                    />
-                  )}
+                  <DocumentViewer
+                    url={etapaData.url_arquivo}
+                    type="image"
+                    bucket="carregamento-fotos"
+                    title={`Foto - ${etapa?.nome}`}
+                    description="Imagem"
+                    variant="button"
+                    size="md"
+                    showPreview={true}
+                  />
                 </div>
               </div>
             </div>
@@ -837,7 +1018,7 @@ const CarregamentoDetalhe = () => {
             <div className="space-y-3">             
               <div>
                 <label className="text-sm font-semibold block mb-2">
-                  {isEtapaDoc ? "Anexar Nota Fiscal (PDF) *" : "Anexar foto obrigatória *"}
+                  Anexar foto obrigatória *
                 </label>
                 
                 <div className="space-y-3">
@@ -856,19 +1037,19 @@ const CarregamentoDetalhe = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => document.getElementById('file-upload-pdf')?.click()}
+                      onClick={() => document.getElementById('file-upload-foto')?.click()}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                       className="flex items-center gap-2"
                     >
                       <Upload className="h-4 w-4" />
-                      {stageFile ? "Alterar PDF" : "Anexar PDF"}
+                      {stageFile ? "Alterar Foto" : "Anexar Foto"}
                     </Button>
                   )}
                   
                   <Input
-                    id="file-upload-pdf"
+                    id="file-upload-foto"
                     type="file"
-                    accept={isEtapaDoc ? ".pdf" : "image/*"}
+                    accept="image/*"
                     onChange={e => {
                       const file = e.target.files?.[0] ?? null;
                       setStageFile(file);
@@ -894,55 +1075,8 @@ const CarregamentoDetalhe = () => {
                 </div>
               </div>
             
-              {isEtapaDoc && (
-                <div>
-                  <label className="text-sm font-semibold block mb-2">
-                    Anexar Arquivo XML *
-                  </label>
-                  
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => document.getElementById('file-upload-xml')?.click()}
-                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                      className="flex items-center gap-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      {stageFileXml ? "Alterar XML" : "Anexar XML"}
-                    </Button>
-                    
-                    <Input
-                      id="file-upload-xml"
-                      type="file"
-                      accept=".xml"
-                      onChange={e => {
-                        const file = e.target.files?.[0] ?? null;
-                        setStageFileXml(file);
-                      }}
-                      className="hidden"
-                      disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                    />
-                    
-                    {stageFileXml && (
-                      <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-700 flex-1">{stageFileXml.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setStageFileXml(null)}
-                          disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            
               <div>
+                <label className="text-sm font-semibold block mb-1">
                 <label className="text-sm font-semibold block mb-1">
                   Observações (opcional)
                 </label>
@@ -986,11 +1120,11 @@ const CarregamentoDetalhe = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Pedido:</span>
-                    <p className="font-semibold text-sm">{carregamento?.agendamento?.liberacao?.pedido_interno || "N/A"}</p>
+                    <p className="font-semibold text-sm">{carregamento?.liberacao_pedido_interno || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Produto:</span>
-                    <p className="font-semibold text-sm">{carregamento?.agendamento?.liberacao?.produto?.nome || "N/A"}</p>
+                    <p className="font-semibold text-sm">{carregamento?.produto_nome || "N/A"}</p>
                   </div>
                 </div>
 
@@ -999,23 +1133,23 @@ const CarregamentoDetalhe = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Cliente:</span>
-                    <p className="font-semibold text-sm">{agendamento.cliente?.nome || "N/A"}</p>
+                    <p className="font-semibold text-sm">{carregamento?.cliente_nome || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Quantidade:</span>
-                    <p className="font-semibold text-sm">{agendamento.quantidade ?? "N/A"} ton</p>
+                    <p className="font-semibold text-sm">{carregamento?.agendamento_quantidade ?? "N/A"} ton</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Placa:</span>
-                    <p className="font-semibold text-sm">{agendamento.placa_caminhao || "N/A"}</p>
+                    <p className="font-semibold text-sm">{carregamento?.agendamento_placa_caminhao || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Motorista:</span>
                     <p className="font-semibold text-sm">
-                      {agendamento.motorista_nome || "N/A"}
-                      {agendamento.motorista_documento && (
+                      {carregamento?.agendamento_motorista_nome || "N/A"}
+                      {carregamento?.agendamento_motorista_documento && (
                         <span className="block text-xs text-muted-foreground font-normal">
-                          CPF: {agendamento.motorista_documento.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                          CPF: {carregamento.agendamento_motorista_documento.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
                         </span>
                       )}
                     </p>
@@ -1028,8 +1162,8 @@ const CarregamentoDetalhe = () => {
                   <div>
                     <span className="text-xs text-muted-foreground">Data Agendada:</span>
                     <p className="font-semibold text-sm">
-                      {agendamento.data_retirada 
-                        ? new Date(agendamento.data_retirada).toLocaleDateString("pt-BR")
+                      {carregamento?.agendamento_data_retirada 
+                        ? new Date(carregamento.agendamento_data_retirada).toLocaleDateString("pt-BR")
                         : "N/A"}
                     </p>
                   </div>
@@ -1049,6 +1183,36 @@ const CarregamentoDetalhe = () => {
                     <div>
                       <span className="text-xs text-muted-foreground">Nota Fiscal:</span>
                       <p className="font-semibold text-sm">{carregamento.numero_nf}</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Progresso das Sub-etapas da Etapa 5 */}
+                {carregamento?.etapa_atual === 5 && (
+                  <>
+                    <div className="border-t"></div>
+                    <div>
+                      <h3 className="text-sm font-medium mb-3">Progresso da Documentação</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Docs. Retorno:</span>
+                          <Badge className={getSubEtapaStatus('5a') === 'concluida' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {getSubEtapaStatus('5a') === 'concluida' ? 'Concluída' : 'Pendente'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Docs. Venda:</span>
+                          <Badge className={getSubEtapaStatus('5b') === 'concluida' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {getSubEtapaStatus('5b') === 'concluida' ? 'Concluída' : 'Pendente'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Docs. Remessa:</span>
+                          <Badge className={getSubEtapaStatus('5c') === 'concluida' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {getSubEtapaStatus('5c') === 'concluida' ? 'Concluída' : 'Pendente'}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}
