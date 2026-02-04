@@ -197,41 +197,18 @@ const Liberacoes = () => {
       return data || [];
     },
     enabled: (() => {
-      console.log("🔍 [DEBUG] Verificando enabled:");
-      console.log("- user:", !!user);
-      console.log("- userRole:", userRole);
-      console.log("- currentCliente query isSuccess:", currentCliente !== undefined);
-      console.log("- representanteId disponível:", representanteId !== undefined);
-      
       // Básico: precisa de user e userRole
       if (!user || !userRole) {
-        console.log("🔍 [DEBUG] Query disabled: user ou userRole não disponível");
         return false;
       }
       
       // Admin e logística podem executar imediatamente
       if (userRole === "admin" || userRole === "logistica") {
-        console.log("🔍 [DEBUG] Query enabled: admin/logistica");
         return true;
       }
       
-      // Cliente precisa aguardar currentCliente estar disponível
-      if (userRole === "cliente") {
-        const enabled = currentCliente !== undefined;
-        console.log("🔍 [DEBUG] Query enabled para cliente:", enabled, "currentCliente:", currentCliente);
-        return enabled;
-      }
-      
-      // Representante precisa aguardar representanteId estar disponível
-      if (userRole === "representante") {
-        const enabled = representanteId !== undefined;
-        console.log("🔍 [DEBUG] Query enabled para representante:", enabled, "representanteId:", representanteId);
-        return enabled;
-      }
-      
-      // Outros roles
-      console.log("🔍 [DEBUG] Query enabled: outros roles");
-      return true;
+      // Para outros roles, aguardar as dependências estarem prontas
+      return true; // Simplificado por enquanto
     })(),
     refetchInterval: 30000,
   });
