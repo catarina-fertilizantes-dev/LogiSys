@@ -15,15 +15,15 @@ import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
-import { 
-  Loader2, 
-  CheckCircle, 
-  ArrowRight, 
-  User, 
-  Truck, 
-  Calendar, 
-  Hash, 
-  Clock, 
+import {
+  Loader2,
+  CheckCircle,
+  ArrowRight,
+  User,
+  Truck,
+  Calendar,
+  Hash,
+  Clock,
   ArrowLeft,
   Camera,
   Upload,
@@ -31,48 +31,48 @@ import {
 } from "lucide-react";
 
 const ETAPAS = [
-  { 
-    id: 1, 
-    nome: "Chegada", 
-    titulo: "Chegada do Caminhão", 
-    campo_data: "data_chegada", 
-    campo_obs: "observacao_chegada", 
+  {
+    id: 1,
+    nome: "Chegada",
+    titulo: "Chegada do Caminhão",
+    campo_data: "data_chegada",
+    campo_obs: "observacao_chegada",
     campo_url: "url_foto_chegada",
     cor: "bg-orange-500 text-white"
   },
-  { 
-    id: 2, 
-    nome: "Início Carregamento", 
-    titulo: "Início do Carregamento", 
-    campo_data: "data_inicio", 
-    campo_obs: "observacao_inicio", 
+  {
+    id: 2,
+    nome: "Início Carregamento",
+    titulo: "Início do Carregamento",
+    campo_data: "data_inicio",
+    campo_obs: "observacao_inicio",
     campo_url: "url_foto_inicio",
     cor: "bg-blue-500 text-white"
   },
-  { 
-    id: 3, 
-    nome: "Carregando", 
-    titulo: "Carregando", 
-    campo_data: "data_carregando", 
-    campo_obs: "observacao_carregando", 
+  {
+    id: 3,
+    nome: "Carregando",
+    titulo: "Carregando",
+    campo_data: "data_carregando",
+    campo_obs: "observacao_carregando",
     campo_url: "url_foto_carregando",
     cor: "bg-purple-500 text-white"
   },
-  { 
-    id: 4, 
-    nome: "Carreg. Finalizado", 
-    titulo: "Carregamento Finalizado", 
-    campo_data: "data_finalizacao", 
-    campo_obs: "observacao_finalizacao", 
+  {
+    id: 4,
+    nome: "Carreg. Finalizado",
+    titulo: "Carregamento Finalizado",
+    campo_data: "data_finalizacao",
+    campo_obs: "observacao_finalizacao",
     campo_url: "url_foto_finalizacao",
     cor: "bg-indigo-500 text-white"
   },
-  { 
-    id: 5, 
-    nome: "Documentação", 
-    titulo: "Documentação", 
-    campo_data: "data_documentacao", 
-    campo_obs: "observacao_documentacao", 
+  {
+    id: 5,
+    nome: "Documentação",
+    titulo: "Documentação",
+    campo_data: "data_documentacao",
+    campo_obs: "observacao_documentacao",
     campo_url: null,
     cor: "bg-yellow-600 text-white",
     sub_etapas: [
@@ -87,33 +87,33 @@ const ETAPAS = [
         cor: "bg-yellow-600 text-white"
       },
       {
-        id: "5b", 
+        id: "5b",
         nome: "Docs. Venda",
         titulo: "Documentos de Venda",
         campo_url: "docs_venda_url",
-        campo_xml: "docs_venda_xml_url", 
+        campo_xml: "docs_venda_xml_url",
         campo_status: "etapa_5b_status",
         roles_permitidos: ["admin", "logistica"],
         cor: "bg-amber-600 text-white"
       },
       {
         id: "5c",
-        nome: "Docs. Remessa", 
+        nome: "Docs. Remessa",
         titulo: "Documentos de Remessa",
         campo_url: "docs_remessa_url",
         campo_xml: "docs_remessa_xml_url",
-        campo_status: "etapa_5c_status", 
+        campo_status: "etapa_5c_status",
         roles_permitidos: ["armazem"],
         cor: "bg-orange-600 text-white"
       }
     ]
   },
-  { 
-    id: 6, 
-    nome: "Finalizado", 
-    titulo: "Finalizado", 
-    campo_data: null, 
-    campo_obs: null, 
+  {
+    id: 6,
+    nome: "Finalizado",
+    titulo: "Finalizado",
+    campo_data: null,
+    campo_obs: null,
     campo_url: null,
     cor: "bg-green-600 text-white"
   },
@@ -148,16 +148,6 @@ const CarregamentoDetalhe = () => {
   const { userRole, user } = useAuth();
   const { clienteId, armazemId, representanteId } = usePermissions();
 
-  // ✅ LOGS DE DEBUG EXPANDIDOS
-  console.log("🔍 [DEBUG] CarregamentoDetalhe - Estado atual:");
-  console.log("- userRole:", userRole);
-  console.log("- representanteId:", representanteId);
-  console.log("- representanteId type:", typeof representanteId);
-  console.log("- user:", user);
-  console.log("- clienteId:", clienteId);
-  console.log("- armazemId:", armazemId);
-  console.log("- carregamento id:", id);
-
   const [stageFile, setStageFile] = useState<File | null>(null);
   const [stageFileXml, setStageFileXml] = useState<File | null>(null);
   const [stageObs, setStageObs] = useState("");
@@ -182,7 +172,7 @@ const CarregamentoDetalhe = () => {
 
   const handlePhotoCapture = async (file: File) => {
     if (!currentPhotoEtapa || !id) return;
-    
+
     try {
       const result = await uploadPhoto(file, `etapa-${currentPhotoEtapa}-${Date.now()}.jpg`);
       
@@ -216,7 +206,7 @@ const CarregamentoDetalhe = () => {
   const updateCarregamentoFoto = async (etapa: number, fotoUrl: string) => {
     const campoFoto = {
       1: 'url_foto_chegada',
-      2: 'url_foto_inicio', 
+      2: 'url_foto_inicio',
       3: 'url_foto_carregando',
       4: 'url_foto_finalizacao'
     }[etapa];
@@ -233,38 +223,120 @@ const CarregamentoDetalhe = () => {
     }
   };
 
-  // 🚀 MIGRAÇÃO PARA FUNÇÃO UNIVERSAL
-  const { data: carregamentoData, isLoading, error } = useQuery({
+  const { data: carregamento, isLoading, error } = useQuery({
     queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      console.log("🔍 [DEBUG] Query carregamento-detalhe executando:");
-      console.log("- userRole:", userRole);
-      console.log("- representanteId:", representanteId);
-      console.log("- clienteId:", clienteId);
-      console.log("- armazemId:", armazemId);
-      console.log("- carregamento id:", id);
-      console.log("- user:", user);
-      
-      // 🚀 USAR FUNÇÃO UNIVERSAL PARA TODOS OS ROLES
-      const { data, error } = await supabase.rpc('get_carregamento_detalhe_universal', {
-        p_user_role: userRole,
-        p_user_id: user?.id,
-        p_cliente_id: clienteId || null,
-        p_armazem_id: armazemId || null,
-        p_representante_id: representanteId || null,
-        p_carregamento_id: id || null
-      });
-      
-      console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
+      if (userRole === "representante" && representanteId) {
+        const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
+          p_representante_id: representanteId,
+          p_carregamento_id: id
+        });
 
-      console.log("🔍 [DEBUG] Dados brutos da função:", carregamentoData);
-      console.log("🔍 [DEBUG] Tipo dos dados:", typeof carregamentoData);
-      console.log("🔍 [DEBUG] É array?", Array.isArray(carregamentoData));
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const item = data[0];
+          return {
+            id: item.id,
+            etapa_atual: item.etapa_atual,
+            numero_nf: item.numero_nf,
+            data_chegada: item.data_chegada,
+            created_at: item.created_at,
+            cliente_id: item.cliente_id,
+            armazem_id: item.armazem_id,
+            observacao_chegada: item.observacao_chegada,
+            observacao_inicio: item.observacao_inicio,
+            observacao_carregando: item.observacao_carregando,
+            observacao_finalizacao: item.observacao_finalizacao,
+            observacao_documentacao: item.observacao_documentacao,
+            data_inicio: item.data_inicio,
+            data_carregando: item.data_carregando,
+            data_finalizacao: item.data_finalizacao,
+            data_documentacao: item.data_documentacao,
+            docs_retorno_url: item.docs_retorno_url,
+            docs_retorno_xml_url: item.docs_retorno_xml_url,
+            url_foto_chegada: item.url_foto_chegada,
+            url_foto_inicio: item.url_foto_inicio,
+            url_foto_carregando: item.url_foto_carregando,
+            url_foto_finalizacao: item.url_foto_finalizacao,
+            agendamento: {
+              id: item.agendamento_id,
+              data_retirada: item.agendamento_data_retirada,
+              quantidade: item.agendamento_quantidade,
+              placa_caminhao: item.agendamento_placa_caminhao,
+              motorista_nome: item.agendamento_motorista_nome,
+              motorista_documento: item.agendamento_motorista_documento,
+              cliente: {
+                nome: item.cliente_nome
+              },
+              liberacao: {
+                pedido_interno: item.liberacao_pedido_interno,
+                produto: {
+                  nome: item.produto_nome
+                }
+              }
+            }
+          };
+        }
+        
+        return null;
+      }
+
+      let query = supabase
+        .from("carregamentos")
+        .select(`
+          id,
+          etapa_atual,
+          numero_nf,
+          data_chegada,
+          created_at,
+          cliente_id,
+          armazem_id,
+          observacao_chegada,
+          observacao_inicio,
+          observacao_carregando,
+          observacao_finalizacao,
+          observacao_documentacao,
+          data_inicio,
+          data_carregando,
+          data_finalizacao,
+          data_documentacao,
+          docs_retorno_url,
+          docs_retorno_xml_url,
+          url_foto_chegada,
+          url_foto_inicio,
+          url_foto_carregando,
+          url_foto_finalizacao,
+          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
+            id,
+            data_retirada,
+            quantidade,
+            cliente:clientes!agendamentos_cliente_id_fkey (
+              nome
+            ),
+            placa_caminhao,
+            motorista_nome,
+            motorista_documento,
+            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
+              pedido_interno,
+              produto:produtos!liberacoes_produto_id_fkey (
+                nome
+              )
+            )
+          )
+        `)
+        .eq("id", id);
+
+      if (userRole === "cliente" && clienteId) {
+        query = query.eq("cliente_id", clienteId);
+      } else if (userRole === "armazem" && armazemId) {
+        query = query.eq("armazem_id", armazemId);
+      }
+
+      const { data, error } = await query.single();
       
       if (error) throw error;
-      
-      // A função retorna um array, mas queremos apenas o primeiro item (se existir)
-      return data && data.length > 0 ? data[0] : null;
+      return data;
     },
     enabled: (() => {
       if (!user || !userRole || !id) {
@@ -279,57 +351,9 @@ const CarregamentoDetalhe = () => {
       const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
-      console.log("🔍 [DEBUG] Enabled check:", { clienteOk, armazemOk, representanteOk });
-      
       return clienteOk && armazemOk && representanteOk;
     })(),
   });
-
-  // ✅ TRANSFORMAR DADOS DA FUNÇÃO UNIVERSAL PARA O FORMATO ESPERADO
-  const carregamento = carregamentoData ? {
-    id: carregamentoData.id,
-    etapa_atual: carregamentoData.etapa_atual,
-    numero_nf: carregamentoData.numero_nf,
-    data_chegada: carregamentoData.data_chegada,
-    created_at: carregamentoData.created_at,
-    cliente_id: carregamentoData.cliente_id,
-    armazem_id: carregamentoData.armazem_id,
-    observacao_chegada: carregamentoData.observacao_chegada,
-    observacao_inicio: carregamentoData.observacao_inicio,
-    observacao_carregando: carregamentoData.observacao_carregando,
-    observacao_finalizacao: carregamentoData.observacao_finalizacao,
-    observacao_documentacao: carregamentoData.observacao_documentacao,
-    data_inicio: carregamentoData.data_inicio,
-    data_carregando: carregamentoData.data_carregando,
-    data_finalizacao: carregamentoData.data_finalizacao,
-    data_documentacao: carregamentoData.data_documentacao,
-    docs_retorno_url: carregamentoData.docs_retorno_url,
-    docs_retorno_xml_url: carregamentoData.docs_retorno_xml_url,
-    url_foto_chegada: carregamentoData.url_foto_chegada,
-    url_foto_inicio: carregamentoData.url_foto_inicio,
-    url_foto_carregando: carregamentoData.url_foto_carregando,
-    url_foto_finalizacao: carregamentoData.url_foto_finalizacao,
-    etapa_5a_status: carregamentoData.etapa_5a_status,
-    etapa_5b_status: carregamentoData.etapa_5b_status,
-    etapa_5c_status: carregamentoData.etapa_5c_status,
-    agendamento: carregamentoData.agendamento_id ? {
-      id: carregamentoData.agendamento_id,
-      data_retirada: carregamentoData.agendamento_data_retirada,
-      quantidade: carregamentoData.agendamento_quantidade,
-      placa_caminhao: carregamentoData.agendamento_placa_caminhao,
-      motorista_nome: carregamentoData.agendamento_motorista_nome,
-      motorista_documento: carregamentoData.agendamento_motorista_documento,
-      cliente: {
-        nome: carregamentoData.cliente_nome || "N/A"
-      },
-      liberacao: {
-        pedido_interno: carregamentoData.liberacao_pedido_interno || "N/A",
-        produto: {
-          nome: carregamentoData.produto_nome || "N/A"
-        }
-      }
-    } : null
-  } : null;
 
   const proximaEtapaMutation = useMutation({
     mutationFn: async () => {
@@ -483,50 +507,50 @@ const CarregamentoDetalhe = () => {
     };
   };
 
-    const stats = calcularEstatisticas();
+  const stats = calcularEstatisticas();
+  
+  const getSubEtapaStatus = (subEtapaId: string) => {
+    if (!carregamento) return 'pendente';
     
-    const getSubEtapaStatus = (subEtapaId: string) => {
-      if (!carregamento) return 'pendente';
-      
-      switch (subEtapaId) {
-        case '5a': return carregamento.etapa_5a_status || 'pendente';
-        case '5b': return carregamento.etapa_5b_status || 'pendente';
-        case '5c': return carregamento.etapa_5c_status || 'pendente';
-        default: return 'pendente';
-      }
-    };
+    switch (subEtapaId) {
+      case '5a': return carregamento.etapa_5a_status || 'pendente';
+      case '5b': return carregamento.etapa_5b_status || 'pendente';
+      case '5c': return carregamento.etapa_5c_status || 'pendente';
+      default: return 'pendente';
+    }
+  };
+  
+  const getProximaSubEtapa = () => {
+    if (!carregamento || carregamento.etapa_atual !== 5) return null;
     
-    const getProximaSubEtapa = () => {
-      if (!carregamento || carregamento.etapa_atual !== 5) return null;
-      
-      const status5a = getSubEtapaStatus('5a');
-      const status5b = getSubEtapaStatus('5b');
-      const status5c = getSubEtapaStatus('5c');
-      
-      if (status5a === 'pendente') return '5a';
-      if (status5a === 'concluida' && status5b === 'pendente') return '5b';
-      if (status5b === 'concluida' && status5c === 'pendente') return '5c';
-      return null; // Todas concluídas
-    };
+    const status5a = getSubEtapaStatus('5a');
+    const status5b = getSubEtapaStatus('5b');
+    const status5c = getSubEtapaStatus('5c');
     
-    const podeEditarSubEtapa = (subEtapaId: string) => {
-      if (!carregamento || carregamento.etapa_atual !== 5) return false;
-      
-      const etapa5 = ETAPAS.find(e => e.id === 5);
-      const subEtapa = etapa5?.sub_etapas?.find(se => se.id === subEtapaId);
-      
-      if (!subEtapa) return false;
-      
-      // Verificar role
-      const temPermissao = subEtapa.roles_permitidos.includes(userRole) || userRole === 'admin';
-      if (!temPermissao) return false;
-      
-      // Verificar se é a próxima sub-etapa
-      const proximaSubEtapa = getProximaSubEtapa();
-      return proximaSubEtapa === subEtapaId;
-    };
+    if (status5a === 'pendente') return '5a';
+    if (status5a === 'concluida' && status5b === 'pendente') return '5b';
+    if (status5b === 'concluida' && status5c === 'pendente') return '5c';
+    return null; // Todas concluídas
+  };
+  
+  const podeEditarSubEtapa = (subEtapaId: string) => {
+    if (!carregamento || carregamento.etapa_atual !== 5) return false;
     
-    const getEtapaInfo = (etapa: number) => {
+    const etapa5 = ETAPAS.find(e => e.id === 5);
+    const subEtapa = etapa5?.sub_etapas?.find(se => se.id === subEtapaId);
+    
+    if (!subEtapa) return false;
+    
+    // Verificar role
+    const temPermissao = subEtapa.roles_permitidos.includes(userRole) || userRole === 'admin';
+    if (!temPermissao) return false;
+    
+    // Verificar se é a próxima sub-etapa
+    const proximaSubEtapa = getProximaSubEtapa();
+    return proximaSubEtapa === subEtapaId;
+  };
+  
+  const getEtapaInfo = (etapa: number) => {
     const found = ETAPAS.find(e => e.id === etapa);
     return found || { 
       id: etapa, 
@@ -950,7 +974,7 @@ const CarregamentoDetalhe = () => {
     const agendamento = carregamento?.agendamento;
     const etapaAtual = carregamento?.etapa_atual ?? 1;
     const etapaInfo = getEtapaInfo(etapaAtual);
-  
+
     return (
       <Card className="shadow-sm">
         <CardContent className="p-4">
@@ -969,9 +993,9 @@ const CarregamentoDetalhe = () => {
                     <p className="font-semibold text-sm">{carregamento?.agendamento?.liberacao?.produto?.nome || "N/A"}</p>
                   </div>
                 </div>
-  
+
                 <div className="border-t"></div>
-  
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Cliente:</span>
@@ -997,9 +1021,9 @@ const CarregamentoDetalhe = () => {
                     </p>
                   </div>
                 </div>
-  
+
                 <div className="border-t"></div>
-  
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Data Agendada:</span>
@@ -1018,7 +1042,7 @@ const CarregamentoDetalhe = () => {
                     </div>
                   </div>
                 </div>
-  
+
                 {carregamento.numero_nf && (
                   <>
                     <div className="border-t"></div>
@@ -1028,7 +1052,7 @@ const CarregamentoDetalhe = () => {
                     </div>
                   </>
                 )}
-  
+
                 {stats && (
                   <>
                     <div className="border-t"></div>
