@@ -1077,7 +1077,6 @@ const CarregamentoDetalhe = () => {
             
               <div>
                 <label className="text-sm font-semibold block mb-1">
-                <label className="text-sm font-semibold block mb-1">
                   Observações (opcional)
                 </label>
                 <Textarea
