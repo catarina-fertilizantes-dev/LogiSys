@@ -114,6 +114,16 @@ const Carregamentos = () => {
   
   const { userRole, user } = useAuth();
   const { clienteId, armazemId, representanteId } = usePermissions();
+  
+  // ✅ LOGS DE DEBUG EXPANDIDOS
+  console.log("🔍 [DEBUG] Carregamentos - Estado atual:");
+  console.log("- userRole:", userRole);
+  console.log("- representanteId:", representanteId);
+  console.log("- representanteId type:", typeof representanteId);
+  console.log("- user:", user);
+  console.log("- clienteId:", clienteId);
+  console.log("- armazemId:", armazemId);
+  
   const [secaoFinalizadosExpandida, setSecaoFinalizadosExpandida] = useState(false);
 
   useEffect(() => {
@@ -122,64 +132,28 @@ const Carregamentos = () => {
     }
   }, []);
 
+  // 🚀 MIGRAÇÃO PARA FUNÇÃO UNIVERSAL
   const { data: carregamentosData, isLoading, error } = useQuery({
     queryKey: ["carregamentos", clienteId, armazemId, representanteId, userRole],
     queryFn: async () => {
-      if (userRole === "representante" && representanteId) {
-        const { data, error } = await supabase.rpc('get_carregamentos_by_representante', {
-          p_representante_id: representanteId
-        });
-        
-        if (error) throw error;
-        return data || [];
-      }
-
-      let query = supabase
-        .from("carregamentos")
-        .select(`
-          id,
-          etapa_atual,
-          numero_nf,
-          data_chegada,
-          created_at,
-          cliente_id,
-          armazem_id,
-          url_foto_chegada,
-          url_foto_inicio,
-          url_foto_carregando,
-          url_foto_finalizacao,
-          agendamento:agendamentos!carregamentos_agendamento_id_fkey (
-            id,
-            data_retirada,
-            quantidade,
-            placa_caminhao,
-            motorista_nome,
-            motorista_documento,
-            liberacao:liberacoes!agendamentos_liberacao_id_fkey (
-              pedido_interno,
-              produto:produtos!liberacoes_produto_id_fkey (
-                nome
-              ),
-              clientes!liberacoes_cliente_id_fkey (
-                nome
-              ),
-              armazem:armazens!liberacoes_armazem_id_fkey (
-                nome,
-                cidade,
-                estado
-              )
-            )
-          )
-        `)
-        .order("data_chegada", { ascending: false });
-
-      if (userRole === "cliente" && clienteId) {
-        query = query.eq("cliente_id", clienteId);
-      } else if (userRole === "armazem" && armazemId) {
-        query = query.eq("armazem_id", armazemId);
-      }
-
-      const { data, error } = await query;
+      console.log("🔍 [DEBUG] Query carregamentos executando:");
+      console.log("- userRole:", userRole);
+      console.log("- representanteId:", representanteId);
+      console.log("- clienteId:", clienteId);
+      console.log("- armazemId:", armazemId);
+      console.log("- user:", user);
+      
+      // 🚀 USAR FUNÇÃO UNIVERSAL PARA TODOS OS ROLES
+      const { data, error } = await supabase.rpc('get_carregamentos_universal', {
+        p_user_role: userRole,
+        p_user_id: user?.id,
+        p_cliente_id: clienteId || null,
+        p_armazem_id: armazemId || null,
+        p_representante_id: representanteId || null
+      });
+      
+      console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
+      
       if (error) throw error;
       return data || [];
     },
@@ -191,54 +165,94 @@ const Carregamentos = () => {
       const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
       
+      console.log("🔍 [DEBUG] Enabled check:", { clienteOk, armazemOk, representanteOk });
+      
       return clienteOk && armazemOk && representanteOk;
     })(),
     refetchInterval: 30000,
   });
 
+  // ✅ USEMEMO HÍBRIDO - SUPORTA FUNÇÃO UNIVERSAL E FALLBACK
   const carregamentos = useMemo<CarregamentoItem[]>(() => {
     if (!carregamentosData) return [];
     
     return carregamentosData.map((item: any) => {
+      // ✅ Verificar se vem da função universal (tem campos calculados)
       const isFromFunction = !!item.cliente_nome;
       
-      const fotosCount = [
-        item.url_foto_chegada,
-        item.url_foto_inicio,
-        item.url_foto_carregando,
-        item.url_foto_finalizacao
-      ].filter(url => url && url.trim() !== '').length;
+      if (isFromFunction) {
+        // ✅ Dados já calculados da função universal
+        const fotosCount = [
+          item.url_foto_chegada,
+          item.url_foto_inicio,
+          item.url_foto_carregando,
+          item.url_foto_finalizacao
+        ].filter(url => url && url.trim() !== '').length;
 
-      const etapaAtual = item.etapa_atual ?? 1;
-      const statusInfo = getStatusCarregamento(etapaAtual);
-      const finalizado = etapaAtual === 6;
+        const etapaAtual = item.etapa_atual ?? 1;
+        const statusInfo = getStatusCarregamento(etapaAtual);
+        const finalizado = etapaAtual === 6;
 
-      return {
-        id: item.id,
-        cliente: isFromFunction ? item.cliente_nome : (item.agendamento?.liberacao?.clientes?.nome || "N/A"),
-        produto: isFromFunction ? item.produto_nome : (item.agendamento?.liberacao?.produto?.nome || "N/A"),
-        pedido: isFromFunction ? item.pedido_interno : (item.agendamento?.liberacao?.pedido_interno || "N/A"),
-        armazem: isFromFunction 
-          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
-          : (item.agendamento?.liberacao?.armazem 
+        return {
+          id: item.id,
+          cliente: item.cliente_nome,
+          produto: item.produto_nome,
+          pedido: item.pedido_interno,
+          armazem: `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`,
+          quantidade: item.quantidade,
+          placa: item.placa_caminhao || "N/A",
+          motorista: item.motorista_nome || "N/A",
+          documento: item.motorista_documento || "N/A",
+          data_retirada: item.data_retirada || "N/A",
+          etapa_atual: etapaAtual,
+          fotosTotal: fotosCount,
+          numero_nf: item.numero_nf || null,
+          cliente_id: item.cliente_id ?? null,
+          armazem_id: item.armazem_id ?? null,
+          status_carregamento: statusInfo.status,
+          cor_carregamento: statusInfo.cor,
+          tooltip_carregamento: statusInfo.tooltip,
+          percentual_carregamento: statusInfo.percentual,
+          finalizado,
+        };
+      } else {
+        // ❌ Fallback para dados da query tradicional (não deveria acontecer)
+        const fotosCount = [
+          item.url_foto_chegada,
+          item.url_foto_inicio,
+          item.url_foto_carregando,
+          item.url_foto_finalizacao
+        ].filter(url => url && url.trim() !== '').length;
+
+        const etapaAtual = item.etapa_atual ?? 1;
+        const statusInfo = getStatusCarregamento(etapaAtual);
+        const finalizado = etapaAtual === 6;
+
+        return {
+          id: item.id,
+          cliente: item.agendamento?.liberacao?.clientes?.nome || "N/A",
+          produto: item.agendamento?.liberacao?.produto?.nome || "N/A",
+          pedido: item.agendamento?.liberacao?.pedido_interno || "N/A",
+          armazem: item.agendamento?.liberacao?.armazem 
             ? `${item.agendamento.liberacao.armazem.nome} - ${item.agendamento.liberacao.armazem.cidade}/${item.agendamento.liberacao.armazem.estado}`
-            : "N/A"),
-        quantidade: isFromFunction ? item.quantidade : (item.agendamento?.quantidade || 0),
-        placa: isFromFunction ? item.placa_caminhao : (item.agendamento?.placa_caminhao || "N/A"),
-        motorista: isFromFunction ? item.motorista_nome : (item.agendamento?.motorista_nome || "N/A"),
-        documento: isFromFunction ? item.motorista_documento : (item.agendamento?.motorista_documento || "N/A"),
-        data_retirada: isFromFunction ? item.data_retirada : (item.agendamento?.data_retirada || "N/A"),
-        etapa_atual: etapaAtual,
-        fotosTotal: fotosCount,
-        numero_nf: item.numero_nf || null,
-        cliente_id: item.cliente_id ?? null,
-        armazem_id: item.armazem_id ?? null,
-        status_carregamento: statusInfo.status,
-        cor_carregamento: statusInfo.cor,
-        tooltip_carregamento: statusInfo.tooltip,
-        percentual_carregamento: statusInfo.percentual,
-        finalizado,
-      };
+            : "N/A",
+          quantidade: item.agendamento?.quantidade || 0,
+          placa: item.agendamento?.placa_caminhao || "N/A",
+          motorista: item.agendamento?.motorista_nome || "N/A",
+          documento: item.agendamento?.motorista_documento || "N/A",
+          data_retirada: item.agendamento?.data_retirada || "N/A",
+          etapa_atual: etapaAtual,
+          fotosTotal: fotosCount,
+          numero_nf: item.numero_nf || null,
+          cliente_id: item.cliente_id ?? null,
+          armazem_id: item.armazem_id ?? null,
+          status_carregamento: statusInfo.status,
+          cor_carregamento: statusInfo.cor,
+          tooltip_carregamento: statusInfo.tooltip,
+          percentual_carregamento: statusInfo.percentual,
+          finalizado,
+        };
+      }
     });
   }, [carregamentosData]);
 
