@@ -256,6 +256,10 @@ const CarregamentoDetalhe = () => {
       });
       
       console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
+
+      console.log("🔍 [DEBUG] Dados brutos da função:", carregamentoData);
+      console.log("🔍 [DEBUG] Tipo dos dados:", typeof carregamentoData);
+      console.log("🔍 [DEBUG] É array?", Array.isArray(carregamentoData));
       
       if (error) throw error;
       
@@ -308,7 +312,7 @@ const CarregamentoDetalhe = () => {
     etapa_5a_status: carregamentoData.etapa_5a_status,
     etapa_5b_status: carregamentoData.etapa_5b_status,
     etapa_5c_status: carregamentoData.etapa_5c_status,
-    agendamento: {
+    agendamento: carregamentoData.agendamento_id ? {
       id: carregamentoData.agendamento_id,
       data_retirada: carregamentoData.agendamento_data_retirada,
       quantidade: carregamentoData.agendamento_quantidade,
@@ -316,15 +320,15 @@ const CarregamentoDetalhe = () => {
       motorista_nome: carregamentoData.agendamento_motorista_nome,
       motorista_documento: carregamentoData.agendamento_motorista_documento,
       cliente: {
-        nome: carregamentoData.cliente_nome
+        nome: carregamentoData.cliente_nome || "N/A"
       },
       liberacao: {
-        pedido_interno: carregamentoData.liberacao_pedido_interno,
+        pedido_interno: carregamentoData.liberacao_pedido_interno || "N/A",
         produto: {
-          nome: carregamentoData.produto_nome
+          nome: carregamentoData.produto_nome || "N/A"
         }
       }
-    }
+    } : null
   } : null;
 
   const proximaEtapaMutation = useMutation({
