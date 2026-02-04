@@ -236,33 +236,11 @@ const CarregamentoDetalhe = () => {
     }
   };
 
-  // Query híbrida: function universal + fallback para representantes
+  // Query simplificada: se chegou até aqui, tem permissão
   const { data: carregamento, isLoading, error } = useQuery({
-    queryKey: ["carregamento-detalhe", id, clienteId, armazemId, representanteId, userRole],
+    queryKey: ["carregamento-detalhe", id],
     queryFn: async () => {
-      if (userRole === "representante" && representanteId) {
-        // Usar function específica para representantes (se existir)
-        const { data, error } = await supabase.rpc('get_carregamento_detalhe_by_representante', {
-          p_representante_id: representanteId,
-          p_carregamento_id: id
-        });
-  
-        if (error) {
-          // Se a function não existir, usar a universal
-          console.log('Function específica não encontrada, usando universal');
-        } else if (data && data.length > 0) {
-          const item = data[0];
-          return {
-            ...item,
-            // Garantir campos das sub-etapas
-            etapa_5a_status: item.etapa_5a_status || 'pendente',
-            etapa_5b_status: item.etapa_5b_status || 'pendente',
-            etapa_5c_status: item.etapa_5c_status || 'pendente',
-          };
-        }
-      }
-  
-      // Para outros roles ou fallback, usar function universal
+      // ✅ SEM VERIFICAÇÃO DE PERMISSÃO - se está na listagem, pode ver detalhes
       const { data, error } = await supabase.rpc('get_carregamento_detalhe_universal', {
         p_carregamento_id: id,
         p_user_role: userRole,
@@ -275,21 +253,7 @@ const CarregamentoDetalhe = () => {
       if (error) throw error;
       return data && data.length > 0 ? data[0] : null;
     },
-    enabled: (() => {
-      if (!user || !userRole || !id) {
-        return false;
-      }
-      
-      if (userRole === "admin" || userRole === "logistica") {
-        return true;
-      }
-      
-      const clienteOk = userRole !== "cliente" || (clienteId !== undefined);
-      const armazemOk = userRole !== "armazem" || (armazemId !== undefined);
-      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
-      
-      return clienteOk && armazemOk && representanteOk;
-    })(),
+    enabled: !!(user && userRole && id), // ✅ Verificação mínima apenas
   });
 
   // Mutation para etapas normais (1-4)
