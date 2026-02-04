@@ -109,7 +109,7 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
   
-  // ✅ ADICIONAR ESTES LOGS AQUI:
+  // ✅ LOGS DE DEBUG MANTIDOS
   console.log("🔍 [DEBUG] Liberacoes - Estado atual:");
   console.log("- userRole:", userRole);
   console.log("- representanteId:", representanteId);
@@ -169,155 +169,65 @@ const Liberacoes = () => {
     enabled: !!user && userRole === "armazem",
   });
 
+  // 🚀 MIGRAÇÃO PRINCIPAL - FUNÇÃO UNIVERSAL
   const { data: liberacoesData, isLoading, error } = useQuery({
-    queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
+    queryKey: ["liberacoes-universal", userRole, user?.id],
     queryFn: async () => {
-      // ✅ ADICIONAR ESTES LOGS:
-      console.log("🔍 [DEBUG] Query liberacoes executando:");
+      console.log("🔍 [DEBUG] Chamando função universal:");
       console.log("- userRole:", userRole);
+      console.log("- user?.id:", user?.id);
+      console.log("- currentCliente?.id:", currentCliente?.id);
+      console.log("- currentArmazem?.id:", currentArmazem?.id);
       console.log("- representanteId:", representanteId);
-      console.log("- user:", user);
       
-      if (userRole === "representante" && representanteId) {
-        console.log("🔍 [DEBUG] Chamando RPC com representanteId:", representanteId);
-        const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
-          p_representante_id: representanteId
-        });
-        
-        console.log("🔍 [DEBUG] Resultado RPC:", { data, error });
-        // ✅ ADICIONAR ESTES LOGS AQUI:
-        console.log("🔍 [DEBUG] Resultado RPC - Data detalhada:", JSON.stringify(data, null, 2));
-        console.log("�� [DEBUG] Resultado RPC - Error detalhado:", error);
-        
-        if (error) throw error;
-        return data || [];
-      }
-
-      let query = supabase
-        .from("liberacoes")
-        .select(`
-          id,
-          pedido_interno,
-          quantidade_liberada,
-          quantidade_retirada,
-          data_liberacao,
-          status,
-          cliente_id,
-          armazem_id,
-          produto_id,
-          clientes (
-            id,
-            nome,
-            cnpj_cpf
-          ),
-          armazens (
-            id,
-            nome,
-            endereco,
-            cidade,
-            estado
-          ),
-          produtos (
-            id,
-            nome,
-            unidade
-          ),
-          created_at
-        `)
-        .order("data_liberacao", { ascending: false });
-
-      if (userRole === "cliente" && currentCliente?.id) {
-        query = query.eq("cliente_id", currentCliente.id);
-      }
-
-      if (userRole === "armazem" && currentArmazem?.id) {
-        query = query.eq("armazem_id", currentArmazem.id);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc('get_liberacoes_universal', {
+        p_user_role: userRole,
+        p_user_id: user?.id,
+        p_cliente_id: currentCliente?.id || null,
+        p_armazem_id: currentArmazem?.id || null,
+        p_representante_id: representanteId || null
+      });
+      
+      console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
+      
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 30000,
-    enabled: (() => {
-      if (!user || !userRole) return false;
-      if (userRole === "admin" || userRole === "logistica") return true;
-      
-      const clienteOk = userRole !== "cliente" || (currentCliente?.id !== undefined);
-      const armazemOk = userRole !== "armazem" || (currentArmazem?.id !== undefined);
-      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
-      
-      return clienteOk && armazemOk && representanteOk;
-    })(),
-  });
-
-  const { data: agendamentosData } = useQuery({
-    queryKey: ["agendamentos-totais"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agendamentos")
-        .select(`
-          liberacao_id,
-          quantidade,
-          status
-        `)
-        .in("status", ["pendente", "em_andamento", "concluido"]);
-      
-      if (error) throw error;
-      
-      const agrupados = (data || []).reduce((acc: Record<string, number>, item) => {
-        acc[item.liberacao_id] = (acc[item.liberacao_id] || 0) + Number(item.quantidade);
-        return acc;
-      }, {});
-      
-      return agrupados;
-    },
+    enabled: !!user && !!userRole,
     refetchInterval: 30000,
   });
 
+  // ✅ USEMEMO SIMPLIFICADO - CAMPOS JÁ CALCULADOS NO BACKEND
   const liberacoes = useMemo(() => {
     if (!liberacoesData) return [];
     
     return liberacoesData.map((item: any) => {
-      const quantidadeRetirada = item.quantidade_retirada || 0;
-      const quantidadeAgendada = agendamentosData?.[item.id] || 0;
-      
-      const percentualRetirado = item.quantidade_liberada > 0 
-        ? Math.round((quantidadeRetirada / item.quantidade_liberada) * 100) 
-        : 0;
-      const percentualAgendado = item.quantidade_liberada > 0 
-        ? Math.round((quantidadeAgendada / item.quantidade_liberada) * 100) 
-        : 0;
-
-      const finalizada = quantidadeRetirada >= item.quantidade_liberada;
-      const isFromFunction = !!item.cliente_nome;
+      // ✅ Todos os campos já vêm calculados do backend
+      const finalizada = item.finalizada || false;
 
       return {
         id: item.id,
-        produto: isFromFunction ? item.produto_nome : (item.produtos?.nome || "N/A"),
-        cliente: isFromFunction ? item.cliente_nome : (item.clientes?.nome || "N/A"),
+        produto: item.produto_nome,
+        cliente: item.cliente_nome,
         quantidade: item.quantidade_liberada,
-        quantidadeRetirada,
-        quantidadeAgendada: isFromFunction ? 
-          (item.quantidade_liberada - (item.quantidade_disponivel || 0) - quantidadeRetirada) : 
-          quantidadeAgendada, // ✅ Para representante, calcular baseado no campo do backend
-        percentualRetirado,
-        percentualAgendado: isFromFunction ? 
-          Math.round(((item.quantidade_liberada - (item.quantidade_disponivel || 0) - quantidadeRetirada) / item.quantidade_liberada) * 100) : 
-          percentualAgendado, // ✅ Para representante, calcular baseado no campo do backend
+        quantidadeRetirada: item.quantidade_retirada,
+        quantidadeAgendada: item.quantidade_agendada,
+        percentualRetirado: item.percentual_retirado, // ✅ Já calculado
+        percentualAgendado: item.percentual_agendado, // ✅ Já calculado
         pedido: item.pedido_interno,
-        data: new Date(item.data_liberacao || item.created_at).toLocaleDateString("pt-BR"),
+        data: new Date(item.data_liberacao).toLocaleDateString("pt-BR"),
         status: item.status as StatusLiberacao,
-        armazem: isFromFunction 
-          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
-          : (item.armazens ? `${item.armazens.nome} - ${item.armazens.cidade}/${item.armazens.estado}` : "N/A"),
+        armazem: `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`,
         produto_id: item.produto_id,
         armazem_id: item.armazem_id,
         created_at: item.created_at,
         finalizada,
       };
     });
-  }, [liberacoesData, agendamentosData]);
+  }, [liberacoesData]);
+
+  // ❌ REMOVIDO: Query de agendamentosData (não é mais necessária)
+  // Os dados de agendamentos já vêm calculados na função universal
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novaLiberacao, setNovaLiberacao] = useState({
@@ -571,7 +481,8 @@ const Liberacoes = () => {
 
       resetFormNovaLiberacao();
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["liberacoes", currentCliente?.id, currentArmazem?.id] });
+      // ✅ INVALIDAR QUERY UNIVERSAL
+      queryClient.invalidateQueries({ queryKey: ["liberacoes-universal"] });
 
     } catch (err: unknown) {
       toast({
