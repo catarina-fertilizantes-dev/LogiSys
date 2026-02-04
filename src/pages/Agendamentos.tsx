@@ -229,7 +229,14 @@ const Agendamentos = () => {
   const { hasRole, userRole, user } = useAuth();
   const { representanteId, clientesDoRepresentante } = usePermissions();
   
-  // 🔧 CORREÇÃO: Representante deve ter mesmas permissões que cliente
+  // ✅ LOGS DE DEBUG EXPANDIDOS
+  console.log("🔍 [DEBUG] Agendamentos - Estado atual:");
+  console.log("- userRole:", userRole);
+  console.log("- representanteId:", representanteId);
+  console.log("- representanteId type:", typeof representanteId);
+  console.log("- user:", user);
+  console.log("- clientesDoRepresentante:", clientesDoRepresentante);
+  
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente") || hasRole("representante");
   const [isCreating, setIsCreating] = useState(false);
   const [detalhesAgendamento, setDetalhesAgendamento] = useState<AgendamentoItem | null>(null);
@@ -265,69 +272,40 @@ const Agendamentos = () => {
     enabled: !!user && userRole === "armazem",
   });
 
+  // 🚀 MIGRAÇÃO PARA FUNÇÃO UNIVERSAL
   const { data: agendamentosData, isLoading, error } = useQuery({
     queryKey: ["agendamentos", currentCliente?.id, currentArmazem?.id, representanteId, userRole],
     queryFn: async () => {
-      if (userRole === "representante" && representanteId) {
-        const { data, error } = await supabase.rpc('get_agendamentos_by_representante', {
-          p_representante_id: representanteId
-        });
-        
-        if (error) throw error;
-        return data || [];
-      }
-
-      let query = supabase
-        .from("agendamentos")
-        .select(`
-          id,
-          data_retirada,
-          quantidade,
-          motorista_nome,
-          motorista_documento,
-          placa_caminhao,
-          tipo_caminhao,
-          status,
-          observacoes,
-          created_at,
-          updated_at,
-          liberacao:liberacoes(
-            id,
-            pedido_interno,
-            quantidade_liberada,
-            quantidade_retirada,
-            status,
-            cliente_id,
-            clientes(nome, cnpj_cpf),
-            produto:produtos(id, nome),
-            armazem:armazens(id, nome, cidade, estado)
-          ),
-          carregamentos!carregamentos_agendamento_id_fkey(
-            id,
-            etapa_atual
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (userRole === "cliente" && currentCliente?.id) {
-        query = query.eq("cliente_id", currentCliente.id);
-      }
-      if (userRole === "armazem" && currentArmazem?.id) {
-        query = query.eq("armazem_id", currentArmazem.id);
-      }
-
-      const { data, error } = await query;
+      console.log("🔍 [DEBUG] Query agendamentos executando:");
+      console.log("- userRole:", userRole);
+      console.log("- representanteId:", representanteId);
+      console.log("- currentCliente?.id:", currentCliente?.id);
+      console.log("- user:", user);
+      
+      // 🚀 USAR FUNÇÃO UNIVERSAL PARA TODOS OS ROLES
+      const { data, error } = await supabase.rpc('get_agendamentos_universal', {
+        p_user_role: userRole,
+        p_user_id: user?.id,
+        p_cliente_id: currentCliente?.id || null,
+        p_armazem_id: currentArmazem?.id || null,
+        p_representante_id: representanteId || null
+      });
+      
+      console.log("🔍 [DEBUG] Resultado função universal:", { data, error });
+      
       if (error) throw error;
-      return data ?? [];
+      return data || [];
     },
     refetchInterval: 30000,
     enabled: (() => {
       if (!user || !userRole) return false;
       if (userRole === "admin" || userRole === "logistica") return true;
       
-      const clienteOk = userRole !== "cliente" || (currentCliente?.id !== undefined);
-      const armazemOk = userRole !== "armazem" || (currentArmazem?.id !== undefined);
+      const clienteOk = userRole !== "cliente" || (currentCliente !== undefined);
+      const armazemOk = userRole !== "armazem" || (currentArmazem !== undefined);
       const representanteOk = userRole !== "representante" || (representanteId !== undefined);
+      
+      console.log("🔍 [DEBUG] Enabled check:", { clienteOk, armazemOk, representanteOk });
       
       return clienteOk && armazemOk && representanteOk;
     })(),
@@ -351,52 +329,82 @@ const Agendamentos = () => {
     enabled: !!user,
   });
 
+  // ✅ USEMEMO HÍBRIDO - SUPORTA FUNÇÃO UNIVERSAL E FALLBACK
   const agendamentos = useMemo(() => {
     if (!agendamentosData) return [];
     
     return agendamentosData.map((item: any): AgendamentoItem => {
+      // ✅ Verificar se vem da função universal (tem campos calculados)
       const isFromFunction = !!item.cliente_nome;
       
-      let etapaAtual = 1;
       if (isFromFunction) {
-        etapaAtual = item.etapa_atual ?? 1;
+        // ✅ Dados já calculados da função universal
+        const etapaAtual = item.etapa_atual ?? 1;
+        const statusInfo = getStatusCarregamento(etapaAtual);
+        const finalizado = item.status === 'concluido';
+        
+        return {
+          id: item.id,
+          cliente: item.cliente_nome,
+          produto: item.produto_nome,
+          quantidade: item.quantidade,
+          data: new Date(item.data_retirada).toLocaleDateString("pt-BR"),
+          placa: item.placa_caminhao || "N/A",
+          motorista: item.motorista_nome || "N/A",
+          documento: item.motorista_documento || "N/A",
+          pedido: item.pedido_interno,
+          status: item.status as AgendamentoStatus,
+          armazem: `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`,
+          produto_id: item.produto_id,
+          armazem_id: item.armazem_id,
+          liberacao_id: item.liberacao_id,
+          updated_at: item.updated_at,
+          tipo_caminhao: item.tipo_caminhao,
+          observacoes: item.observacoes,
+          etapa_carregamento: etapaAtual,
+          status_carregamento: statusInfo.status,
+          percentual_carregamento: statusInfo.percentual,
+          cor_carregamento: statusInfo.cor,
+          tooltip_carregamento: statusInfo.tooltip,
+          finalizado,
+        };
       } else {
+        // ❌ Fallback para dados da query tradicional (não deveria acontecer)
+        let etapaAtual = 1;
         const carregamento = item.carregamentos?.[0];
         etapaAtual = carregamento?.etapa_atual ?? 1;
+        
+        const statusInfo = getStatusCarregamento(etapaAtual);
+        const finalizado = item.status === 'concluido';
+        
+        return {
+          id: item.id,
+          cliente: item.liberacao?.clientes?.nome || "N/A",
+          produto: item.liberacao?.produto?.nome || "N/A",
+          quantidade: item.quantidade,
+          data: item.data_retirada
+            ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
+            : "",
+          placa: item.placa_caminhao || "N/A",
+          motorista: item.motorista_nome || "N/A",
+          documento: item.motorista_documento || "N/A",
+          pedido: item.liberacao?.pedido_interno || "N/A",
+          status: item.status as AgendamentoStatus,
+          armazem: item.liberacao?.armazem ? `${item.liberacao.armazem.nome} - ${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado}` : "N/A",
+          produto_id: item.liberacao?.produto?.id,
+          armazem_id: item.liberacao?.armazem?.id,
+          liberacao_id: item.liberacao?.id,
+          updated_at: item.updated_at,
+          tipo_caminhao: item.tipo_caminhao,
+          observacoes: item.observacoes,
+          etapa_carregamento: etapaAtual,
+          status_carregamento: statusInfo.status,
+          percentual_carregamento: statusInfo.percentual,
+          cor_carregamento: statusInfo.cor,
+          tooltip_carregamento: statusInfo.tooltip,
+          finalizado,
+        };
       }
-      
-      const statusInfo = getStatusCarregamento(etapaAtual);
-      const finalizado = item.status === 'concluido';
-      
-      return {
-        id: item.id,
-        cliente: isFromFunction ? item.cliente_nome : (item.liberacao?.clientes?.nome || "N/A"),
-        produto: isFromFunction ? item.produto_nome : (item.liberacao?.produto?.nome || "N/A"),
-        quantidade: item.quantidade,
-        data: item.data_retirada
-          ? new Date(item.data_retirada).toLocaleDateString("pt-BR")
-          : "",
-        placa: item.placa_caminhao || "N/A",
-        motorista: item.motorista_nome || "N/A",
-        documento: item.motorista_documento || "N/A",
-        pedido: isFromFunction ? item.pedido_interno : (item.liberacao?.pedido_interno || "N/A"),
-        status: item.status as AgendamentoStatus,
-        armazem: isFromFunction 
-          ? `${item.armazem_nome} - ${item.armazem_cidade}/${item.armazem_estado}`
-          : (item.liberacao?.armazem ? `${item.liberacao.armazem.nome} - ${item.liberacao.armazem.cidade}/${item.liberacao.armazem.estado}` : "N/A"),
-        produto_id: isFromFunction ? item.produto_id : item.liberacao?.produto?.id,
-        armazem_id: isFromFunction ? item.armazem_id : item.liberacao?.armazem?.id,
-        liberacao_id: isFromFunction ? item.liberacao_id : item.liberacao?.id,
-        updated_at: item.updated_at,
-        tipo_caminhao: item.tipo_caminhao,
-        observacoes: item.observacoes,
-        etapa_carregamento: etapaAtual,
-        status_carregamento: statusInfo.status,
-        percentual_carregamento: statusInfo.percentual,
-        cor_carregamento: statusInfo.cor,
-        tooltip_carregamento: statusInfo.tooltip,
-        finalizado,
-      };
     });
   }, [agendamentosData]);
 
@@ -415,94 +423,51 @@ const Agendamentos = () => {
   const [quantidadeDisponivel, setQuantidadeDisponivel] = useState<number>(0);
   const [validandoQuantidade, setValidandoQuantidade] = useState(false);
 
-  // 🔧 CORREÇÃO: Query de liberações deve incluir representante
+  // 🚀 MIGRAÇÃO PARA FUNÇÃO UNIVERSAL - LIBERAÇÕES DISPONÍVEIS
   const { data: liberacoesDisponiveis } = useQuery({
     queryKey: ["liberacoes-disponiveis", currentCliente?.id, representanteId, userRole],
     queryFn: async () => {
-      // 🔧 REPRESENTANTE: Usar function específica para liberações
-      if (userRole === "representante" && representanteId) {
-        const { data, error } = await supabase.rpc('get_liberacoes_by_representante', {
-          p_representante_id: representanteId
-        });
-        
-        if (error) throw error;
-        
-        // Filtrar apenas liberações disponíveis e calcular disponibilidade
-        const liberacoesDisponiveis = (data || []).filter((lib: any) => 
-          lib.status === 'disponivel' || lib.status === 'parcialmente_agendada'
-        );
-
-        const liberacoesComDisponibilidade = liberacoesDisponiveis.map((lib: any) => ({
-          id: lib.id,
-          pedido_interno: lib.pedido_interno,
-          quantidade_liberada: lib.quantidade_liberada,
-          quantidade_retirada: lib.quantidade_retirada,
-          status: lib.status,
-          cliente_id: lib.cliente_id,
-          clientes: { nome: lib.cliente_nome },
-          produto: { nome: lib.produto_nome },
-          armazem: {
-            id: lib.armazem_id,
-            cidade: lib.armazem_cidade,
-            estado: lib.armazem_estado,
-            nome: lib.armazem_nome
-          },
-          quantidade_disponivel_real: lib.quantidade_disponivel
-        }));
-        
-        return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
-      }
-
-      // Query tradicional para outros roles
-      let query = supabase
-        .from("liberacoes")
-        .select(`
-          id,
-          pedido_interno,
-          quantidade_liberada,
-          quantidade_retirada,
-          status,
-          cliente_id,
-          clientes(nome),
-          produto:produtos(nome),
-          armazem:armazens(id, cidade, estado, nome)
-        `)
-        .in("status", ["disponivel", "parcialmente_agendada"])
-        .order("created_at", { ascending: false });
-
-      if (userRole === "cliente" && currentCliente?.id) {
-        query = query.eq("cliente_id", currentCliente.id);
-      }
+      console.log("🔍 [DEBUG] Query liberacoes-disponiveis executando:");
+      console.log("- userRole:", userRole);
+      console.log("- representanteId:", representanteId);
+      console.log("- currentCliente?.id:", currentCliente?.id);
       
-      const { data, error } = await query;
+      // 🚀 USAR FUNÇÃO UNIVERSAL PARA LIBERAÇÕES DISPONÍVEIS
+      const { data, error } = await supabase.rpc('get_liberacoes_universal', {
+        p_user_role: userRole,
+        p_user_id: user?.id,
+        p_cliente_id: currentCliente?.id || null,
+        p_armazem_id: null, // Para agendamentos, não filtramos por armazém específico
+        p_representante_id: representanteId || null
+      });
+      
+      console.log("🔍 [DEBUG] Resultado função universal liberações:", { data, error });
+      
       if (error) throw error;
       
-      if (!data) return [];
-
-      const liberacoesComDisponibilidade = await Promise.all(
-        data.map(async (lib: any) => {
-          const { data: agendamentosPendentes } = await supabase
-            .from("agendamentos")
-            .select("quantidade")
-            .eq("liberacao_id", lib.id)
-            .in("status", ["pendente", "em_andamento"]);
-      
-          const totalAgendado = (agendamentosPendentes || []).reduce(
-            (total, ag) => total + (ag.quantidade || 0), 
-            0
-          );
-      
-          const disponivel = Math.max(
-            0, 
-            lib.quantidade_liberada - (lib.quantidade_retirada || 0) - totalAgendado
-          );
-      
-          return {
-            ...lib,
-            quantidade_disponivel_real: disponivel
-          };
-        })
+      // Filtrar apenas liberações disponíveis e calcular disponibilidade
+      const liberacoesDisponiveis = (data || []).filter((lib: any) => 
+        lib.status === 'disponivel' || lib.status === 'parcialmente_agendada'
       );
+
+      const liberacoesComDisponibilidade = liberacoesDisponiveis.map((lib: any) => ({
+        id: lib.id,
+        pedido_interno: lib.pedido_interno,
+        quantidade_liberada: lib.quantidade_liberada,
+        quantidade_retirada: lib.quantidade_retirada,
+        status: lib.status,
+        cliente_id: lib.cliente_id,
+        clientes: { nome: lib.cliente_nome },
+        produto: { nome: lib.produto_nome },
+        armazem: {
+          id: lib.armazem_id,
+          cidade: lib.armazem_cidade,
+          estado: lib.armazem_estado,
+          nome: lib.armazem_nome
+        },
+        quantidade_disponivel_real: lib.quantidade_disponivel || 
+          (lib.quantidade_liberada - (lib.quantidade_retirada || 0) - (lib.quantidade_agendada || 0))
+      }));
       
       return liberacoesComDisponibilidade.filter(lib => lib.quantidade_disponivel_real > 0);
     },
@@ -510,8 +475,10 @@ const Agendamentos = () => {
       if (!user || !userRole) return false;
       if (userRole === "admin" || userRole === "logistica") return true;
       
-      const clienteOk = userRole !== "cliente" || !!currentCliente?.id;
-      const representanteOk = userRole !== "representante" || !!representanteId;
+      const clienteOk = userRole !== "cliente" || (currentCliente !== undefined);
+      const representanteOk = userRole !== "representante" || (representanteId !== undefined);
+      
+      console.log("🔍 [DEBUG] Liberações enabled check:", { clienteOk, representanteOk });
       
       return clienteOk && representanteOk;
     })(),
@@ -997,7 +964,7 @@ const Agendamentos = () => {
                                   </span>
                                 ) : (
                                   <span className={quantidadeDisponivel > 0 ? "text-green-600" : "text-red-600"}>
-                                    Disponível: {quantidadeDisponivel.toLocaleString('pt-BR')}t
+                                                                        Disponível: {quantidadeDisponivel.toLocaleString('pt-BR')}t
                                   </span>
                                 )}
                               </div>
