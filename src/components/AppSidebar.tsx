@@ -231,7 +231,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-3 rounded-md min-h-[44px]`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px]`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
@@ -265,7 +265,7 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-3 rounded-md min-h-[44px]`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px]`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
@@ -293,7 +293,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-3"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-2"
                 >
                   <LogOut className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
                   {!isCollapsed && <span className="text-sm md:text-base">Sair</span>}
