@@ -142,19 +142,21 @@ All colors MUST be HSL.
     display: none;             /* Chrome, Safari, Opera */
   }
 
-  /* Touch targets mobile para SidebarTrigger - VERSÃO MAIS ESPECÍFICA */
+  /* Touch targets mobile para SidebarTrigger */
   @media (max-width: 767px) {
-    button[data-sidebar="trigger"] {
+    button[data-sidebar="trigger"],
+    [data-sidebar="trigger"] {
       height: 44px !important;
       width: 44px !important;
       padding: 8px !important;
+      min-height: 44px !important;
+      min-width: 44px !important;
     }
     
-    /* Fallback para caso o data-attribute não funcione */
-    .sidebar-trigger-mobile {
-      height: 44px !important;
-      width: 44px !important;
-      padding: 8px !important;
+    button[data-sidebar="trigger"] svg,
+    [data-sidebar="trigger"] svg {
+      height: 20px !important;
+      width: 20px !important;
     }
   }
 }
