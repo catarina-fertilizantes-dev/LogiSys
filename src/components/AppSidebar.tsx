@@ -193,13 +193,10 @@ export function AppSidebar() {
       className="top-14"
     >
       <SidebarContent className="pt-2 px-1 scrollbar-hide">
-        {/* 📱 MENU PRINCIPAL COM TOUCH TARGETS OTIMIZADOS */}
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
-            Menu Principal
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu>
               {visibleUpperMenuItems.map((item) => {
                 const isActive = isMenuActive(item.url);
                 return (
@@ -212,10 +209,10 @@ export function AppSidebar() {
                         onClick={handleItemClick}
                       >
                         <item.icon 
-                          className={`h-5 w-5 md:h-4 md:w-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
+                          className={`h-4 w-4 md:h-4 md:w-4 ${isActive ? 'text-primary' : ''}`} 
                         />
                         {!isCollapsed && (
-                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : ''}`}>
+                          <span className={isActive ? 'text-primary' : ''}>
                             {item.title}
                           </span>
                         )}
@@ -228,14 +225,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* 📱 CADASTROS COM TOUCH TARGETS OTIMIZADOS */}
         {showCadastros && (
           <SidebarGroup>
-            <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
-              Cadastros
-            </SidebarGroupLabel>
+            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
+              <SidebarMenu>
                 {visibleLowerMenuItems.map((item) => {
                   const isActive = isMenuActive(item.url);
                   return (
@@ -248,10 +242,10 @@ export function AppSidebar() {
                           onClick={handleItemClick}
                         >
                           <item.icon 
-                            className={`h-5 w-5 md:h-4 md:w-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
+                            className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
                           />
                           {!isCollapsed && (
-                            <span className={`text-sm font-medium ${isActive ? 'text-primary' : ''}`}>
+                            <span className={isActive ? 'text-primary' : ''}>
                               {item.title}
                             </span>
                           )}
@@ -265,19 +259,16 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* 📱 LOGOUT COM TOUCH TARGET OTIMIZADO */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-2 md:min-h-auto md:py-2"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] md:min-h-auto py-2"
                 >
-                  <LogOut className="h-5 w-5 md:h-4 md:w-4 flex-shrink-0" />
-                  {!isCollapsed && (
-                    <span className="text-sm font-medium">Sair</span>
-                  )}
+                  <LogOut className="h-4 w-4" />
+                  {!isCollapsed && <span>Sair</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
