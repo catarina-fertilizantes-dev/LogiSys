@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -184,7 +183,7 @@ const Clientes = () => {
   const [novoRepresentanteId, setNovoRepresentanteId] = useState<string>("");
   const [salvandoRepresentante, setSalvandoRepresentante] = useState(false);
 
-  // 🆕 ESTADOS PARA CONTROLE DE FECHAMENTO DO MODAL
+  // Estados para controle de fechamento do modal
   const [alertaSalvarAberto, setAlertaSalvarAberto] = useState(false);
 
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
@@ -209,14 +208,14 @@ const Clientes = () => {
     });
   };
 
-  // 🆕 FUNÇÃO PARA RESETAR ESTADOS DE EDIÇÃO
+  // Função para resetar estados de edição
   const resetEdicaoStates = () => {
     setEditandoRepresentante(false);
     setNovoRepresentanteId("");
     setAlertaSalvarAberto(false);
   };
 
-  // 🆕 FUNÇÃO PARA FECHAR MODAL COM VERIFICAÇÃO
+  // Função para fechar modal com verificação
   const handleFecharModal = () => {
     if (editandoRepresentante) {
       setAlertaSalvarAberto(true);
@@ -226,13 +225,13 @@ const Clientes = () => {
     }
   };
 
-  // 🆕 FUNÇÃO PARA CONFIRMAR FECHAMENTO SEM SALVAR
+  // Função para confirmar fechamento sem salvar
   const handleConfirmarFechamento = () => {
     setDetalhesCliente(null);
     resetEdicaoStates();
   };
 
-  // 🆕 FUNÇÃO PARA SALVAR E FECHAR
+  // Função para salvar e fechar
   const handleSalvarEFechar = async () => {
     await handleSalvarRepresentante();
     setDetalhesCliente(null);
@@ -296,14 +295,14 @@ const Clientes = () => {
     }
   };
 
-  // FUNÇÃO PARA SALVAR ALTERAÇÃO DE REPRESENTANTE - CORRIGIDA
+  // Função para salvar alteração de representante
   const handleSalvarRepresentante = async () => {
     if (!detalhesCliente) return;
 
     setSalvandoRepresentante(true);
 
     try {
-      // TRATAR O VALOR "sem-representante" COMO NULL
+      // Tratar o valor "sem-representante" como null
       const representanteIdParaSalvar = novoRepresentanteId === "sem-representante" ? null : novoRepresentanteId;
       
       const { error } = await supabase
@@ -371,10 +370,10 @@ const Clientes = () => {
     setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
-  // FUNÇÃO PARA INICIAR EDIÇÃO - CORRIGIDA
+  // Função para iniciar edição
   const handleIniciarEdicao = () => {
     setEditandoRepresentante(true);
-    // SE NÃO TEM REPRESENTANTE, USAR "sem-representante"
+    // Se não tem representante, usar "sem-representante"
     setNovoRepresentanteId(detalhesCliente?.representante_id || "sem-representante");
   };
 
@@ -686,11 +685,14 @@ const Clientes = () => {
                   Novo Cliente
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+              
+              {/* Modal de Criação com Botões Não-Fixos */}
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+                <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Cliente</DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto py-4 px-1">
+                
+                <div className="py-4 px-1 space-y-6">
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
@@ -845,34 +847,36 @@ const Clientes = () => {
                       * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
                     </p>
                   </div>
+
+                  {/* Botões no final do conteúdo */}
+                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      disabled={isCreating}
+                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
+                      onClick={handleCreateCliente}
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Criar Cliente
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setDialogOpen(false)}
-                    disabled={isCreating}
-                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                    onClick={handleCreateCliente}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Criar Cliente
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           )
@@ -942,7 +946,7 @@ const Clientes = () => {
         )}
       </div>
 
-      {/* Modal credenciais temporárias do Cliente - Otimizado */}
+      {/* Modal de credenciais com botões não-fixos */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -953,11 +957,12 @@ const Clientes = () => {
           )
         }
       >
-        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+          <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
             <DialogTitle className="text-lg md:text-xl pr-2 mt-1">✅ Cliente cadastrado com sucesso!</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4 px-1">
+          
+          <div className="py-4 px-1 space-y-6">
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
@@ -987,31 +992,33 @@ const Clientes = () => {
                 </p>
               </div>
             </div>
+
+            {/* Botões no final do conteúdo */}
+            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const baseUrl = window.location.origin;
+                  const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                  navigator.clipboard.writeText(texto);
+                  toast({ title: "Credenciais copiadas!" });
+                }}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+              >
+                📋 Copiar credenciais
+              </Button>
+              <Button 
+                onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+              >
+                Fechar
+              </Button>
+            </div>
           </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const baseUrl = window.location.origin;
-                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
-                navigator.clipboard.writeText(texto);
-                toast({ title: "Credenciais copiadas!" });
-              }}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              📋 Copiar credenciais
-            </Button>
-            <Button 
-              onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 ALERT DIALOG PARA SALVAR ANTES DE FECHAR */}
+      {/* Alert Dialog para salvar antes de fechar */}
       <AlertDialog open={alertaSalvarAberto} onOpenChange={setAlertaSalvarAberto}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md">
           <AlertDialogHeader>
@@ -1037,7 +1044,7 @@ const Clientes = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 🆕 MODAL DE DETALHES MODIFICADO COM CONTROLE DE FECHAMENTO */}
+      {/* Modal de detalhes com botões não-fixos */}
       <Dialog 
         open={!!detalhesCliente} 
         onOpenChange={(open) => {
@@ -1046,11 +1053,12 @@ const Clientes = () => {
           }
         }}
       >
-        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+          <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
             <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes do Cliente</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4 px-1">
+          
+          <div className="py-4 px-1 space-y-6">
             <div className="space-y-4">
               {detalhesCliente && (
                 <>
@@ -1177,10 +1185,10 @@ const Clientes = () => {
                       )}
                     </div>
                   </div>
-        
+
                   {/* Separador */}
                   <div className="border-t"></div>
-        
+
                   {/* Endereço - Layout responsivo */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
@@ -1203,27 +1211,29 @@ const Clientes = () => {
                 </>
               )}
             </div>
-          </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-            {canCreate && detalhesCliente?.temp_password && (
-              <Button
-                variant="outline"
-                onClick={() => handleShowCredentials(detalhesCliente)}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+
+            {/* Botões no final do conteúdo */}
+            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+              {canCreate && detalhesCliente?.temp_password && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleShowCredentials(detalhesCliente)}
+                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                  disabled={editandoRepresentante}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Ver Credenciais
+                </Button>
+              )}
+              <Button 
+                onClick={handleFecharModal}
                 disabled={editandoRepresentante}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
               >
-                <Key className="h-4 w-4 mr-2" />
-                Ver Credenciais
+                Fechar
               </Button>
-            )}
-            <Button 
-              onClick={handleFecharModal}
-              disabled={editandoRepresentante}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
