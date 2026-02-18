@@ -155,8 +155,8 @@ All colors MUST be HSL.
     
     button[data-sidebar="trigger"] svg,
     [data-sidebar="trigger"] svg {
-      height: 20px !important;
-      width: 20px !important;
+      height: 24px !important;
+      width: 24px !important;
     }
   }
 }
