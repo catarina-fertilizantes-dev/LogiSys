@@ -385,7 +385,7 @@ const handleCreateUser = async () => {
                 Novo Colaborador
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
               <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b border-border mb-4">
                 <DialogTitle className="text-lg md:text-xl">Criar Novo Colaborador</DialogTitle>
                 <DialogDescription className="text-sm md:text-base">
