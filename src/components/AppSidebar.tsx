@@ -137,22 +137,10 @@ export function AppSidebar() {
     const isActive = isMenuActive(itemUrl);
     
     if (isActive) {
-      return `
-        bg-gradient-to-r from-primary/20 to-primary/10 
-        text-primary 
-        font-semibold 
-        border-r-2 border-primary
-        shadow-sm
-        ${!isCollapsed ? 'pl-4' : ''}
-      `;
+      return `bg-gradient-to-r from-primary/20 to-primary/10 text-primary font-semibold border-r-2 border-primary shadow-sm ${!isCollapsed ? 'pl-4' : ''}`;
     }
     
-    return `
-      hover:bg-sidebar-accent/50 
-      text-sidebar-foreground 
-      transition-all duration-200
-      hover:text-sidebar-accent-foreground
-    `;
+    return "hover:bg-sidebar-accent/50 text-sidebar-foreground transition-all duration-200 hover:text-sidebar-accent-foreground";
   };
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
@@ -204,7 +192,7 @@ export function AppSidebar() {
       collapsible="icon"
       className="top-14"
     >
-      <SidebarContent className="pt-2 px-1">
+      <SidebarContent className="pt-2 px-1 scrollbar-hide">
         {/* 📱 MENU PRINCIPAL COM TOUCH TARGETS OTIMIZADOS */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
@@ -220,10 +208,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} 
-                          flex items-center gap-3 rounded-md transition-all duration-200
-                          min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
-                        `}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 rounded-md transition-all duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
@@ -259,10 +244,7 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} 
-                            flex items-center gap-3 rounded-md transition-all duration-200
-                            min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
-                          `}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 rounded-md transition-all duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
@@ -290,9 +272,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200
-                    min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
-                  "
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2"
                 >
                   <LogOut className="h-5 w-5 md:h-4 md:w-4 flex-shrink-0" />
                   {!isCollapsed && (
