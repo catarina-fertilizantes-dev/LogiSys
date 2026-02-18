@@ -14,29 +14,28 @@ const NotFound = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center pb-0">
-          <div className="flex justify-center">
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center items-center gap-2 mb-2">
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
-              className="h-52 w-52 object-contain" 
+              className="h-8 w-8 object-contain" 
             />
+            <span className="text-sm font-medium text-muted-foreground">NEXOR</span>
           </div>
-          <CardTitle className="text-2xl font-bold -mt-2">NEXOR</CardTitle>
-          <CardDescription className="-mt-1">Sistema de Gestão Logística</CardDescription>
         </CardHeader>
-        <CardContent className="pt-4 text-center space-y-4">
+        <CardContent className="pt-0 text-center space-y-6">
           <div className="flex justify-center">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-              <AlertTriangle className="h-10 w-10 text-white" />
+            <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <AlertTriangle className="h-12 w-12 text-white" />
             </div>
           </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">404</h1>
-            <p className="text-lg text-muted-foreground">Página não encontrada</p>
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold text-foreground">404</h1>
+            <CardTitle className="text-xl">Página não encontrada</CardTitle>
+            <CardDescription className="text-base">
               A página que você está procurando não existe ou foi removida.
-            </p>
+            </CardDescription>
           </div>
           <Button 
             onClick={() => window.location.href = "/"} 
