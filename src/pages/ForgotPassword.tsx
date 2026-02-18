@@ -57,31 +57,30 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center pb-0">
-          <div className="flex justify-center">
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center items-center gap-2 mb-2">
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
-              className="h-52 w-52 object-contain" 
+              className="h-8 w-8 object-contain" 
             />
+            <span className="text-sm font-medium text-muted-foreground">NEXOR</span>
           </div>
-          <CardTitle className="text-2xl font-bold -mt-2">NEXOR</CardTitle>
-          <CardDescription className="-mt-1">Sistema de Gestão Logística</CardDescription>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-0">
           {emailSent ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex justify-center">
-                <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                  <Check className="h-10 w-10 text-white" />
+                <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                  <Check className="h-12 w-12 text-white" />
                 </div>
               </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">Email enviado!</h3>
-                <p className="text-sm text-muted-foreground">
+              <div className="text-center space-y-3">
+                <CardTitle className="text-xl">Email enviado!</CardTitle>
+                <CardDescription className="text-base">
                   Enviamos um link de recuperação para <strong>{email}</strong>
-                </p>
-                <p className="text-xs text-muted-foreground">
+                </CardDescription>
+                <p className="text-sm text-muted-foreground">
                   Verifique sua caixa de entrada e spam. O link expira em 1 hora.
                 </p>
               </div>
@@ -93,17 +92,17 @@ const ForgotPassword = () => {
               </Link>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex justify-center">
-                <div className="h-16 w-16 rounded-xl bg-gradient-primary flex items-center justify-center">
-                  <Mail className="h-10 w-10 text-white" />
+                <div className="h-20 w-20 rounded-xl bg-gradient-primary flex items-center justify-center">
+                  <Mail className="h-12 w-12 text-white" />
                 </div>
               </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">Esqueci minha senha</h3>
-                <p className="text-sm text-muted-foreground">
+              <div className="text-center space-y-3">
+                <CardTitle className="text-xl">Esqueci minha senha</CardTitle>
+                <CardDescription className="text-base">
                   Digite seu email para receber instruções de recuperação
-                </p>
+                </CardDescription>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
