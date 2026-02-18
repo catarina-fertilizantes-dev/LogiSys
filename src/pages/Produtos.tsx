@@ -53,7 +53,6 @@ const Produtos = () => {
   const [filterStatus, setFilterStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 🚀 NOVOS ESTADOS DE LOADING
   const [isCreating, setIsCreating] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<Record<string, boolean>>({});
 
@@ -94,11 +93,9 @@ const Produtos = () => {
   };
 
   useEffect(() => {
-    // Detectar se deve abrir o modal automaticamente
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
-      // Limpar o parâmetro da URL sem recarregar a página
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
@@ -118,7 +115,6 @@ const Produtos = () => {
       return;
     }
 
-    // 🚀 ATIVAR LOADING STATE
     setIsCreating(true);
 
     try {
@@ -144,8 +140,6 @@ const Produtos = () => {
         return;
       }
 
-      // Aqui pode haver uma Function personalizada como no cadastro de clientes,
-      // mas se for direto na tabela, use o insert padrão abaixo:
       const { error } = await supabase
         .from("produtos")
         .insert([{ nome: nome.trim(), unidade, ativo: true }]);
@@ -171,14 +165,11 @@ const Produtos = () => {
         description: err instanceof Error ? err.message : "Erro desconhecido",
       });
     } finally {
-      // 🚀 DESATIVAR LOADING STATE
       setIsCreating(false);
     }
   };
 
-  // 🚀 FUNÇÃO DE TOGGLE STATUS COM LOADING
   const handleToggleAtivo = async (id: string, ativoAtual: boolean) => {
-    // Ativar loading para este produto específico
     setIsTogglingStatus(prev => ({ ...prev, [id]: true }));
 
     try {
@@ -197,7 +188,6 @@ const Produtos = () => {
         title: "Erro ao alterar status",
       });
     } finally {
-      // Desativar loading para este produto
       setIsTogglingStatus(prev => ({ ...prev, [id]: false }));
     }
   };
@@ -218,10 +208,14 @@ const Produtos = () => {
     });
   }, [produtos, filterStatus, searchTerm]);
   
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
 
   const canCreate = hasRole("logistica") || hasRole("admin");
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+  };
 
   if (loading) {
     return (
@@ -245,7 +239,7 @@ const Produtos = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Produtos"
         subtitle="Gerencie os produtos do sistema"
@@ -253,63 +247,66 @@ const Produtos = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
               if (!open && isCreating) return;
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Produto
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Produto</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do produto.
-                  </DialogDescription>
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+                  <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Produto</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <Label htmlFor="nome">Nome *</Label>
-                    <Input
-                      id="nome"
-                      value={novoProduto.nome}
-                      onChange={e => setNovoProduto({ ...novoProduto, nome: e.target.value })}
-                      placeholder="Nome do produto"
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="unidade">Unidade *</Label>
-                    <Select
-                      value={novoProduto.unidade}
-                      onValueChange={value => setNovoProduto({ ...novoProduto, unidade: value as Unidade })}
-                      disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
-                    >
-                      <SelectTrigger id="unidade">
-                        <SelectValue placeholder="Selecione a unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="t">{unidadeLabels.t}</SelectItem>
-                        <SelectItem value="kg">{unidadeLabels.kg}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="flex-1 overflow-y-auto py-4 px-1">
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Preencha os dados do produto.
+                    </p>
+                    <div>
+                      <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
+                      <Input
+                        id="nome"
+                        value={novoProduto.nome}
+                        onChange={e => setNovoProduto({ ...novoProduto, nome: e.target.value })}
+                        placeholder="Nome do produto"
+                        disabled={isCreating}
+                        className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="unidade" className="text-sm font-medium">Unidade *</Label>
+                      <Select
+                        value={novoProduto.unidade}
+                        onValueChange={value => setNovoProduto({ ...novoProduto, unidade: value as Unidade })}
+                        disabled={isCreating}
+                      >
+                        <SelectTrigger id="unidade" className="min-h-[44px] max-md:min-h-[44px]">
+                          <SelectValue placeholder="Selecione a unidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="t">{unidadeLabels.t}</SelectItem>
+                          <SelectItem value="kg">{unidadeLabels.kg}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
                   <Button 
                     variant="outline" 
                     onClick={() => setDialogOpen(false)}
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
+                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
                   >
                     Cancelar
                   </Button>
                   <Button 
-                    className="bg-gradient-primary" 
+                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
                     onClick={handleCreateProduto}
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
                   >
                     {isCreating ? (
                       <>
@@ -330,13 +327,13 @@ const Produtos = () => {
         }
       />
 
-      {/* Filtros / Busca */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      {/* Filtros e busca - Otimizado para mobile */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
           <div className="flex gap-2 items-center">
-            <FilterIcon className="h-4 w-4 text-muted-foreground" />
+            <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <Select value={filterStatus} onValueChange={v => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] max-md:min-h-[44px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
@@ -350,79 +347,81 @@ const Produtos = () => {
             placeholder="Buscar por nome ou unidade..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="max-w-md"
+            className="w-full md:max-w-md min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
           />
-          {hasActiveFilters && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                setSearchTerm("");
-                setFilterStatus("all");
-              }}
-              className="gap-1"
-            >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
-            </Button>
-          )}
         </div>
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearFilters}
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+          >
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
+        )}
       </div>
 
-      {/* Modal detalhes produto */}
+      {/* Modal detalhes produto - Otimizado */}
       <Dialog open={!!detalhesProduto} onOpenChange={open => !open && setDetalhesProduto(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Produto</DialogTitle>
-            <DialogDescription>
-              {detalhesProduto?.nome}
-            </DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes do Produto</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {detalhesProduto && (
-              <>
-                {/* Informações Básicas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Unidade:</Label>
-                    <p className="font-semibold">{unidadeLabels[detalhesProduto.unidade || ""] || detalhesProduto.unidade}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Status:</Label>
-                    <div className="mt-1">
-                      <Badge variant={detalhesProduto.ativo ? "default" : "secondary"}>
-                        {detalhesProduto.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            <div className="space-y-4">
+              {detalhesProduto && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {detalhesProduto?.nome}
+                  </p>
+                  {/* Informações Básicas - Layout responsivo */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Unidade:</Label>
+                      <p className="font-semibold">{unidadeLabels[detalhesProduto.unidade || ""] || detalhesProduto.unidade}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status:</Label>
+                      <div className="mt-1">
+                        <Badge variant={detalhesProduto.ativo ? "default" : "secondary"}>
+                          {detalhesProduto.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Criado em:</Label>
+                      <p className="font-semibold">{detalhesProduto.created_at ? new Date(detalhesProduto.created_at).toLocaleString('pt-BR') : "—"}</p>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Criado em:</Label>
-                    <p className="font-semibold">{detalhesProduto.created_at ? new Date(detalhesProduto.created_at).toLocaleString() : "—"}</p>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setDetalhesProduto(null)}>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background">
+            <Button 
+              onClick={() => setDetalhesProduto(null)}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Lista de produtos */}
+      {/* Lista de produtos - Cards responsivos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredProdutos.map((produto) => (
           <Card
             key={produto.id}
-            className="cursor-pointer transition-all"
+            className="cursor-pointer transition-all hover:shadow-md"
             onClick={() => setDetalhesProduto(produto)}
           >
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{produto.nome}</h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg leading-tight">{produto.nome}</h3>
                   <p className="text-sm text-muted-foreground">
                     Unidade: {unidadeLabels[produto.unidade] || produto.unidade}
                   </p>
@@ -431,7 +430,7 @@ const Produtos = () => {
               <div className="space-y-1 text-sm">
                 <p>
                   <span className="text-muted-foreground">Criado em:</span>{" "}
-                  {produto.created_at ? new Date(produto.created_at).toLocaleString() : "—"}
+                  {produto.created_at ? new Date(produto.created_at).toLocaleDateString('pt-BR') : "—"}
                 </p>
               </div>
               {canCreate && (
@@ -459,6 +458,8 @@ const Produtos = () => {
           </Card>
         ))}
       </div>
+
+      {/* Estado vazio */}
       {filteredProdutos.length === 0 && (
         <div className="text-center py-12">
           <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -471,11 +472,8 @@ const Produtos = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => {
-                setSearchTerm("");
-                setFilterStatus("all");
-              }}
-              className="mt-2"
+              onClick={handleClearFilters}
+              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
