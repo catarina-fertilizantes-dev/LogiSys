@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCircle, ExternalLink, Loader2, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -764,11 +764,14 @@ const Estoque = () => {
                   Entrada de Estoque
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+              
+              {/* Modal de Entrada de Estoque com Botões Não-Fixos */}
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+                <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Registrar Entrada de Estoque</DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto py-4 px-1">
+                
+                <div className="py-4 px-1 space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="produto" className="text-sm font-medium">Produto *</Label>
@@ -967,37 +970,39 @@ const Estoque = () => {
                       * Campos obrigatórios
                     </p>
                   </div>
+
+                  {/* Botões no final do conteúdo */}
+                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      disabled={isCreating}
+                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
+                      onClick={handleCreateProduto}
+                      disabled={
+                        !temProdutosDisponiveis || 
+                        !temArmazensDisponiveis || 
+                        !notaRemessaFile || 
+                        !xmlRemessaFile || 
+                        isCreating
+                      }
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        "Salvar"
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setDialogOpen(false)}
-                    disabled={isCreating}
-                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                    onClick={handleCreateProduto}
-                    disabled={
-                      !temProdutosDisponiveis || 
-                      !temArmazensDisponiveis || 
-                      !notaRemessaFile || 
-                      !xmlRemessaFile || 
-                      isCreating
-                    }
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Salvar"
-                    )}
-                  </Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           ) : null
