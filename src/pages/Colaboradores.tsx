@@ -386,11 +386,8 @@ const handleCreateUser = async () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-              <DialogHeader className="flex-shrink-0 pb-4 border-b border-border pr-8">
-                <DialogTitle className="text-lg md:text-xl pr-2">Criar Novo Colaborador</DialogTitle>
-                <DialogDescription className="text-sm md:text-base pr-2">
-                  Crie um novo colaborador (Admin ou Logística). Clientes e armazéns são criados em suas respectivas páginas.
-                </DialogDescription>
+              <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+                <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Criar Novo Colaborador</DialogTitle>
               </DialogHeader>
               
               <div className="flex-1 overflow-y-auto py-4 px-1">
