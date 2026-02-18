@@ -636,19 +636,22 @@ const Representantes = () => {
       {/* Filtros e busca - Otimizado para mobile */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          <div className="flex gap-2 items-center">
-            <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] max-md:min-h-[44px]">
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ativo">Ativos</SelectItem>
-                <SelectItem value="inativo">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex gap-2 items-center">
+              <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
+                <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] max-md:min-h-[44px]">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          
           <Input
             placeholder="Buscar por nome, email, CPF/CNPJ, região..."
             value={searchTerm}
@@ -656,6 +659,7 @@ const Representantes = () => {
             className="w-full md:max-w-md min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
           />
         </div>
+        
         {hasActiveFilters && (
           <Button 
             variant="ghost" 
