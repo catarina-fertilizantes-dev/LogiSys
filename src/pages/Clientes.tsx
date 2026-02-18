@@ -669,7 +669,7 @@ const Clientes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Clientes"
         subtitle="Gerencie os clientes do sistema"
@@ -681,175 +681,182 @@ const Clientes = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Cliente
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do cliente. Um usuário de acesso será criado automaticamente.
-                  </DialogDescription>
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+                  <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Cliente</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label htmlFor="nome">Nome *</Label>
-                      <Input
-                        id="nome"
-                        value={novoCliente.nome}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
-                        placeholder="Nome completo"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cnpj_cpf">CNPJ/CPF *</Label>
-                      <Input
-                        id="cnpj_cpf"
-                        value={novoCliente.cnpj_cpf}
-                        onChange={(e) =>
-                          setNovoCliente({ ...novoCliente, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
-                        }
-                        placeholder="00.000.000/0000-00 ou 000.000.000-00"
-                        maxLength={18}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={novoCliente.email}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-                        placeholder="email@exemplo.com"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="representante_id">Representante</Label>
-                      <Select
-                        value={novoCliente.representante_id || undefined}
-                        onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value || "" })}
-                        disabled={isCreating}
-                      >
-                        <SelectTrigger id="representante_id">
-                          <SelectValue placeholder="Selecione um representante (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {representantes.filter(rep => rep.ativo).map((rep) => (
-                            <SelectItem key={rep.id} value={rep.id}>
-                              <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4" />
-                                {rep.nome}
-                              </div>
-                            </SelectItem>
-                          ))}
-                          {representantes.filter(rep => rep.ativo).length === 0 && (
-                            <SelectItem value="no-representantes" disabled>
-                              Nenhum representante disponível
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {novoCliente.representante_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
-                          className="mt-1 h-6 px-2 text-xs"
+                <div className="flex-1 overflow-y-auto py-4 px-1">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
+                        <Input
+                          id="nome"
+                          value={novoCliente.nome}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                          placeholder="Nome completo"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cnpj_cpf" className="text-sm font-medium">CNPJ/CPF *</Label>
+                        <Input
+                          id="cnpj_cpf"
+                          value={novoCliente.cnpj_cpf}
+                          onChange={(e) =>
+                            setNovoCliente({ ...novoCliente, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
+                          }
+                          placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                          maxLength={18}
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={novoCliente.email}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                          placeholder="email@exemplo.com"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="representante_id" className="text-sm font-medium">Representante</Label>
+                        <Select
+                          value={novoCliente.representante_id || undefined}
+                          onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value || "" })}
+                          disabled={isCreating}
                         >
-                          <X className="h-3 w-3 mr-1" />
-                          Remover representante
-                        </Button>
-                      )}
+                          <SelectTrigger id="representante_id" className="min-h-[44px] max-md:min-h-[44px]">
+                            <SelectValue placeholder="Selecione um representante (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {representantes.filter(rep => rep.ativo).map((rep) => (
+                              <SelectItem key={rep.id} value={rep.id}>
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="h-4 w-4" />
+                                  {rep.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                            {representantes.filter(rep => rep.ativo).length === 0 && (
+                              <SelectItem value="no-representantes" disabled>
+                                Nenhum representante disponível
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {novoCliente.representante_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
+                            className="mt-1 h-6 px-2 text-xs"
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Remover representante
+                          </Button>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+                        <Input
+                          id="telefone"
+                          value={novoCliente.telefone}
+                          onChange={e =>
+                            setNovoCliente({
+                              ...novoCliente,
+                              telefone: maskPhoneInput(e.target.value),
+                            })
+                          }
+                          placeholder="(00) 00000-0000"
+                          maxLength={15}
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cep" className="text-sm font-medium">CEP</Label>
+                        <Input
+                          id="cep"
+                          value={novoCliente.cep}
+                          onChange={e =>
+                            setNovoCliente({ ...novoCliente, cep: maskCEPInput(e.target.value) })
+                          }
+                          placeholder="00000-000"
+                          maxLength={9}
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="endereco" className="text-sm font-medium">Endereço</Label>
+                        <Input
+                          id="endereco"
+                          value={novoCliente.endereco}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                          placeholder="Rua, número, complemento"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cidade" className="text-sm font-medium">Cidade</Label>
+                        <Input
+                          id="cidade"
+                          value={novoCliente.cidade}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
+                          placeholder="Nome da cidade"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="estado" className="text-sm font-medium">Estado (UF)</Label>
+                        <Select
+                          value={novoCliente.estado}
+                          onValueChange={(value) => setNovoCliente({ ...novoCliente, estado: value })}
+                          disabled={isCreating}
+                        >
+                          <SelectTrigger id="estado" className="min-h-[44px] max-md:min-h-[44px]">
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {estadosBrasil.map((uf) => (
+                              <SelectItem key={uf} value={uf}>
+                                {uf}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="telefone">Telefone</Label>
-                      <Input
-                        id="telefone"
-                        value={novoCliente.telefone}
-                        onChange={e =>
-                          setNovoCliente({
-                            ...novoCliente,
-                            telefone: maskPhoneInput(e.target.value),
-                          })
-                        }
-                        placeholder="(00) 00000-0000"
-                        maxLength={15}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cep">CEP</Label>
-                      <Input
-                        id="cep"
-                        value={novoCliente.cep}
-                        onChange={e =>
-                          setNovoCliente({ ...novoCliente, cep: maskCEPInput(e.target.value) })
-                        }
-                        placeholder="00000-000"
-                        maxLength={9}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="endereco">Endereço</Label>
-                      <Input
-                        id="endereco"
-                        value={novoCliente.endereco}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
-                        placeholder="Rua, número, complemento"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cidade">Cidade</Label>
-                      <Input
-                        id="cidade"
-                        value={novoCliente.cidade}
-                        onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
-                        placeholder="Nome da cidade"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="estado">Estado (UF)</Label>
-                      <Select
-                        value={novoCliente.estado}
-                        onValueChange={(value) => setNovoCliente({ ...novoCliente, estado: value })}
-                        disabled={isCreating}
-                      >
-                        <SelectTrigger id="estado">
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {estadosBrasil.map((uf) => (
-                            <SelectItem key={uf} value={uf}>
-                              {uf}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
-                  </p>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
                   <Button 
                     variant="outline" 
                     onClick={() => setDialogOpen(false)}
                     disabled={isCreating}
+                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
                   >
                     Cancelar
                   </Button>
                   <Button 
-                    className="bg-gradient-primary" 
+                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
                     onClick={handleCreateCliente}
                     disabled={isCreating}
                   >
@@ -872,68 +879,70 @@ const Clientes = () => {
         }
       />
 
-      {/* Filtros e busca */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-          <div className="flex gap-2 items-center">
-            <FilterIcon className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ativo">Ativos</SelectItem>
-                <SelectItem value="inativo">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex gap-2 items-center">
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterRepresentante} onValueChange={setFilterRepresentante}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Representante" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os representantes</SelectItem>
-                <SelectItem value="sem-representante">Sem representante</SelectItem>
-                {representantes.map((rep) => (
-                  <SelectItem key={rep.id} value={rep.id}>
-                    <div className="flex items-center gap-2">
-                      <span className={rep.ativo ? "text-foreground" : "text-muted-foreground"}>
-                        {rep.nome}
-                      </span>
-                      {!rep.ativo && <span className="text-xs text-muted-foreground">(Inativo)</span>}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Filtros e busca - Otimizado para mobile */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex gap-2 items-center">
+              <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
+                <SelectTrigger className="w-full sm:w-[140px] min-h-[44px] max-md:min-h-[44px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="ativo">Ativos</SelectItem>
+                  <SelectItem value="inativo">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2 items-center">
+              <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Select value={filterRepresentante} onValueChange={setFilterRepresentante}>
+                <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] max-md:min-h-[44px]">
+                  <SelectValue placeholder="Representante" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os representantes</SelectItem>
+                  <SelectItem value="sem-representante">Sem representante</SelectItem>
+                  {representantes.map((rep) => (
+                    <SelectItem key={rep.id} value={rep.id}>
+                      <div className="flex items-center gap-2">
+                        <span className={rep.ativo ? "text-foreground" : "text-muted-foreground"}>
+                          {rep.nome}
+                        </span>
+                        {!rep.ativo && <span className="text-xs text-muted-foreground">(Inativo)</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <Input
             placeholder="Buscar por nome, email, CNPJ/CPF, representante..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
+            className="w-full md:max-w-md min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
           />
-          
-          {hasActiveFilters && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleClearFilters}
-              className="gap-1"
-            >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
-            </Button>
-          )}
         </div>
+        
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearFilters}
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+          >
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
+        )}
       </div>
 
-      {/* Modal credenciais temporárias do Cliente */}
+      {/* Modal credenciais temporárias do Cliente - Otimizado */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -944,40 +953,42 @@ const Clientes = () => {
           )
         }
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>✅ Cliente cadastrado com sucesso!</DialogTitle>
-            <DialogDescription>
-              Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
-            </DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1">✅ Cliente cadastrado com sucesso!</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
-              <p className="text-sm font-medium">Credenciais de acesso para:</p>
-              <p className="text-base font-semibold">{credenciaisModal.nome}</p>
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Acesse:</Label>
-                  <p className="font-mono text-sm text-blue-600">{window.location.origin}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Email:</Label>
-                  <p className="font-mono text-sm">{credenciaisModal.email}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
-                  <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Credenciais de acesso criadas. Envie ao cliente por email ou WhatsApp.
+              </p>
+              <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
+                <p className="text-sm font-medium">Credenciais de acesso para:</p>
+                <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Acesse:</Label>
+                    <p className="font-mono text-sm text-blue-600 break-all">{window.location.origin}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email:</Label>
+                    <p className="font-mono text-sm break-all">{credenciaisModal.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
+                    <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-200">
-                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente.
-                Por segurança, esta senha só aparece uma vez. O cliente será obrigado a trocar a senha no primeiro login.
-              </p>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  ⚠️ <strong>Importante:</strong> Envie estas credenciais ao cliente.
+                  Por segurança, esta senha só aparece uma vez. O cliente será obrigado a trocar a senha no primeiro login.
+                </p>
+              </div>
             </div>
           </div>
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -986,10 +997,14 @@ const Clientes = () => {
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
             >
               📋 Copiar credenciais
             </Button>
-            <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
+            <Button 
+              onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar
             </Button>
           </DialogFooter>
@@ -998,18 +1013,24 @@ const Clientes = () => {
 
       {/* 🆕 ALERT DIALOG PARA SALVAR ANTES DE FECHAR */}
       <AlertDialog open={alertaSalvarAberto} onOpenChange={setAlertaSalvarAberto}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Salvar alterações?</AlertDialogTitle>
             <AlertDialogDescription>
               Você tem alterações não salvas na edição do representante. Deseja salvar antes de fechar?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleConfirmarFechamento}>
+          <AlertDialogFooter className="flex-col-reverse gap-2 md:flex-row md:gap-0">
+            <AlertDialogCancel 
+              onClick={handleConfirmarFechamento}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar sem salvar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleSalvarEFechar}>
+            <AlertDialogAction 
+              onClick={handleSalvarEFechar}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Salvar e fechar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1025,172 +1046,171 @@ const Clientes = () => {
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Cliente</DialogTitle>
-            <DialogDescription>
-              {detalhesCliente?.nome}
-            </DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes do Cliente</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {detalhesCliente && (
-              <>
-                {/* ALERTA PARA CLIENTE INATIVO */}
-                {!detalhesCliente.ativo && editandoRepresentante && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-amber-800 dark:text-amber-200">
-                        <strong>Atenção:</strong> Este cliente está inativo. O representante só poderá acessar informações após a reativação do cliente.
-                      </p>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            <div className="space-y-4">
+              {detalhesCliente && (
+                <>
+                  {/* ALERTA PARA CLIENTE INATIVO */}
+                  {!detalhesCliente.ativo && editandoRepresentante && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                          <strong>Atenção:</strong> Este cliente está inativo. O representante só poderá acessar informações após a reativação do cliente.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Informações Básicas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Email:</Label>
-                    <p className="font-semibold">{detalhesCliente.email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Status:</Label>
-                    <div className="mt-1">
-                      <Badge variant={detalhesCliente.ativo ? "default" : "secondary"}>
-                        {detalhesCliente.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
+                  {/* Informações Básicas - Layout responsivo */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Email:</Label>
+                      <p className="font-semibold break-all">{detalhesCliente.email}</p>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
-                    <p className="font-semibold">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                    <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
-                  </div>
-                  
-                  {/* SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
-                  <div className="col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs text-muted-foreground">Representante:</Label>
-                      {canCreate && !editandoRepresentante && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleIniciarEdicao}
-                          className="h-6 px-2 text-xs"
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Editar
-                        </Button>
-                      )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status:</Label>
+                      <div className="mt-1">
+                        <Badge variant={detalhesCliente.ativo ? "default" : "secondary"}>
+                          {detalhesCliente.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
+                      <p className="font-semibold break-all">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Telefone:</Label>
+                      <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
                     </div>
                     
-                    {editandoRepresentante ? (
-                      // MODO DE EDIÇÃO
-                      <div className="space-y-3">
-                        <Select
-                          value={novoRepresentanteId}
-                          onValueChange={setNovoRepresentanteId}
-                          disabled={salvandoRepresentante}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um representante" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {/* VALOR CORRIGIDO */}
-                            <SelectItem value="sem-representante">
-                              <span className="text-muted-foreground">Sem representante</span>
-                            </SelectItem>
-                            {representantes.filter(rep => rep.ativo).map((rep) => (
-                              <SelectItem key={rep.id} value={rep.id}>
-                                <div className="flex items-center gap-2">
-                                  <UserCheck className="h-4 w-4" />
-                                  {rep.nome}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <div className="flex gap-2">
+                    {/* SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs text-muted-foreground">Representante:</Label>
+                        {canCreate && !editandoRepresentante && (
                           <Button
+                            variant="ghost"
                             size="sm"
-                            onClick={handleSalvarRepresentante}
-                            disabled={salvandoRepresentante}
-                            className="flex-1"
+                            onClick={handleIniciarEdicao}
+                            className="h-8 px-2 text-xs min-h-[32px]"
                           >
-                            {salvandoRepresentante ? (
-                              <>
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Salvando...
-                              </>
-                            ) : (
-                              <>
-                                <Save className="h-3 w-3 mr-1" />
-                                Salvar
-                              </>
-                            )}
+                            <Edit3 className="h-3 w-3 mr-1" />
+                            Editar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCancelarEdicao}
-                            disabled={salvandoRepresentante}
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // MODO DE VISUALIZAÇÃO
-                      <div className="mt-1">
-                        {detalhesCliente.representantes ? (
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="h-4 w-4 text-primary" />
-                            <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Nenhum representante atribuído</span>
                         )}
                       </div>
-                    )}
+                      
+                      {editandoRepresentante ? (
+                        // MODO DE EDIÇÃO
+                        <div className="space-y-3">
+                          <Select
+                            value={novoRepresentanteId}
+                            onValueChange={setNovoRepresentanteId}
+                            disabled={salvandoRepresentante}
+                          >
+                            <SelectTrigger className="min-h-[44px] max-md:min-h-[44px]">
+                              <SelectValue placeholder="Selecione um representante" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sem-representante">
+                                <span className="text-muted-foreground">Sem representante</span>
+                              </SelectItem>
+                              {representantes.filter(rep => rep.ativo).map((rep) => (
+                                <SelectItem key={rep.id} value={rep.id}>
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="h-4 w-4" />
+                                    {rep.nome}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleSalvarRepresentante}
+                              disabled={salvandoRepresentante}
+                              className="flex-1 min-h-[44px] max-md:min-h-[44px]"
+                            >
+                              {salvandoRepresentante ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Salvando...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="h-3 w-3 mr-1" />
+                                  Salvar
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelarEdicao}
+                              disabled={salvandoRepresentante}
+                              className="flex-1 sm:flex-initial min-h-[44px] max-md:min-h-[44px]"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // MODO DE VISUALIZAÇÃO
+                        <div className="mt-1">
+                          {detalhesCliente.representantes ? (
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                              <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Nenhum representante atribuído</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-      
-                {/* Separador */}
-                <div className="border-t"></div>
-      
-                {/* Endereço */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Endereço:</Label>
-                    <p className="font-semibold">{detalhesCliente.endereco || "—"}</p>
+        
+                  {/* Separador */}
+                  <div className="border-t"></div>
+        
+                  {/* Endereço - Layout responsivo */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Endereço:</Label>
+                      <p className="font-semibold break-words">{detalhesCliente.endereco || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cidade:</Label>
+                      <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Estado:</Label>
+                      <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CEP:</Label>
+                      <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Cidade:</Label>
-                    <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Estado:</Label>
-                    <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">CEP:</Label>
-                    <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
             {canCreate && detalhesCliente?.temp_password && (
               <Button
                 variant="outline"
                 onClick={() => handleShowCredentials(detalhesCliente)}
-                className="flex-1"
-                disabled={editandoRepresentante} // 🆕 DESABILITAR DURANTE EDIÇÃO
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+                disabled={editandoRepresentante}
               >
                 <Key className="h-4 w-4 mr-2" />
                 Ver Credenciais
@@ -1198,7 +1218,8 @@ const Clientes = () => {
             )}
             <Button 
               onClick={handleFecharModal}
-              disabled={editandoRepresentante} // 🆕 DESABILITAR DURANTE EDIÇÃO
+              disabled={editandoRepresentante}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
             >
               Fechar
             </Button>
@@ -1206,35 +1227,35 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 🆕 LISTA DE CLIENTES COM LAYOUT MODIFICADO PARA ALINHAMENTO PERFEITO */}
+      {/* Lista de clientes - Cards responsivos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClientes.map((cliente) => (
           <Card
             key={cliente.id}
-            className="cursor-pointer transition-all"
+            className="cursor-pointer transition-all hover:shadow-md"
             onClick={() => {
               setDetalhesCliente(cliente);
-              resetEdicaoStates(); // 🆕 RESETAR ESTADOS AO ABRIR NOVO MODAL
+              resetEdicaoStates();
             }}
           >
             <CardContent className="p-4 space-y-3">
-              {/* 🆕 LAYOUT MODIFICADO PARA ALINHAMENTO PERFEITO */}
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">{cliente.nome}</h3>
-                <p className="text-sm text-muted-foreground">{cliente.email}</p>
+                <h3 className="font-semibold text-lg leading-tight">{cliente.nome}</h3>
+                <p className="text-sm text-muted-foreground break-all">{cliente.email}</p>
                 <p className="text-sm">
-                  <span className="text-muted-foreground">CNPJ/CPF:</span> {formatCpfCnpj(cliente.cnpj_cpf)}
+                  <span className="text-muted-foreground">CNPJ/CPF:</span> 
+                  <span className="ml-1 break-all">{formatCpfCnpj(cliente.cnpj_cpf)}</span>
                 </p>
                 
-                {/* 🆕 ESPAÇO RESERVADO PARA REPRESENTANTE - ALTURA FIXA */}
+                {/* Espaço reservado para representante - altura fixa */}
                 <div className="h-5 flex items-center">
                   {cliente.representantes ? (
                     <div className="flex items-center gap-1">
-                      <UserCheck className="h-3 w-3 text-primary" />
-                      <span className="text-xs text-primary font-medium">{cliente.representantes.nome}</span>
+                      <UserCheck className="h-3 w-3 text-primary flex-shrink-0" />
+                      <span className="text-xs text-primary font-medium truncate">{cliente.representantes.nome}</span>
                     </div>
                   ) : (
-                    <div></div> // 🆕 DIV VAZIA PARA MANTER ALTURA
+                    <div></div>
                   )}
                 </div>
               </div>
@@ -1269,6 +1290,7 @@ const Clientes = () => {
         ))}
       </div>
       
+      {/* Estado vazio */}
       {filteredClientes.length === 0 && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -1282,7 +1304,7 @@ const Clientes = () => {
               variant="outline" 
               size="sm" 
               onClick={handleClearFilters}
-              className="mt-2"
+              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
