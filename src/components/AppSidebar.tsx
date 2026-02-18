@@ -214,11 +214,12 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon"
-      className="top-14" // Posiciona abaixo da barra fixa
+      className="top-12 md:top-14" // 📱 POSICIONAMENTO RESPONSIVO
     >
-      <SidebarContent className="pt-2 px-1">
+      {/* 📱 CONTAINER RESPONSIVO */}
+      <SidebarContent className="pt-2 px-1 md:px-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs md:text-sm">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleUpperMenuItems.map((item) => {
@@ -226,17 +227,18 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
+                      {/* 📱 NAVLINK COM TOUCH TARGET */}
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-3 rounded-md min-h-[44px]`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
-                          className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                          className={`h-4 w-4 md:h-5 md:w-5 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
                         />
                         {!isCollapsed && (
-                          <span className={isActive ? 'text-primary' : ''}>
+                          <span className={`text-sm md:text-base ${isActive ? 'text-primary' : ''}`}>
                             {item.title}
                           </span>
                         )}
@@ -251,7 +253,7 @@ export function AppSidebar() {
 
         {showCadastros && (
           <SidebarGroup>
-            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-xs md:text-sm">Cadastros</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLowerMenuItems.map((item) => {
@@ -259,17 +261,18 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
+                        {/* 📱 NAVLINK COM TOUCH TARGET */}
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-3 rounded-md min-h-[44px]`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
-                            className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                            className={`h-4 w-4 md:h-5 md:w-5 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
                           />
                           {!isCollapsed && (
-                            <span className={isActive ? 'text-primary' : ''}>
+                            <span className={`text-sm md:text-base ${isActive ? 'text-primary' : ''}`}>
                               {item.title}
                             </span>
                           )}
@@ -283,16 +286,17 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
+        {/* 📱 LOGOUT COM TOUCH TARGET */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-3"
                 >
-                  <LogOut className="h-4 w-4" />
-                  {!isCollapsed && <span>Sair</span>}
+                  <LogOut className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                  {!isCollapsed && <span className="text-sm md:text-base">Sair</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
