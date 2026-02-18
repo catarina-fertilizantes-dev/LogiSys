@@ -142,9 +142,16 @@ All colors MUST be HSL.
     display: none;             /* Chrome, Safari, Opera */
   }
 
-  /* Touch targets mobile para SidebarTrigger */
+  /* Touch targets mobile para SidebarTrigger - VERSÃO MAIS ESPECÍFICA */
   @media (max-width: 767px) {
-    [data-sidebar="trigger"] {
+    button[data-sidebar="trigger"] {
+      height: 44px !important;
+      width: 44px !important;
+      padding: 8px !important;
+    }
+    
+    /* Fallback para caso o data-attribute não funcione */
+    .sidebar-trigger-mobile {
       height: 44px !important;
       width: 44px !important;
       padding: 8px !important;
