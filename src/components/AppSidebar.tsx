@@ -190,7 +190,7 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon"
-      className="top-14"
+      className="top-16 md:top-14"
     >
       <SidebarContent className="pt-2 px-1 scrollbar-hide">
         <SidebarGroup>
