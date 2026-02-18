@@ -38,7 +38,6 @@ const upperMenuItems = [
     url: "/liberacoes",
     icon: ClipboardList,
     resource: "liberacoes" as const,
-    // 🚫 NOVA RESTRIÇÃO: Ocultar para role 'armazem'
     excludeRoles: ["armazem"] as const,
   },
   {
@@ -53,7 +52,6 @@ const upperMenuItems = [
     icon: Truck,
     resource: "carregamentos" as const,
   },
-  // 🆕 ESTOQUE NO MENU PRINCIPAL APENAS PARA ARMAZÉM
   {
     title: "Estoque",
     url: "/estoque",
@@ -77,7 +75,6 @@ const lowerMenuItems = [
     icon: Users,
     resource: "clientes" as const,
   },
-  // 🆕 REPRESENTANTES ADICIONADO
   {
     title: "Representantes",
     url: "/representantes",
@@ -96,7 +93,6 @@ const lowerMenuItems = [
     icon: Tag,
     resource: "produtos" as const,
   },
-  // 🆕 ESTOQUE EM CADASTROS APENAS PARA ADMIN/LOGÍSTICA
   {
     title: "Estoque",
     url: "/estoque",
@@ -117,23 +113,19 @@ export function AppSidebar() {
     await signOut();
   };
 
-  // Fechar sidebar mobile ao clicar em um item
   const handleItemClick = () => {
     if (isMobile) {
       setOpenMobile(false);
     }
   };
 
-  // 🎯 FUNÇÃO PARA VERIFICAR SE O MENU ESTÁ ATIVO
   const isMenuActive = (itemUrl: string) => {
     const currentPath = location.pathname;
     
-    // Para o dashboard (página inicial)
     if (itemUrl === "/" && currentPath === "/") {
       return true;
     }
     
-    // Para outras páginas, verificar se o caminho atual começa com a URL do item
     if (itemUrl !== "/" && currentPath.startsWith(itemUrl)) {
       return true;
     }
@@ -141,7 +133,6 @@ export function AppSidebar() {
     return false;
   };
 
-  // 🎨 FUNÇÃO PARA GERAR CLASSES CSS DO MENU ATIVO
   const getMenuClasses = (itemUrl: string, isCollapsed: boolean) => {
     const isActive = isMenuActive(itemUrl);
     
@@ -166,7 +157,6 @@ export function AppSidebar() {
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
     return items.filter(item => {
-      // 🚫 NOVA VERIFICAÇÃO: Verificar excludeRoles
       if ('excludeRoles' in item && item.excludeRoles && userRole) {
         if (item.excludeRoles.includes(userRole as any)) {
           return false;
@@ -188,7 +178,6 @@ export function AppSidebar() {
       ) {
         return true;
       }
-      // 🆕 PERMISSÃO PARA REPRESENTANTES
       if (
         item.resource === "representantes" &&
         (userRole === "admin" || userRole === "logistica")
@@ -208,19 +197,21 @@ export function AppSidebar() {
     ? []
     : filterMenuItems(lowerMenuItems);
 
-  // 🔧 MODIFICAÇÃO: Mostrar Cadastros apenas se houver itens visíveis
   const showCadastros = visibleLowerMenuItems.length > 0;
 
   return (
     <Sidebar 
       collapsible="icon"
-      className="top-14" // Posiciona abaixo da barra fixa
+      className="top-14"
     >
       <SidebarContent className="pt-2 px-1">
+        {/* 📱 MENU PRINCIPAL COM TOUCH TARGETS OTIMIZADOS */}
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
+            Menu Principal
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {visibleUpperMenuItems.map((item) => {
                 const isActive = isMenuActive(item.url);
                 return (
@@ -229,14 +220,17 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} 
+                          flex items-center gap-3 rounded-md transition-all duration-200
+                          min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
+                        `}
                         onClick={handleItemClick}
                       >
                         <item.icon 
-                          className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                          className={`h-5 w-5 md:h-4 md:w-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
                         />
                         {!isCollapsed && (
-                          <span className={isActive ? 'text-primary' : ''}>
+                          <span className={`text-sm font-medium ${isActive ? 'text-primary' : ''}`}>
                             {item.title}
                           </span>
                         )}
@@ -249,11 +243,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* 📱 CADASTROS COM TOUCH TARGETS OTIMIZADOS */}
         {showCadastros && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Cadastros</SidebarGroupLabel>
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
+              Cadastros
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {visibleLowerMenuItems.map((item) => {
                   const isActive = isMenuActive(item.url);
                   return (
@@ -262,14 +259,17 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} 
+                            flex items-center gap-3 rounded-md transition-all duration-200
+                            min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
+                          `}
                           onClick={handleItemClick}
                         >
                           <item.icon 
-                            className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                            className={`h-5 w-5 md:h-4 md:w-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} 
                           />
                           {!isCollapsed && (
-                            <span className={isActive ? 'text-primary' : ''}>
+                            <span className={`text-sm font-medium ${isActive ? 'text-primary' : ''}`}>
                               {item.title}
                             </span>
                           )}
@@ -283,16 +283,21 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
+        {/* 📱 LOGOUT COM TOUCH TARGET OTIMIZADO */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200
+                    min-h-[44px] px-3 py-3 md:min-h-[36px] md:py-2
+                  "
                 >
-                  <LogOut className="h-4 w-4" />
-                  {!isCollapsed && <span>Sair</span>}
+                  <LogOut className="h-5 w-5 md:h-4 md:w-4 flex-shrink-0" />
+                  {!isCollapsed && (
+                    <span className="text-sm font-medium">Sair</span>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
