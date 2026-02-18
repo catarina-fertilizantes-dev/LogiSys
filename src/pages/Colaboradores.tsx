@@ -351,8 +351,8 @@ const handleCreateUser = async () => {
 
   if (! hasRole('admin')) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardContent className="pt-6">
             <div className="text-center">
               <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -368,8 +368,7 @@ const handleCreateUser = async () => {
   };
 
   return (
-    // Aplicando p-6 space-y-6 na div principal, assim como na página Clientes
-    <div className="min-h-screen bg-background p-6 space-y-6"> 
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6"> 
       <PageHeader
         title="Colaboradores"
         subtitle="Gerencie colaboradores do sistema (Admin e Logística)"
@@ -381,62 +380,65 @@ const handleCreateUser = async () => {
             setDialogOpen(open);
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary">
+              <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Novo Colaborador
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md">
               <DialogHeader>
-                <DialogTitle>Criar Novo Colaborador</DialogTitle>
-                <DialogDescription>
-                  Crie um novo colaborador (Admin ou Logística).  Clientes e armazéns são criados em suas respectivas páginas.
+                <DialogTitle className="text-lg md:text-xl">Criar Novo Colaborador</DialogTitle>
+                <DialogDescription className="text-sm md:text-base">
+                  Crie um novo colaborador (Admin ou Logística). Clientes e armazéns são criados em suas respectivas páginas.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo</Label>
+                  <Label htmlFor="nome" className="text-sm font-medium">Nome Completo</Label>
                   <Input
                     id="nome"
                     value={newUserNome}
                     onChange={(e) => setNewUserNome(e.target.value)}
                     placeholder="Nome do usuário"
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={newUserEmail}
                     onChange={(e) => setNewUserEmail(e.target.value)}
                     placeholder="email@exemplo.com"
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
                   <Input
                     id="password"
                     type="password"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     placeholder="Senha segura"
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Mínimo 6 caracteres.  Evite senhas comuns como '123456' ou 'senha123'.
+                    Mínimo 6 caracteres. Evite senhas comuns como '123456' ou 'senha123'.
                   </p>
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-sm font-medium">Role</Label>
                   <Select 
                     value={newUserRole} 
                     onValueChange={(v) => setNewUserRole(v as UserRole)}
-                    disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                    disabled={isCreating}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="min-h-[44px] max-md:min-h-[44px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -449,18 +451,19 @@ const handleCreateUser = async () => {
                   </p>
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse gap-2 md:flex-row md:gap-0">
                 <Button 
                   variant="outline" 
                   onClick={() => setDialogOpen(false)}
-                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  disabled={isCreating}
+                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleCreateUser} 
-                  className="bg-gradient-primary"
-                  disabled={isCreating} // 🚀 DESABILITAR DURANTE LOADING
+                  className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]"
+                  disabled={isCreating}
                 >
                   {isCreating ? (
                     <>
@@ -480,10 +483,9 @@ const handleCreateUser = async () => {
         }
       />
 
-      {/* Removido o div 'container mx-auto px-6 py-8' para que o Card principal siga o padding do wrapper */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
             <Users className="h-5 w-5" />
             Usuários do Sistema
           </CardTitle>
@@ -505,11 +507,11 @@ const handleCreateUser = async () => {
                 <p className="text-xs text-muted-foreground mb-4">
                   Execute a migration: <code className="bg-muted px-2 py-1 rounded">20251120_update_get_users_function.sql</code>
                 </p>
-                {/* 🚀 BOTÃO DE RETRY COM LOADING */}
                 <Button 
                   onClick={handleRetry} 
                   variant="outline"
                   disabled={isRetrying}
+                  className="min-h-[44px] max-md:min-h-[44px]"
                 >
                   {isRetrying ? (
                     <>
@@ -531,44 +533,42 @@ const handleCreateUser = async () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3 md:space-y-0                   md:space-x-4"
                 >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{user.nome}</h3>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground text-base md:text-base truncate">{user.nome}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
                     </p>
-                    {! user.role && (
+                    {!user.role && (
                       <p className="text-xs text-destructive mt-1">
                         ⚠️ Sem role - contate administrador
                       </p>
                     )}
                   </div>
 
-                  {/* 🚀 SELECT COM LOADING STATE */}
-                  <div className="relative">
+                  <div className="relative w-full md:w-[180px] flex-shrink-0">
                     <Select
                       value={user.role || ''}
                       onValueChange={(value) => handleUpdateUserRole(user.id, value as UserRole)}
-                      disabled={isUpdatingRole[user.id]} // 🚀 DESABILITAR DURANTE LOADING
+                      disabled={isUpdatingRole[user.id]}
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full min-h-[44px] max-md:min-h-[44px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {! user.role && <SelectItem value="">Selecione uma role</SelectItem>}
+                        {!user.role && <SelectItem value="">Selecione uma role</SelectItem>}
                         <SelectItem value="admin">Administrador</SelectItem>
                         <SelectItem value="logistica">Logística</SelectItem>
                         <SelectItem value="armazem">Armazém</SelectItem>
                         <SelectItem value="cliente">Cliente</SelectItem>
                       </SelectContent>
                     </Select>
-                    {/* 🚀 SPINNER SOBREPOSTO DURANTE LOADING */}
                     {isUpdatingRole[user.id] && (
                       <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-md">
                         <Loader2 className="h-4 w-4 animate-spin" />
