@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Users, UserPlus, Shield, BadgeCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,6 @@ interface User {
   role: string | null;
 }
 
-// Tipo para o retorno da função RPC get_users_with_roles
 interface RpcUserData {
   id: string;
   nome: string;
@@ -34,13 +33,10 @@ interface RpcUserData {
   role?: UserRole;
 }
 
-// Constante para facilitar troca futura de função RPC
 const USERS_FUNCTION = 'get_users_with_roles';
 
-// Helper para mapear e filtrar colaboradores (admin e logistica)
 const mapAndFilterColaboradores = (usersData: RpcUserData[]): User[] => {
   const usersMapped: User[] = (usersData || []).map(u => {
-    // Se roles é um array, selecionar role com prioridade: admin > logistica > outros
     let selectedRole: string | null = null;
     if (Array.isArray(u.roles)) {
       if (u.roles.includes('admin')) selectedRole = 'admin';
@@ -59,7 +55,6 @@ const mapAndFilterColaboradores = (usersData: RpcUserData[]): User[] => {
     };
   });
   
-  // Filtrar apenas colaboradores (admin ou logistica)
   return usersMapped.filter(u => u.role === 'admin' || u.role === 'logistica');
 };
 
@@ -75,7 +70,6 @@ const Colaboradores = () => {
   const [newUserRole, setNewUserRole] = useState<UserRole>("logistica");
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  // 🚀 NOVOS ESTADOS DE LOADING
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdatingRole, setIsUpdatingRole] = useState<Record<string, boolean>>({});
   const [isRetrying, setIsRetrying] = useState(false);
@@ -113,7 +107,6 @@ const Colaboradores = () => {
     }
   };
 
-  // 🚀 FUNÇÃO DE RETRY COM LOADING
   const handleRetry = async () => {
     setIsRetrying(true);
     await fetchUsers();
@@ -135,7 +128,6 @@ const handleCreateUser = async () => {
     return;
   }
 
-  // Validar senha usando o schema
   const passwordValidation = passwordSchema.safeParse(newUserPassword);
   if (!passwordValidation.success) {
     const errorMessage = passwordValidation.error.issues[0]?.message || "Senha inválida";
@@ -148,7 +140,6 @@ const handleCreateUser = async () => {
     return;
   }
 
-  // 🚀 ATIVAR LOADING STATE
   setIsCreating(true);
 
   try {
@@ -212,14 +203,12 @@ const handleCreateUser = async () => {
 
       let errorMessage = "Erro ao criar colaborador";
 
-      // ------ TRATAMENTO ROBUSTO PARA DETALHES ZOD/OBJETO ------
       if (data) {
         if (
           typeof data.details === "object" &&
           data.details !== null &&
           "fieldErrors" in data.details
         ) {
-          // Detalhes de erro do Zod: mensagens de campo amigáveis
           errorMessage = Object.values(data.details.fieldErrors)
             .flat()
             .map(msg => {
@@ -230,10 +219,8 @@ const handleCreateUser = async () => {
             })
             .join(" | ");
         } else {
-          // Se details é string ou similar
           let rawDetails = data.details || data.error || "";
 
-          // Traduzir duplicidade
           if (typeof rawDetails === "string" &&
             (rawDetails.includes('already been registered') || rawDetails.includes('already exists'))) {
             errorMessage = "Este email já está cadastrado no sistema.";
@@ -243,7 +230,6 @@ const handleCreateUser = async () => {
             errorMessage = String(data.error);
           }
 
-          // Mensagens específicas de stage
           if (data.stage === 'validation' && String(data.error).includes('Weak password')) {
             errorMessage = "Senha muito fraca. Use pelo menos 6 caracteres e evite senhas comuns.";
           } else if (data.stage === 'createUser') {
@@ -267,7 +253,6 @@ const handleCreateUser = async () => {
       return;
     }
 
-    // Success case - verify we have valid data
     if (!data) {
       toast({
         variant: "destructive",
@@ -291,7 +276,6 @@ const handleCreateUser = async () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       fetchUsers();
     } else {
-      // Unexpected response structure
       toast({
         variant: "destructive",
         title: "Erro ao criar colaborador",
@@ -307,14 +291,11 @@ const handleCreateUser = async () => {
       description: errorMessage
     });
   } finally {
-    // 🚀 DESATIVAR LOADING STATE
     setIsCreating(false);
   }
 };
 
-  // 🚀 FUNÇÃO DE UPDATE ROLE COM LOADING
   const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
-    // Ativar loading para este usuário específico
     setIsUpdatingRole(prev => ({ ...prev, [userId]: true }));
 
     try {
@@ -334,7 +315,6 @@ const handleCreateUser = async () => {
         fetchUsers();
       }
     } finally {
-      // Desativar loading para este usuário
       setIsUpdatingRole(prev => ({ ...prev, [userId]: false }));
     }
   };
@@ -375,7 +355,6 @@ const handleCreateUser = async () => {
         icon={BadgeCheck}
         actions={
           <Dialog open={dialogOpen} onOpenChange={(open) => {
-            // 🚀 BLOQUEAR FECHAMENTO DURANTE CRIAÇÃO
             if (!open && isCreating) return;
             setDialogOpen(open);
           }}>
@@ -385,12 +364,16 @@ const handleCreateUser = async () => {
                 Novo Colaborador
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-              <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            
+            {/* 🆕 MODAL SEM FOOTER FIXO - BOTÕES NO CONTEÚDO */}
+            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+              <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                 <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Criar Novo Colaborador</DialogTitle>
               </DialogHeader>
               
-              <div className="flex-1 overflow-y-auto py-4 px-1">
+              {/* 🆕 TODO O CONTEÚDO EM UMA ÚNICA ÁREA SCROLLÁVEL */}
+              <div className="py-4 px-1 space-y-6">
+                {/* Formulário */}
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="nome" className="text-sm font-medium">Nome Completo</Label>
@@ -450,35 +433,36 @@ const handleCreateUser = async () => {
                     </p>
                   </div>
                 </div>
+
+                {/* 🆕 BOTÕES NO FINAL DO CONTEÚDO (NÃO FIXOS) */}
+                <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(false)}
+                    disabled={isCreating}
+                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleCreateUser} 
+                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]"
+                    disabled={isCreating}
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Criar Colaborador
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-              
-              <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)}
-                  disabled={isCreating}
-                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleCreateUser} 
-                  className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]"
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Criar Colaborador
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         }
@@ -538,7 +522,7 @@ const handleCreateUser = async () => {
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3 md:space-y-0                   md:space-x-4"
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3 md:space-y-0 md:space-x-4"
                 >
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground text-base md:text-base truncate">{user.nome}</h3>
