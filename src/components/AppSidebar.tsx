@@ -212,12 +212,9 @@ export function AppSidebar() {
   const showCadastros = visibleLowerMenuItems.length > 0;
 
   return (
-    <Sidebar 
-      collapsible="icon"
-      className="top-12 md:top-14" // 📱 POSICIONAMENTO RESPONSIVO
-    >
-      {/* 📱 CONTAINER RESPONSIVO */}
-      <SidebarContent className="pt-2 px-1 md:px-2">
+    <Sidebar collapsible="icon">
+      {/* 📱 CONTAINER COM SCROLLBAR OCULTA E SEM GAP */}
+      <SidebarContent className="pt-2 px-1 md:px-2 scrollbar-hide overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs md:text-sm">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
