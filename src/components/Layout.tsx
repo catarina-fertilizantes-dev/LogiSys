@@ -32,33 +32,36 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* 📱 HEADER RESPONSIVO */}
-        <header className="h-12 md:h-14 bg-sidebar border-b border-sidebar-border flex items-center px-2 md:px-4 sticky top-0 z-[60]">
-          <div className="flex items-center gap-2 md:gap-3">
-            {/* Hambúrguer Global - Controla tudo */}
-            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
-            
-            {/* 📱 LOGO RESPONSIVO */}
-            <div className="flex items-center gap-1 md:gap-2">
-              <img 
-                src="/nexor-logo.png" 
-                alt="NEXOR" 
-                className="h-6 w-6 md:h-8 md:w-8 object-contain" 
-              />
-              <span className="font-bold text-sidebar-foreground text-sm md:text-base">NEXOR</span>
+      <div className="min-h-screen flex w-full bg-background">
+        {/* 📱 SIDEBAR FIXO */}
+        <AppSidebar />
+        
+        {/* 📱 CONTAINER PRINCIPAL */}
+        <div className="flex flex-1 flex-col">
+          {/* 📱 HEADER RESPONSIVO */}
+          <header className="h-12 md:h-14 bg-sidebar border-b border-sidebar-border flex items-center px-2 md:px-4 sticky top-0 z-[60]">
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Hambúrguer Global - Controla tudo */}
+              <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
+              
+              {/* 📱 LOGO RESPONSIVO */}
+              <div className="flex items-center gap-1 md:gap-2">
+                <img 
+                  src="/nexor-logo.png" 
+                  alt="NEXOR" 
+                  className="h-6 w-6 md:h-8 md:w-8 object-contain" 
+                />
+                <span className="font-bold text-sidebar-foreground text-sm md:text-base">NEXOR</span>
+              </div>
             </div>
-          </div>
-          
-          {/* Área do Usuário */}
-          <div className="ml-auto flex items-center gap-2">
-            <UserAvatar />
-          </div>
-        </header>
+            
+            {/* Área do Usuário */}
+            <div className="ml-auto flex items-center gap-2">
+              <UserAvatar />
+            </div>
+          </header>
 
-        {/* Container Principal */}
-        <div className="flex flex-1 relative">
-          <AppSidebar />
+          {/* 📱 MAIN CONTENT */}
           <main className="flex-1 overflow-auto">
             {children}
           </main>
