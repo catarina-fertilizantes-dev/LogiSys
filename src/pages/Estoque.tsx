@@ -761,8 +761,7 @@ const Estoque = () => {
               <DialogTrigger asChild>
                 <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Entrada de Estoque</span>
-                  <span className="sm:hidden">Entrada</span>
+                  Entrada de Estoque
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
