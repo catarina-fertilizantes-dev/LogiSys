@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { UserAvatar } from "@/components/UserAvatar"; // 🆕 IMPORT ADICIONADO
+import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -34,10 +34,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
         {/* Barra Superior Fixa Global */}
-        <header className="h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-[60]">
+        <header className="h-16 md:h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-[60]">
           <div className="flex items-center gap-3">
             {/* Hambúrguer Global - Controla tudo */}
-            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
+            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-md:min-h-[44px] max-md:min-w-[44px]" />
             
             {/* Logo/Brand */}
             <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
           
-          {/* 🆕 ÁREA DO USUÁRIO ADICIONADA */}
+          {/* Área do Usuário */}
           <div className="ml-auto flex items-center gap-2">
             <UserAvatar />
           </div>
