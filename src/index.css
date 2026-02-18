@@ -141,7 +141,6 @@ All colors MUST be HSL.
   .scrollbar-hide::-webkit-scrollbar {
     display: none;             /* Chrome, Safari, Opera */
   }
-}
 
   /* Touch targets mobile para SidebarTrigger */
   @media (max-width: 767px) {
