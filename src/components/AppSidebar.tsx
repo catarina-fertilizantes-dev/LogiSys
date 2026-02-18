@@ -137,22 +137,10 @@ export function AppSidebar() {
     const isActive = isMenuActive(itemUrl);
     
     if (isActive) {
-      return `
-        bg-gradient-to-r from-primary/20 to-primary/10 
-        text-primary 
-        font-semibold 
-        border-r-2 border-primary
-        shadow-sm
-        ${!isCollapsed ? 'pl-4' : ''}
-      `;
+      return `bg-gradient-to-r from-primary/20 to-primary/10 text-primary font-semibold border-r-2 border-primary shadow-sm ${!isCollapsed ? 'pl-4' : ''}`;
     }
     
-    return `
-      hover:bg-sidebar-accent/50 
-      text-sidebar-foreground 
-      transition-all duration-200
-      hover:text-sidebar-accent-foreground
-    `;
+    return "hover:bg-sidebar-accent/50 text-sidebar-foreground transition-all duration-200 hover:text-sidebar-accent-foreground";
   };
 
   const filterMenuItems = (items: typeof upperMenuItems | typeof lowerMenuItems) => {
@@ -204,7 +192,7 @@ export function AppSidebar() {
       collapsible="icon"
       className="top-14"
     >
-      <SidebarContent className="pt-2 px-1">
+      <SidebarContent className="pt-2 px-1 scrollbar-hide">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -217,11 +205,11 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
-                          className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                          className={`h-5 w-5 md:h-4 md:w-4 ${isActive ? 'text-primary' : ''}`} 
                         />
                         {!isCollapsed && (
                           <span className={isActive ? 'text-primary' : ''}>
@@ -250,11 +238,11 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
-                            className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} 
+                            className={`h-5 w-5 md:h-4 md:w-4 ${isActive ? 'text-primary' : ''}`} 
                           />
                           {!isCollapsed && (
                             <span className={isActive ? 'text-primary' : ''}>
@@ -277,9 +265,9 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] md:min-h-auto"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-5 w-5 md:h-4 md:w-4" />
                   {!isCollapsed && <span>Sair</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
