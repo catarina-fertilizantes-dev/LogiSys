@@ -385,75 +385,77 @@ const handleCreateUser = async () => {
                 Novo Colaborador
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
-              <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b border-border mb-4">
-                <DialogTitle className="text-lg md:text-xl">Criar Novo Colaborador</DialogTitle>
-                <DialogDescription className="text-sm md:text-base">
+            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+              <DialogHeader className="flex-shrink-0 pb-4 border-b border-border pr-8">
+                <DialogTitle className="text-lg md:text-xl pr-2">Criar Novo Colaborador</DialogTitle>
+                <DialogDescription className="text-sm md:text-base pr-2">
                   Crie um novo colaborador (Admin ou Logística). Clientes e armazéns são criados em suas respectivas páginas.
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="space-y-4 py-2 px-1">
-                <div className="space-y-2">
-                  <Label htmlFor="nome" className="text-sm font-medium">Nome Completo</Label>
-                  <Input
-                    id="nome"
-                    value={newUserNome}
-                    onChange={(e) => setNewUserNome(e.target.value)}
-                    placeholder="Nome do usuário"
-                    disabled={isCreating}
-                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                    placeholder="email@exemplo.com"
-                    disabled={isCreating}
-                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newUserPassword}
-                    onChange={(e) => setNewUserPassword(e.target.value)}
-                    placeholder="Senha segura"
-                    disabled={isCreating}
-                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Mínimo 6 caracteres. Evite senhas comuns como '123456' ou 'senha123'.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="text-sm font-medium">Role</Label>
-                  <Select 
-                    value={newUserRole} 
-                    onValueChange={(v) => setNewUserRole(v as UserRole)}
-                    disabled={isCreating}
-                  >
-                    <SelectTrigger className="min-h-[44px] max-md:min-h-[44px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Administrador</SelectItem>
-                      <SelectItem value="logistica">Logística</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Para criar usuários de armazém ou clientes, use as páginas específicas.
-                  </p>
+              <div className="flex-1 overflow-y-auto py-4 px-1">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome" className="text-sm font-medium">Nome Completo</Label>
+                    <Input
+                      id="nome"
+                      value={newUserNome}
+                      onChange={(e) => setNewUserNome(e.target.value)}
+                      placeholder="Nome do usuário"
+                      disabled={isCreating}
+                      className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      placeholder="email@exemplo.com"
+                      disabled={isCreating}
+                      className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      placeholder="Senha segura"
+                      disabled={isCreating}
+                      className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Mínimo 6 caracteres. Evite senhas comuns como '123456' ou 'senha123'.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role" className="text-sm font-medium">Role</Label>
+                    <Select 
+                      value={newUserRole} 
+                      onValueChange={(v) => setNewUserRole(v as UserRole)}
+                      disabled={isCreating}
+                    >
+                      <SelectTrigger className="min-h-[44px] max-md:min-h-[44px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="logistica">Logística</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Para criar usuários de armazém ou clientes, use as páginas específicas.
+                    </p>
+                  </div>
                 </div>
               </div>
               
-              <DialogFooter className="sticky bottom-0 bg-background z-10 pt-4 border-t border-border mt-4 flex-col-reverse gap-2 md:flex-row md:gap-0">
+              <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
                 <Button 
                   variant="outline" 
                   onClick={() => setDialogOpen(false)}
