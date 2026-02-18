@@ -74,7 +74,7 @@ const EstoqueDetalhe = () => {
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
-  // Estados para filtros (seguindo padrão da página Carregamentos)
+  // Estados para filtros
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -82,7 +82,6 @@ const EstoqueDetalhe = () => {
   const [quantidadeMin, setQuantidadeMin] = useState("");
   const [quantidadeMax, setQuantidadeMax] = useState("");
 
-  // 🆕 FUNÇÃO PARA LIMPAR FILTROS
   const clearFilters = () => {
     setSearch("");
     setDateFrom("");
@@ -91,7 +90,6 @@ const EstoqueDetalhe = () => {
     setQuantidadeMax("");
   };
 
-  // 🆕 BUSCAR ARMAZÉM DO USUÁRIO DIRETAMENTE (SEM ESTADO LOCAL)
   const { data: currentArmazem } = useQuery({
     queryKey: ["current-armazem-detalhe", user?.id],
     queryFn: async () => {
@@ -108,7 +106,6 @@ const EstoqueDetalhe = () => {
     enabled: !!user && userRole === "armazem",
   });
 
-  // 🔍 DEBUG LOGS - EstoqueDetalhe.jsx (OTIMIZADO)
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Renderização iniciada");
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - produtoId (URL):", produtoId);
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - armazemId (URL):", armazemId);
@@ -116,12 +113,10 @@ const EstoqueDetalhe = () => {
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - user?.id:", user?.id);
   console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - currentArmazem:", currentArmazem);
 
-  // Função para voltar à página pai
   const handleGoBack = () => {
     navigate("/estoque");
   };
 
-  // Query principal para buscar detalhes do estoque
   const { data: estoqueDetalhes, isLoading, error } = useQuery({
     queryKey: ["estoque-detalhe", produtoId, armazemId, user?.id],
     queryFn: async () => {
@@ -134,13 +129,11 @@ const EstoqueDetalhe = () => {
         currentArmazem 
       });
       
-      // Verificar permissões
       if (userRole === "armazem" && currentArmazem && currentArmazem.id !== armazemId) {
         console.log("❌ [ERROR] EstoqueDetalhe.jsx - Sem permissão para este armazém");
         throw new Error("Sem permissão para visualizar este armazém");
       }
 
-      // Buscar dados do estoque atual
       const { data: estoqueData, error: estoqueError } = await supabase
         .from("estoque")
         .select(`
@@ -161,7 +154,6 @@ const EstoqueDetalhe = () => {
         throw new Error("Estoque não encontrado");
       }
 
-      // Buscar remessas relacionadas
       const { data: remessasData, error: remessasError } = await supabase
         .from("estoque_remessas")
         .select(`
@@ -208,7 +200,6 @@ const EstoqueDetalhe = () => {
     })(),
   });
 
-  // Verificar permissões
   useEffect(() => {
     console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - useEffect permissão disparado");
     console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Condições verificação:", {
@@ -223,10 +214,9 @@ const EstoqueDetalhe = () => {
     if (!isLoading && estoqueDetalhes && user?.id) {
       console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Entrando na verificação de permissão");
       
-      // 🎯 AGUARDAR currentArmazem SER CARREGADO PARA USUÁRIO ARMAZÉM
       if (userRole === "armazem" && !currentArmazem) {
         console.log("🔍 [DEBUG] EstoqueDetalhe.jsx - Aguardando currentArmazem ser carregado");
-        return; // Aguarda currentArmazem ser carregado
+        return;
       }
       
       const hasPermission = 
@@ -254,10 +244,8 @@ const EstoqueDetalhe = () => {
     }
   }, [isLoading, estoqueDetalhes, user?.id, userRole, currentArmazem, armazemId, navigate]);
 
-  // Função para aplicar filtros
   const aplicarFiltros = (remessas: RemessaItem[]): RemessaItem[] => {
     return remessas.filter(remessa => {
-      // Filtro por busca (número da remessa ou ID)
       if (search.trim()) {
         const termo = search.trim().toLowerCase();
         const numeroRemessa = (remessa.numero_remessa || '').toLowerCase();
@@ -267,7 +255,6 @@ const EstoqueDetalhe = () => {
         }
       }
 
-      // Filtro por período
       if (dateFrom) {
         const dataRemessa = parseDate(remessa.created_at);
         const dataInicio = new Date(dateFrom);
@@ -281,13 +268,11 @@ const EstoqueDetalhe = () => {
         if (dataRemessa > dataFim) return false;
       }
 
-      // Filtro por quantidade mínima
       if (quantidadeMin.trim()) {
         const qtdMin = parseFloat(quantidadeMin);
         if (!isNaN(qtdMin) && remessa.quantidade_original < qtdMin) return false;
       }
 
-      // Filtro por quantidade máxima
       if (quantidadeMax.trim()) {
         const qtdMax = parseFloat(quantidadeMax);
         if (!isNaN(qtdMax) && remessa.quantidade_original > qtdMax) return false;
@@ -297,33 +282,29 @@ const EstoqueDetalhe = () => {
     });
   };
 
-  // Calcular dados filtrados e totalizadores
   const remessasFiltradas = estoqueDetalhes ? aplicarFiltros(estoqueDetalhes.remessas) : [];
   const entradaTotal = remessasFiltradas.reduce((total, remessa) => total + remessa.quantidade_original, 0);
   const numeroRemessasFiltradas = remessasFiltradas.length;
 
-  // Verificar se há filtros ativos
   const activeFiltersCount = 
     (search.trim() ? 1 : 0) +
     (dateFrom || dateTo ? 1 : 0) +
     (quantidadeMin.trim() || quantidadeMax.trim() ? 1 : 0);
   
-  // 🆕 VERIFICAR SE HÁ FILTROS ATIVOS
   const hasActiveFilters = search.trim() || dateFrom || dateTo || quantidadeMin.trim() || quantidadeMax.trim();
 
-  // Renderizar card de remessa
   const renderRemessaCard = (remessa: RemessaItem) => (
     <Card key={remessa.id} className="transition-all hover:shadow-md">
-      <CardContent className="p-5">
+      <CardContent className="p-4 md:p-5">
         <div className="space-y-4">
-          {/* Header da remessa */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+          {/* Header da remessa - Layout responsivo */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary flex-shrink-0">
                 <Package className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground leading-tight">
                   {remessa.numero_remessa || `Remessa ${remessa.id.slice(-8)}`}
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -335,7 +316,7 @@ const EstoqueDetalhe = () => {
               </div>
             </div>
             
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs self-start sm:self-auto">
               Remessa
             </Badge>
           </div>
@@ -344,15 +325,14 @@ const EstoqueDetalhe = () => {
           {remessa.observacoes && (
             <div className="pt-2 border-t">
               <p className="text-xs text-muted-foreground mb-1">Observações:</p>
-              <p className="text-sm bg-muted p-2 rounded-md">{remessa.observacoes}</p>
+              <p className="text-sm bg-muted p-2 rounded-md break-words">{remessa.observacoes}</p>
             </div>
           )}
 
-          {/* 🆕 DOCUMENTOS COM COMPONENTE UNIVERSAL */}
+          {/* Documentos - Layout responsivo */}
           <div className="pt-2 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-2">Documentos:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {/* Nota de Remessa */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <DocumentViewer
                 url={remessa.url_nota_remessa}
                 type="pdf"
@@ -364,7 +344,6 @@ const EstoqueDetalhe = () => {
                 showPreview={true}
               />
 
-              {/* XML da Remessa */}
               <DocumentViewer
                 url={remessa.url_xml_remessa}
                 type="xml"
@@ -384,7 +363,7 @@ const EstoqueDetalhe = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Detalhes do Estoque"
           backButton={
@@ -392,10 +371,10 @@ const EstoqueDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Voltar
+              <span className="hidden sm:inline">Voltar</span>
             </Button>
           }
         />
@@ -408,7 +387,7 @@ const EstoqueDetalhe = () => {
 
   if (error || !estoqueDetalhes) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Detalhes do Estoque"
           backButton={
@@ -416,15 +395,15 @@ const EstoqueDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Voltar
+              <span className="hidden sm:inline">Voltar</span>
             </Button>
           }
         />
         <Card className="border-destructive">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="text-center text-destructive">
               <p className="font-semibold">Erro ao carregar detalhes do estoque</p>
               <p className="text-sm mt-2">
@@ -440,7 +419,7 @@ const EstoqueDetalhe = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader 
         title="Detalhes do Estoque"
         subtitle={`${estoqueDetalhes.produto.nome} - ${estoqueDetalhes.armazem.nome}`}
@@ -449,22 +428,22 @@ const EstoqueDetalhe = () => {
             variant="ghost"
             size="sm"
             onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar
+            <span className="hidden sm:inline">Voltar</span>
           </Button>
         }
       />
       
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* 🆕 Card de informações gerais OTIMIZADO */}
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+        {/* Card de informações gerais - Otimizado para mobile */}
         <Card className="shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <h2 className="text-lg font-semibold mb-4">Informações do Estoque</h2>
             
-            {/* Layout otimizado 2x2 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Layout otimizado responsivo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               {/* Produto */}
               <div className="flex items-center gap-3">
                 <Package className="h-5 w-5 text-primary flex-shrink-0" />
@@ -502,25 +481,25 @@ const EstoqueDetalhe = () => {
               </div>
             </div>
 
-            {/* 🆕 TOTALIZADORES SIMPLIFICADOS */}
+            {/* Totalizadores - Layout responsivo */}
             <div className="pt-4 border-t mt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Archive className="h-5 w-5 text-green-600" />
+                    <Archive className="h-5 w-5 text-green-600 flex-shrink-0" />
                     <span className="font-medium text-green-800">Entrada Total</span>
                   </div>
-                  <p className="text-xl font-bold text-green-700">
+                  <p className="text-lg md:text-xl font-bold text-green-700 break-words">
                     {entradaTotal.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Package className="h-5 w-5 text-blue-600" />
+                    <Package className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <span className="font-medium text-blue-800">Estoque Atual</span>
                   </div>
-                  <p className="text-xl font-bold text-blue-700">
+                  <p className="text-lg md:text-xl font-bold text-blue-700 break-words">
                     {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
@@ -529,59 +508,66 @@ const EstoqueDetalhe = () => {
           </CardContent>
         </Card>
 
-        {/* 🆕 BARRA DE FILTROS NO PADRÃO CARREGAMENTOS */}
-        <div className="flex items-center gap-3">
-          <Input
-            className="h-9 flex-1"
-            placeholder="Buscar por número da remessa..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Mostrando <span className="font-medium">{numeroRemessasFiltradas}</span> de <span className="font-medium">{estoqueDetalhes.remessas.length}</span>
-          </span>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setFiltersOpen(!filtersOpen)}
-          >
-            <FilterIcon className="h-4 w-4 mr-1" />
-            Filtros {activeFiltersCount ? `(${activeFiltersCount})` : ""}
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-          {hasActiveFilters && (
+        {/* Barra de filtros - Mobile otimizada */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Input
+              className="h-9 flex-1 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+              placeholder="Buscar por número da remessa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm" 
-              onClick={clearFilters} 
-              className="gap-1"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]"
             >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
+              <FilterIcon className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Filtros</span>
+              {activeFiltersCount ? ` (${activeFiltersCount})` : ""}
+              {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
-          )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Mostrando <span className="font-medium">{numeroRemessasFiltradas}</span> de <span className="font-medium">{estoqueDetalhes.remessas.length}</span>
+            </span>
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters} 
+                className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+              >
+                <X className="h-4 w-4" /> 
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* 🆕 FILTROS AVANÇADOS SEM BOTÃO LIMPAR INTERNO */}
+        {/* Filtros avançados - Mobile otimizado */}
         {filtersOpen && (
-          <div className="rounded-md border p-3 space-y-6">
+          <div className="rounded-md border p-3 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Período */}
               <div>
                 <Label className="text-sm font-semibold mb-2 block">Período</Label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Input 
                     type="date" 
                     value={dateFrom} 
                     onChange={(e) => setDateFrom(e.target.value)} 
-                    className="h-9 flex-1" 
+                    className="h-9 min-h-[44px] max-md:min-h-[44px]" 
                     placeholder="De"
                   />
                   <Input 
                     type="date" 
                     value={dateTo} 
                     onChange={(e) => setDateTo(e.target.value)} 
-                    className="h-9 flex-1" 
+                    className="h-9 min-h-[44px] max-md:min-h-[44px]" 
                     placeholder="Até"
                   />
                 </div>
@@ -592,14 +578,14 @@ const EstoqueDetalhe = () => {
                 <Label className="text-sm font-semibold mb-2 block">
                   Quantidade ({estoqueDetalhes.produto.unidade})
                 </Label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Input 
                     type="number" 
                     step="0.01"
                     min="0"
                     value={quantidadeMin} 
                     onChange={(e) => setQuantidadeMin(e.target.value)} 
-                    className="h-9 flex-1" 
+                    className="h-9 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
                     placeholder="Mín"
                   />
                   <Input 
@@ -608,7 +594,7 @@ const EstoqueDetalhe = () => {
                     min="0"
                     value={quantidadeMax} 
                     onChange={(e) => setQuantidadeMax(e.target.value)} 
-                    className="h-9 flex-1" 
+                    className="h-9 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
                     placeholder="Máx"
                   />
                 </div>
@@ -620,7 +606,7 @@ const EstoqueDetalhe = () => {
         {/* Lista de remessas */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
+            <Package className="h-5 w-5 text-primary flex-shrink-0" />
             <h2 className="text-lg font-semibold">
               Histórico de Remessas 
               {activeFiltersCount > 0 ? (
@@ -640,7 +626,7 @@ const EstoqueDetalhe = () => {
               remessasFiltradas.map(renderRemessaCard)
             ) : hasActiveFilters ? (
               <Card className="border-dashed">
-                <CardContent className="p-8 text-center">
+                <CardContent className="p-6 md:p-8 text-center">
                   <FilterIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold text-muted-foreground mb-2">
                     Nenhuma remessa encontrada
@@ -652,6 +638,7 @@ const EstoqueDetalhe = () => {
                     variant="outline"
                     size="sm"
                     onClick={clearFilters}
+                    className="min-h-[44px] max-md:min-h-[44px]"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Limpar Filtros
@@ -660,7 +647,7 @@ const EstoqueDetalhe = () => {
               </Card>
             ) : (
               <Card className="border-dashed">
-                <CardContent className="p-8 text-center">
+                <CardContent className="p-6 md:p-8 text-center">
                   <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold text-muted-foreground mb-2">
                     Nenhuma remessa encontrada
