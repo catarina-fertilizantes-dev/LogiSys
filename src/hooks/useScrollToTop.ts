@@ -1,3 +1,4 @@
+// src/hooks/useScrollToTop.ts
 import { useEffect } from 'react';
 
 export const useScrollToTop = () => {
