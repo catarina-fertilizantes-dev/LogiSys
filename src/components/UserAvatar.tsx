@@ -81,12 +81,12 @@ export const UserAvatar = () => {
       {/* 📱 AVATAR BUTTON RESPONSIVO */}
       <Button
         variant="ghost"
-        className="relative h-10 w-auto px-2 md:px-3 rounded-full hover:bg-sidebar-accent/50 transition-colors min-h-[44px]"
+        className="relative h-11 md:h-10 w-auto px-2 md:px-3 rounded-full hover:bg-sidebar-accent/50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-2">
           {/* Avatar Circle */}
-          <div className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold text-sm">
+          <div className="h-9 w-9 md:h-8 md:w-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold text-sm">
             {initials}
           </div>
           
