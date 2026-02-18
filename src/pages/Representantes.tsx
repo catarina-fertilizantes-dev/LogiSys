@@ -439,7 +439,6 @@ const Representantes = () => {
     }
   };
 
-  // ✅ FUNÇÃO CORRETA PARA MOSTRAR CREDENCIAIS (igual à de Clientes)
   const handleShowCredentials = (representante: Representante) => {
     if (!representante.temp_password) {
       toast({
@@ -479,6 +478,11 @@ const Representantes = () => {
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
   const canCreate = hasRole("logistica") || hasRole("admin");
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -501,7 +505,7 @@ const Representantes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Representantes"
         subtitle="Gerencie os representantes do sistema"
@@ -513,95 +517,100 @@ const Representantes = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary">
+                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Representante
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Representante</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do representante. Um usuário de acesso será criado automaticamente.
-                  </DialogDescription>
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+                  <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Representante</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label htmlFor="nome">Nome *</Label>
-                      <Input
-                        id="nome"
-                        value={novoRepresentante.nome}
-                        onChange={(e) => setNovoRepresentante({ ...novoRepresentante, nome: e.target.value })}
-                        placeholder="Nome completo ou razão social"
-                        disabled={isCreating}
-                      />
+                <div className="flex-1 overflow-y-auto py-4 px-1">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
+                        <Input
+                          id="nome"
+                          value={novoRepresentante.nome}
+                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, nome: e.target.value })}
+                          placeholder="Nome completo ou razão social"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cpf" className="text-sm font-medium">CPF/CNPJ *</Label>
+                        <Input
+                          id="cpf"
+                          value={novoRepresentante.cpf}
+                          onChange={(e) =>
+                            setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfCnpjInput(e.target.value) })
+                          }
+                          placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                          maxLength={18}
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={novoRepresentante.email}
+                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, email: e.target.value })}
+                          placeholder="email@exemplo.com"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+                        <Input
+                          id="telefone"
+                          value={novoRepresentante.telefone}
+                          onChange={e =>
+                            setNovoRepresentante({
+                              ...novoRepresentante,
+                              telefone: maskPhoneInput(e.target.value),
+                            })
+                          }
+                          placeholder="(00) 00000-0000"
+                          maxLength={15}
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="regiao_atuacao" className="text-sm font-medium">Região de Atuação</Label>
+                        <Input
+                          id="regiao_atuacao"
+                          value={novoRepresentante.regiao_atuacao}
+                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, regiao_atuacao: e.target.value })}
+                          placeholder="Ex: São Paulo, Rio de Janeiro"
+                          disabled={isCreating}
+                          className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="cpf">CPF/CNPJ *</Label>
-                      <Input
-                        id="cpf"
-                        value={novoRepresentante.cpf}
-                        onChange={(e) =>
-                          setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfCnpjInput(e.target.value) })
-                        }
-                        placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                        maxLength={18}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={novoRepresentante.email}
-                        onChange={(e) => setNovoRepresentante({ ...novoRepresentante, email: e.target.value })}
-                        placeholder="email@exemplo.com"
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="telefone">Telefone</Label>
-                      <Input
-                        id="telefone"
-                        value={novoRepresentante.telefone}
-                        onChange={e =>
-                          setNovoRepresentante({
-                            ...novoRepresentante,
-                            telefone: maskPhoneInput(e.target.value),
-                          })
-                        }
-                        placeholder="(00) 00000-0000"
-                        maxLength={15}
-                        disabled={isCreating}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="regiao_atuacao">Região de Atuação</Label>
-                      <Input
-                        id="regiao_atuacao"
-                        value={novoRepresentante.regiao_atuacao}
-                        onChange={(e) => setNovoRepresentante({ ...novoRepresentante, regiao_atuacao: e.target.value })}
-                        placeholder="Ex: São Paulo, Rio de Janeiro"
-                        disabled={isCreating}
-                      />
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
-                  </p>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
                   <Button 
                     variant="outline" 
                     onClick={() => setDialogOpen(false)}
                     disabled={isCreating}
+                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
                   >
                     Cancelar
                   </Button>
                   <Button 
-                    className="bg-gradient-primary" 
+                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
                     onClick={handleCreateRepresentante}
                     disabled={isCreating}
                   >
@@ -624,12 +633,13 @@ const Representantes = () => {
         }
       />
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      {/* Filtros e busca - Otimizado para mobile */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
           <div className="flex gap-2 items-center">
-            <FilterIcon className="h-4 w-4 text-muted-foreground" />
+            <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] max-md:min-h-[44px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
@@ -643,25 +653,23 @@ const Representantes = () => {
             placeholder="Buscar por nome, email, CPF/CNPJ, região..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
+            className="w-full md:max-w-md min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
           />
-          {hasActiveFilters && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                setSearchTerm("");
-                setFilterStatus("all");
-              }}
-              className="gap-1"
-            >
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
-            </Button>
-          )}
         </div>
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearFilters}
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+          >
+            <X className="h-4 w-4" /> 
+            Limpar Filtros
+          </Button>
+        )}
       </div>
 
+      {/* Modal credenciais temporárias - Otimizado */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -672,40 +680,42 @@ const Representantes = () => {
           )
         }
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>✅ Representante cadastrado com sucesso!</DialogTitle>
-            <DialogDescription>
-              Credenciais de acesso criadas. Envie ao representante por email ou WhatsApp.
-            </DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1">✅ Representante cadastrado com sucesso!</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
-              <p className="text-sm font-medium">Credenciais de acesso para:</p>
-              <p className="text-base font-semibold">{credenciaisModal.nome}</p>
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Acesse:</Label>
-                  <p className="font-mono text-sm text-blue-600">{window.location.origin}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Email:</Label>
-                  <p className="font-mono text-sm">{credenciaisModal.email}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
-                  <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Credenciais de acesso criadas. Envie ao representante por email ou WhatsApp.
+              </p>
+              <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
+                <p className="text-sm font-medium">Credenciais de acesso para:</p>
+                <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Acesse:</Label>
+                    <p className="font-mono text-sm text-blue-600 break-all">{window.location.origin}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email:</Label>
+                    <p className="font-mono text-sm break-all">{credenciaisModal.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Senha temporária:</Label>
+                    <p className="font-mono text-sm font-bold">{credenciaisModal.senha}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-200">
-                ⚠️ <strong>Importante:</strong> Envie estas credenciais ao representante.
-                Por segurança, esta senha só aparece uma vez. O representante será obrigado a trocar a senha no primeiro login.
-              </p>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  ⚠️ <strong>Importante:</strong> Envie estas credenciais ao representante.
+                  Por segurança, esta senha só aparece uma vez. O representante será obrigado a trocar a senha no primeiro login.
+                </p>
+              </div>
             </div>
           </div>
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -714,178 +724,196 @@ const Representantes = () => {
                 navigator.clipboard.writeText(texto);
                 toast({ title: "Credenciais copiadas!" });
               }}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
             >
               📋 Copiar credenciais
             </Button>
-            <Button onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}>
+            <Button 
+              onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Modal clientes do representante - Otimizado */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-4xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1 flex items-center gap-2">
               <Users className="h-5 w-5" />
               Clientes Ativos do Representante
             </DialogTitle>
-            <DialogDescription>
-              {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s)
-            </DialogDescription>
           </DialogHeader>
           
-          {clientesModal.loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <span className="ml-2">Carregando clientes...</span>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              {clientesModal.clientes.length > 0 ? (
-                <>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-3">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      💡 <strong>Dica:</strong> Para alterar o representante de um cliente, acesse a página <strong>Clientes</strong> e edite no modal de detalhes do cliente.
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            {clientesModal.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Carregando clientes...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s)
+                </p>
+                {clientesModal.clientes.length > 0 ? (
+                  <>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-3">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        💡 <strong>Dica:</strong> Para alterar o representante de um cliente, acesse a página <strong>Clientes</strong> e edite no modal de detalhes do cliente.
+                      </p>
+                    </div>
+                    
+                    <div className="grid gap-3">
+                      {clientesModal.clientes.map((cliente) => (
+                        <Card key={cliente.id} className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold truncate">{cliente.nome}</h4>
+                              <p className="text-sm text-muted-foreground break-all">{cliente.email}</p>
+                              <p className="text-sm text-muted-foreground">
+                                CNPJ/CPF: {formatCpfCnpj(cliente.cnpj_cpf)}
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Nenhum cliente ativo atribuído a este representante
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Para atribuir clientes, acesse a página <strong>Clientes</strong> e selecione o representante no modal de detalhes.
                     </p>
                   </div>
-                  
-                  <div className="grid gap-3">
-                    {clientesModal.clientes.map((cliente) => (
-                      <Card key={cliente.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{cliente.nome}</h4>
-                            <p className="text-sm text-muted-foreground">{cliente.email}</p>
-                            <p className="text-sm text-muted-foreground">
-                              CNPJ/CPF: {formatCpfCnpj(cliente.cnpj_cpf)}
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Nenhum cliente ativo atribuído a este representante
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Para atribuir clientes, acesse a página <strong>Clientes</strong> e selecione o representante no modal de detalhes.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
           
-          <DialogFooter>
-            <Button onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background">
+            <Button 
+              onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Modal detalhes do representante - Otimizado */}
       <Dialog open={!!detalhesRepresentante} onOpenChange={open => !open && setDetalhesRepresentante(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Representante</DialogTitle>
-            <DialogDescription>
-              {detalhesRepresentante?.nome}
-            </DialogDescription>
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
+          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+            <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes do Representante</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {detalhesRepresentante && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Email:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Status:</Label>
-                    <div className="mt-1">
-                      <Badge variant={detalhesRepresentante.ativo ? "default" : "secondary"}>
-                        {detalhesRepresentante.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            <div className="space-y-4">
+              {detalhesRepresentante && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {detalhesRepresentante?.nome}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Email:</Label>
+                      <p className="font-semibold break-all">{detalhesRepresentante.email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status:</Label>
+                      <div className="mt-1">
+                        <Badge variant={detalhesRepresentante.ativo ? "default" : "secondary"}>
+                          {detalhesRepresentante.ativo ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CPF/CNPJ:</Label>
+                      <p className="font-semibold break-all">{detalhesRepresentante.cpf ? formatCpfCnpj(detalhesRepresentante.cpf) : "—"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Telefone:</Label>
+                      <p className="font-semibold">{detalhesRepresentante.telefone ? formatPhone(detalhesRepresentante.telefone) : "—"}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
+                      <p className="font-semibold break-words">{detalhesRepresentante.regiao_atuacao || "—"}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {detalhesRepresentante.clientes_count || 0} cliente(s)
+                        </Badge>
+                        {(detalhesRepresentante.clientes_count || 0) > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchClientesRepresentante(detalhesRepresentante.id, detalhesRepresentante.nome)}
+                            className="text-xs min-h-[32px]"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Ver Clientes
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">CPF/CNPJ:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.cpf ? formatCpfCnpj(detalhesRepresentante.cpf) : "—"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.telefone ? formatPhone(detalhesRepresentante.telefone) : "—"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
-                    <p className="font-semibold">{detalhesRepresentante.regiao_atuacao || "—"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {detalhesRepresentante.clientes_count || 0} cliente(s)
-                      </Badge>
-                      {(detalhesRepresentante.clientes_count || 0) > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchClientesRepresentante(detalhesRepresentante.id, detalhesRepresentante.nome)}
-                          className="text-xs"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          Ver Clientes
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-          <DialogFooter className="flex gap-2">
-            {/* ✅ BOTÃO "VER CREDENCIAIS" - CONDIÇÃO CORRETA */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
             {canCreate && detalhesRepresentante?.temp_password && (
               <Button
                 variant="outline"
                 onClick={() => handleShowCredentials(detalhesRepresentante)}
-                className="flex-1"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
               >
                 <Key className="h-4 w-4 mr-2" />
                 Ver Credenciais
               </Button>
             )}
-            <Button onClick={() => setDetalhesRepresentante(null)}>
+            <Button 
+              onClick={() => setDetalhesRepresentante(null)}
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+            >
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Lista de representantes - Cards responsivos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredRepresentantes.map((representante) => (
           <Card
             key={representante.id}
-            className="cursor-pointer transition-all"
+            className="cursor-pointer transition-all hover:shadow-md"
             onClick={() => setDetalhesRepresentante(representante)}
           >
             <CardContent className="p-4 space-y-3">
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">{representante.nome}</h3>
-                <p className="text-sm text-muted-foreground">{representante.email}</p>
+                <h3 className="font-semibold text-lg leading-tight">{representante.nome}</h3>
+                <p className="text-sm text-muted-foreground break-all">{representante.email}</p>
                 <p className="text-sm">
-                  <span className="text-muted-foreground">CPF/CNPJ:</span> {formatCpfCnpj(representante.cpf)}
+                  <span className="text-muted-foreground">CPF/CNPJ:</span> 
+                  <span className="ml-1 break-all">{formatCpfCnpj(representante.cpf)}</span>
                 </p>
                 
+                {/* Espaço reservado para clientes - altura fixa */}
                 <div className="h-5 flex items-center">
                   {(representante.clientes_count || 0) > 0 ? (
                     <Button
@@ -906,8 +934,10 @@ const Representantes = () => {
                 </div>
               </div>
               
+              {/* Separador */}
               <div className="border-t"></div>
               
+              {/* Badge e switch na mesma linha */}
               {canCreate && (
                 <div className="flex items-center justify-between">
                   <Badge variant={representante.ativo ? "default" : "secondary"}>
@@ -934,6 +964,7 @@ const Representantes = () => {
         ))}
       </div>
       
+      {/* Estado vazio */}
       {filteredRepresentantes.length === 0 && (
         <div className="text-center py-12">
           <UserCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -946,11 +977,8 @@ const Representantes = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => {
-                setSearchTerm("");
-                setFilterStatus("all");
-              }}
-              className="mt-2"
+              onClick={handleClearFilters}
+              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
