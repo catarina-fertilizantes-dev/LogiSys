@@ -78,10 +78,10 @@ export const UserAvatar = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Avatar Button - Ajustado para header */}
+      {/* 📱 AVATAR BUTTON RESPONSIVO */}
       <Button
         variant="ghost"
-        className="relative h-10 w-auto px-2 md:px-3 rounded-full hover:bg-sidebar-accent/50 transition-colors"
+        className="relative h-10 w-auto px-2 md:px-3 rounded-full hover:bg-sidebar-accent/50 transition-colors min-h-[44px]"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-2">
@@ -100,19 +100,19 @@ export const UserAvatar = () => {
         </div>
       </Button>
 
-      {/* Dropdown Menu */}
+      {/* 📱 DROPDOWN RESPONSIVO */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 md:w-80 bg-card border border-border rounded-lg shadow-lg z-[70] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1rem)] max-w-80 md:w-80 bg-card border border-border rounded-lg shadow-lg z-[70] overflow-hidden">
           {/* Header do usuário */}
-          <div className="p-4 bg-muted/30">
+          <div className="p-3 md:p-4 bg-muted/30">
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold text-base md:text-lg flex-shrink-0">
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{userName}</p>
-                <p className="text-sm text-muted-foreground truncate">{userEmail}</p>
-                <div className="mt-2">
+                <p className="font-semibold text-foreground truncate text-sm md:text-base">{userName}</p>
+                <p className="text-xs md:text-sm text-muted-foreground truncate">{userEmail}</p>
+                <div className="mt-1 md:mt-2">
                   <Badge 
                     variant="secondary" 
                     className={`text-xs ${getRoleColor(userRole)}`}
@@ -126,19 +126,19 @@ export const UserAvatar = () => {
 
           <Separator />
 
-          {/* Menu Items */}
+          {/* 📱 MENU ITEMS COM TOUCH TARGETS */}
           <div className="p-2">
-            {/* Configurações (placeholder para futuro) */}
+            {/* Configurações */}
             <Button
               variant="ghost"
-              className="w-full justify-start h-auto p-3 text-left hover:bg-muted/50"
+              className="w-full justify-start min-h-[44px] p-3 text-left hover:bg-muted/50"
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Implementar página de configurações
               }}
             >
-              <Settings className="h-4 w-4 mr-3 text-muted-foreground" />
-              <div>
+              <Settings className="h-4 w-4 mr-3 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-sm font-medium">Configurações</p>
                 <p className="text-xs text-muted-foreground">Preferências da conta</p>
               </div>
@@ -146,14 +146,14 @@ export const UserAvatar = () => {
 
             <Separator className="my-2" />
 
-            {/* Logout */}
+            {/* 📱 LOGOUT COM TOUCH TARGET */}
             <Button
               variant="ghost"
-              className="w-full justify-start h-auto p-3 text-left hover:bg-destructive/10 text-destructive hover:text-destructive"
+              className="w-full justify-start min-h-[44px] p-3 text-left hover:bg-destructive/10 text-destructive hover:text-destructive"
               onClick={handleSignOut}
             >
-              <LogOut className="h-4 w-4 mr-3" />
-              <div>
+              <LogOut className="h-4 w-4 mr-3 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-sm font-medium">Sair</p>
                 <p className="text-xs opacity-80">Encerrar sessão</p>
               </div>
