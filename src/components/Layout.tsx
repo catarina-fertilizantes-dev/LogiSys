@@ -37,7 +37,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <header className="h-16 md:h-14 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-[60]">
           <div className="flex items-center gap-3">
             {/* Hambúrguer Global - Touch target melhorado */}
-            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-md:h-11 max-md:w-11 max-md:p-0" />
+            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
             
             {/* Logo/Brand - Touch target melhorado */}
             <div className="flex items-center gap-2 max-md:min-h-[44px] max-md:py-2">
