@@ -214,7 +214,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       {/* 📱 CONTAINER COM SCROLLBAR OCULTA E SEM GAP */}
-      <SidebarContent className="pt-2 px-1 md:px-2 scrollbar-hide overflow-y-auto">
+      <SidebarContent className="px-1 md:px-2 scrollbar-hide overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs md:text-sm">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
