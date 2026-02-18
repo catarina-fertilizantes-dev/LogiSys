@@ -385,14 +385,15 @@ const handleCreateUser = async () => {
                 Novo Colaborador
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md">
-              <DialogHeader>
+            <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto">
+              <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b border-border mb-4">
                 <DialogTitle className="text-lg md:text-xl">Criar Novo Colaborador</DialogTitle>
                 <DialogDescription className="text-sm md:text-base">
                   Crie um novo colaborador (Admin ou Logística). Clientes e armazéns são criados em suas respectivas páginas.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              
+              <div className="space-y-4 py-2 px-1">
                 <div className="space-y-2">
                   <Label htmlFor="nome" className="text-sm font-medium">Nome Completo</Label>
                   <Input
@@ -451,7 +452,8 @@ const handleCreateUser = async () => {
                   </p>
                 </div>
               </div>
-              <DialogFooter className="flex-col-reverse gap-2 md:flex-row md:gap-0">
+              
+              <DialogFooter className="sticky bottom-0 bg-background z-10 pt-4 border-t border-border mt-4 flex-col-reverse gap-2 md:flex-row md:gap-0">
                 <Button 
                   variant="outline" 
                   onClick={() => setDialogOpen(false)}
