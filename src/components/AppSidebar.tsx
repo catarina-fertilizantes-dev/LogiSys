@@ -205,11 +205,11 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md max-md:min-h-[44px]`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
-                          className={`h-5 w-5 md:h-4 md:w-4 ${isActive ? 'text-primary' : ''}`} 
+                          className={`h-4 w-4 max-md:h-5 max-md:w-5 ${isActive ? 'text-primary' : ''}`} 
                         />
                         {!isCollapsed && (
                           <span className={isActive ? 'text-primary' : ''}>
@@ -238,11 +238,11 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md max-md:min-h-[44px]`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
-                            className={`h-5 w-5 md:h-4 md:w-4 ${isActive ? 'text-primary' : ''}`} 
+                            className={`h-4 w-4 max-md:h-5 max-md:w-5 ${isActive ? 'text-primary' : ''}`} 
                           />
                           {!isCollapsed && (
                             <span className={isActive ? 'text-primary' : ''}>
@@ -265,9 +265,9 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] md:min-h-auto"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 max-md:min-h-[44px]"
                 >
-                  <LogOut className="h-5 w-5 md:h-4 md:w-4" />
+                  <LogOut className="h-4 w-4 max-md:h-5 max-md:w-5" />
                   {!isCollapsed && <span>Sair</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
