@@ -142,3 +142,13 @@ All colors MUST be HSL.
     display: none;             /* Chrome, Safari, Opera */
   }
 }
+
+  /* Touch targets mobile para SidebarTrigger */
+  @media (max-width: 767px) {
+    [data-sidebar="trigger"] {
+      height: 44px !important;
+      width: 44px !important;
+      padding: 8px !important;
+    }
+  }
+}
