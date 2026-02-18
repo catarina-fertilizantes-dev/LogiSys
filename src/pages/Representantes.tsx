@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCheck, Plus, Filter as FilterIcon, Key, Loader2, X, Users, Eye } from "lucide-react";
@@ -522,11 +521,14 @@ const Representantes = () => {
                   Novo Representante
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-                <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+              
+              {/* Modal de Criação com Botões Não-Fixos */}
+              <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+                <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Representante</DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto py-4 px-1">
+                
+                <div className="py-4 px-1 space-y-6">
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
@@ -599,34 +601,36 @@ const Representantes = () => {
                       * Campos obrigatórios. Um usuário será criado automaticamente com uma senha temporária.
                     </p>
                   </div>
+
+                  {/* Botões no final do conteúdo */}
+                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      disabled={isCreating}
+                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
+                      onClick={handleCreateRepresentante}
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Criar Representante
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setDialogOpen(false)}
-                    disabled={isCreating}
-                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                    onClick={handleCreateRepresentante}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Criar Representante
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           )
@@ -673,7 +677,7 @@ const Representantes = () => {
         )}
       </div>
 
-      {/* Modal credenciais temporárias - Otimizado */}
+      {/* Modal de credenciais com botões não-fixos */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -684,11 +688,12 @@ const Representantes = () => {
           )
         }
       >
-        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+          <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
             <DialogTitle className="text-lg md:text-xl pr-2 mt-1">✅ Representante cadastrado com sucesso!</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4 px-1">
+          
+          <div className="py-4 px-1 space-y-6">
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Credenciais de acesso criadas. Envie ao representante por email ou WhatsApp.
@@ -718,44 +723,46 @@ const Representantes = () => {
                 </p>
               </div>
             </div>
+
+            {/* Botões no final do conteúdo */}
+            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const baseUrl = window.location.origin;
+                  const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                  navigator.clipboard.writeText(texto);
+                  toast({ title: "Credenciais copiadas!" });
+                }}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+              >
+                📋 Copiar credenciais
+              </Button>
+              <Button 
+                onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+              >
+                Fechar
+              </Button>
+            </div>
           </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const baseUrl = window.location.origin;
-                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
-                navigator.clipboard.writeText(texto);
-                toast({ title: "Credenciais copiadas!" });
-              }}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              📋 Copiar credenciais
-            </Button>
-            <Button 
-              onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal clientes do representante - Otimizado */}
+      {/* Modal de clientes com botões não-fixos */}
       <Dialog 
         open={clientesModal.show} 
         onOpenChange={(open) => !open && setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
       >
-        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-4xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-4xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+          <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
             <DialogTitle className="text-lg md:text-xl pr-2 mt-1 flex items-center gap-2">
               <Users className="h-5 w-5" />
               Clientes Ativos do Representante
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto py-4 px-1">
+          <div className="py-4 px-1 space-y-6">
             {clientesModal.loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -803,26 +810,28 @@ const Representantes = () => {
                 )}
               </div>
             )}
+
+            {/* Botão no final do conteúdo */}
+            <div className="pt-4 border-t border-border bg-background">
+              <Button 
+                onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+              >
+                Fechar
+              </Button>
+            </div>
           </div>
-          
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background">
-            <Button 
-              onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal detalhes do representante - Otimizado */}
+      {/* Modal de detalhes com botões não-fixos */}
       <Dialog open={!!detalhesRepresentante} onOpenChange={open => !open && setDetalhesRepresentante(null)}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-hidden my-4 md:my-8 flex flex-col">
-          <DialogHeader className="flex-shrink-0 pt-2 pb-3 border-b border-border pr-8">
+        <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+          <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
             <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes do Representante</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4 px-1">
+          
+          <div className="py-4 px-1 space-y-6">
             <div className="space-y-4">
               {detalhesRepresentante && (
                 <>
@@ -878,25 +887,27 @@ const Representantes = () => {
                 </>
               )}
             </div>
-          </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border bg-background flex-col-reverse gap-2 md:flex-row md:gap-0">
-            {canCreate && detalhesRepresentante?.temp_password && (
-              <Button
-                variant="outline"
-                onClick={() => handleShowCredentials(detalhesRepresentante)}
+
+            {/* Botões no final do conteúdo */}
+            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
+              {canCreate && detalhesRepresentante?.temp_password && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleShowCredentials(detalhesRepresentante)}
+                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Ver Credenciais
+                </Button>
+              )}
+              <Button 
+                onClick={() => setDetalhesRepresentante(null)}
                 className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
               >
-                <Key className="h-4 w-4 mr-2" />
-                Ver Credenciais
+                Fechar
               </Button>
-            )}
-            <Button 
-              onClick={() => setDetalhesRepresentante(null)}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-            >
-              Fechar
-            </Button>
-          </DialogFooter>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
