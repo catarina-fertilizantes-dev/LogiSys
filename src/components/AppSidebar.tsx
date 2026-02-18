@@ -208,7 +208,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 rounded-md transition-all duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2`}
+                        className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto md:py-2`}
                         onClick={handleItemClick}
                       >
                         <item.icon 
@@ -230,7 +230,7 @@ export function AppSidebar() {
 
         {/* 📱 CADASTROS COM TOUCH TARGETS OTIMIZADOS */}
         {showCadastros && (
-          <SidebarGroup className="mt-6">
+          <SidebarGroup>
             <SidebarGroupLabel className="px-3 py-2 text-xs font-medium">
               Cadastros
             </SidebarGroupLabel>
@@ -244,7 +244,7 @@ export function AppSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/"}
-                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 rounded-md transition-all duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2`}
+                          className={`${getMenuClasses(item.url, isCollapsed)} flex items-center gap-3 px-3 py-2 rounded-md min-h-[44px] md:min-h-auto md:py-2`}
                           onClick={handleItemClick}
                         >
                           <item.icon 
@@ -272,7 +272,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
-                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-3 md:min-h-auto md:py-2"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 min-h-[44px] px-3 py-2 md:min-h-auto md:py-2"
                 >
                   <LogOut className="h-5 w-5 md:h-4 md:w-4 flex-shrink-0" />
                   {!isCollapsed && (
