@@ -92,13 +92,15 @@ const Produtos = () => {
     }
   };
 
+  const canCreate = hasRole("logistica") || hasRole("admin");
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [canCreate]);
   
   useEffect(() => {
     fetchProdutos();
@@ -210,8 +212,6 @@ const Produtos = () => {
   
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
 
-  const canCreate = hasRole("logistica") || hasRole("admin");
-
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilterStatus("all");
@@ -219,10 +219,13 @@ const Produtos = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando produtos...</p>
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Produtos" subtitle="Carregando..." icon={Tag} actions={<></>} />
+        <div className="flex justify-center items-center h-40">
+          <div className="text-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando produtos...</p>
+          </div>
         </div>
       </div>
     );
@@ -230,9 +233,12 @@ const Produtos = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-destructive">Erro ao carregar produtos</p>
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Produtos" subtitle="Erro ao carregar dados" icon={Tag} actions={<></>} />
+        <div className="flex justify-center items-center h-40">
+          <div className="text-center">
+            <p className="text-destructive">Erro ao carregar produtos</p>
+          </div>
         </div>
       </div>
     );
@@ -359,14 +365,14 @@ const Produtos = () => {
             <div className="space-y-4">
               {detalhesProduto && (
                 <>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     {detalhesProduto?.nome}
                   </p>
                   {/* Informações Básicas - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Unidade:</Label>
-                      <p className="font-semibold">{unidadeLabels[detalhesProduto.unidade || ""] || detalhesProduto.unidade}</p>
+                      <p className="font-semibold text-sm md:text-base">{unidadeLabels[detalhesProduto.unidade || ""] || detalhesProduto.unidade}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
@@ -376,9 +382,9 @@ const Produtos = () => {
                         </Badge>
                       </div>
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Criado em:</Label>
-                      <p className="font-semibold">{detalhesProduto.created_at ? new Date(detalhesProduto.created_at).toLocaleString('pt-BR') : "—"}</p>
+                      <p className="font-semibold text-sm md:text-base">{detalhesProduto.created_at ? new Date(detalhesProduto.created_at).toLocaleString('pt-BR') : "—"}</p>
                     </div>
                   </div>
                 </>
@@ -405,7 +411,7 @@ const Produtos = () => {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg leading-tight">{produto.nome}</h3>
+                  <h3 className="font-semibold text-base md:text-lg leading-tight break-words">{produto.nome}</h3>
                   <p className="text-sm text-muted-foreground">
                     Unidade: {unidadeLabels[produto.unidade] || produto.unidade}
                   </p>
@@ -422,13 +428,14 @@ const Produtos = () => {
                   <Badge variant={produto.ativo ? "default" : "secondary"}>
                     {produto.ativo ? "Ativo" : "Inativo"}
                   </Badge>
-                  <div className="relative">
+                  <div className="relative min-h-[44px] max-md:min-h-[44px] flex items-center">
                     <Switch
                       id={`switch-${produto.id}`}
                       checked={produto.ativo}
                       onCheckedChange={() => handleToggleAtivo(produto.id, produto.ativo)}
                       onClick={e => e.stopPropagation()}
                       disabled={isTogglingStatus[produto.id]}
+                      className="data-[state=checked]:bg-primary"
                     />
                     {isTogglingStatus[produto.id] && (
                       <div className="absolute inset-0 flex items-center justify-center">
