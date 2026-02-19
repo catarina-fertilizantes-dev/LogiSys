@@ -692,8 +692,8 @@ const CarregamentoDetalhe = () => {
       style={{ marginTop: `${ARROW_HEIGHT + 8}px`, marginBottom: "28px" }}
     >
       <div className="relative">
-        {/* Container com scroll horizontal - barra visível */}
-        <div className="overflow-x-auto">
+        {/* Container com scroll horizontal - com padding para as setas */}
+        <div className="overflow-x-auto pb-2" style={{ paddingTop: `${ARROW_HEIGHT}px` }}>
           <div className="flex items-end justify-between w-full min-w-[600px] lg:min-w-0 max-w-4xl mx-auto relative">
             {ETAPAS.map((etapa, idx) => {
               const etapaIndex = etapa.id;
