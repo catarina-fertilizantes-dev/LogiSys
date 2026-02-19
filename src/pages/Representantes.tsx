@@ -23,6 +23,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 type Representante = Database['public']['Tables']['representantes']['Row'] & {
   temp_password?: string | null;
@@ -516,7 +517,7 @@ const Representantes = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+                <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Representante
                 </Button>
@@ -603,33 +604,14 @@ const Representantes = () => {
                   </div>
 
                   {/* Botões no final do conteúdo */}
-                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                      onClick={handleCreateRepresentante}
-                      disabled={isCreating}
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Criar Representante
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateRepresentante}
+                    confirmText="Criar Representante"
+                    confirmIcon={<Plus className="h-4 w-4" />}
+                    isLoading={isCreating}
+                  />
                 </div>
               </DialogContent>
             </Dialog>
@@ -666,10 +648,9 @@ const Representantes = () => {
         
         {hasActiveFilters && (
           <Button 
-            variant="ghost" 
             size="sm" 
             onClick={handleClearFilters}
-            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px] btn-secondary"
           >
             <X className="h-4 w-4" /> 
             Limpar Filtros
@@ -725,26 +706,18 @@ const Representantes = () => {
             </div>
 
             {/* Botões no final do conteúdo */}
-            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const baseUrl = window.location.origin;
-                  const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
-                  navigator.clipboard.writeText(texto);
-                  toast({ title: "Credenciais copiadas!" });
-                }}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-              >
-                📋 Copiar credenciais
-              </Button>
-              <Button 
-                onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-              >
-                Fechar
-              </Button>
-            </div>
+            <ModalFooter 
+              variant="double"
+              onClose={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
+              onConfirm={() => {
+                const baseUrl = window.location.origin;
+                const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
+                navigator.clipboard.writeText(texto);
+                toast({ title: "Credenciais copiadas!" });
+              }}
+              confirmText="📋 Copiar credenciais"
+              cancelText="Fechar"
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -812,14 +785,10 @@ const Representantes = () => {
             )}
 
             {/* Botão no final do conteúdo */}
-            <div className="pt-4 border-t border-border bg-background">
-              <Button 
-                onClick={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-              >
-                Fechar
-              </Button>
-            </div>
+            <ModalFooter 
+              variant="single"
+              onClose={() => setClientesModal({ show: false, representante: null, clientes: [], loading: false })}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -872,10 +841,9 @@ const Representantes = () => {
                         </Badge>
                         {(detalhesRepresentante.clientes_count || 0) > 0 && (
                           <Button
-                            variant="outline"
                             size="sm"
                             onClick={() => fetchClientesRepresentante(detalhesRepresentante.id, detalhesRepresentante.nome)}
-                            className="text-xs min-h-[32px]"
+                            className="text-xs min-h-[32px] btn-secondary"
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             Ver Clientes
@@ -889,24 +857,21 @@ const Representantes = () => {
             </div>
 
             {/* Botões no final do conteúdo */}
-            <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-              {canCreate && detalhesRepresentante?.temp_password && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleShowCredentials(detalhesRepresentante)}
-                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                >
-                  <Key className="h-4 w-4 mr-2" />
-                  Ver Credenciais
-                </Button>
-              )}
-              <Button 
-                onClick={() => setDetalhesRepresentante(null)}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-              >
-                Fechar
-              </Button>
-            </div>
+            {canCreate && detalhesRepresentante?.temp_password ? (
+              <ModalFooter 
+                variant="double"
+                onClose={() => setDetalhesRepresentante(null)}
+                onConfirm={() => handleShowCredentials(detalhesRepresentante)}
+                confirmText="Ver Credenciais"
+                confirmIcon={<Key className="h-4 w-4" />}
+                cancelText="Fechar"
+              />
+            ) : (
+              <ModalFooter 
+                variant="single"
+                onClose={() => setDetalhesRepresentante(null)}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -990,10 +955,9 @@ const Representantes = () => {
           </p>
           {hasActiveFilters && (
             <Button 
-              variant="outline" 
               size="sm" 
               onClick={handleClearFilters}
-              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+              className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
