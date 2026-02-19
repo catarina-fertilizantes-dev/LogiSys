@@ -688,11 +688,11 @@ const CarregamentoDetalhe = () => {
 
   const renderEtapasFluxo = () => (
     <div
-      className="w-full flex flex-col px-2 sm:px-0"
-      style={{ marginTop: `${ARROW_HEIGHT + 8}px`,      marginBottom: "28px" }}
+      className="w-full flex flex-col"
+      style={{ marginTop: `${ARROW_HEIGHT + 8}px`, marginBottom: "28px" }}
     >
       <div className="relative">
-        <div className="flex items-end justify-between w-full max-w-4xl mx-auto relative overflow-x-auto sm:overflow-x-visible">
+        <div className="flex items-end justify-between w-full max-w-4xl mx-auto relative">
           {ETAPAS.map((etapa, idx) => {
             const etapaIndex = etapa.id;
             const etapaAtual = carregamento?.etapa_atual ?? 1;
@@ -720,7 +720,7 @@ const CarregamentoDetalhe = () => {
             } else {
               circleClasses += " cursor-not-allowed opacity-70";
             }
-
+  
             const getDataEtapa = () => {
               switch (etapaIndex) {
                 case 1: return carregamento?.data_chegada;
@@ -735,11 +735,10 @@ const CarregamentoDetalhe = () => {
             return (
               <div
                 key={etapa.id}
-                className="flex flex-col items-center flex-1 min-w-[70px] sm:min-w-[90px] relative"
+                className="flex flex-col items-center flex-1 min-w-[90px] relative"
               >
                 {idx < ETAPAS.length - 1 && (
                   <div
-                    className="hidden sm:block"
                     style={{
                       position: "absolute",
                       top: `-${ARROW_HEIGHT}px`,
@@ -750,15 +749,15 @@ const CarregamentoDetalhe = () => {
                       justifyContent: "center"
                     }}
                   >
-                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                    <ArrowRight className="w-6 h-6 text-gray-400" />
                   </div>
                 )}
                 <div
                   className={circleClasses}
                   style={{
-                    width: 32,
-                    height: 32,
-                    fontSize: "0.9rem",
+                    width: 36,
+                    height: 36,
+                    fontSize: "1.1rem",
                     marginBottom: 3,
                     boxShadow: shadowStyle,
                   }}
@@ -768,11 +767,11 @@ const CarregamentoDetalhe = () => {
                     }
                   }}
                 >
-                  {isFinalizada && !isSelected ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> : etapaIndex}
+                  {isFinalizada && !isSelected ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
                 </div>
                 <div
                   className={
-                    "text-xs text-center leading-tight break-words " +
+                    "text-xs text-center leading-tight " +
                     (isSelected ? "text-primary font-bold" : "text-foreground") +
                     (podeClicar ? " cursor-pointer" : " cursor-not-allowed opacity-70")
                   }
@@ -788,7 +787,7 @@ const CarregamentoDetalhe = () => {
                 >
                   {etapa.nome}
                 </div>
-                <div className="text-[10px] sm:text-[11px] text-center text-muted-foreground break-words" style={{ marginTop: 1 }}>
+                <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
                   {formatarDataHora(getDataEtapa())}
                 </div>
               </div>
