@@ -314,21 +314,21 @@ const Carregamentos = () => {
 
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-4 md:p-5">
+      <CardContent className="p-4">
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <Link 
               to={`/carregamentos/${carr.id}`} 
-              className="flex items-start gap-3 md:gap-4 flex-1 w-full text-inherit no-underline"
+              className="flex items-start gap-3 flex-1 w-full text-inherit no-underline"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
-                <Truck className="h-4 w-4 md:h-5 md:w-5 text-white" />
+              <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+                <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground text-sm md:text-base">Pedido: {carr.pedido}</h3>
-                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
-                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
+                <h3 className="font-semibold text-foreground text-sm sm:text-base break-words">Pedido: {carr.pedido}</h3>
+                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold break-words">{carr.cliente}</span></p>
+                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold break-words">{carr.produto}</span></p>
                 <p className="text-xs text-muted-foreground break-words">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
                 <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
                 {carr.numero_nf && (
@@ -363,22 +363,22 @@ const Carregamentos = () => {
             className="block text-inherit no-underline"
             style={{ textDecoration: "none", color: "inherit" }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm pt-2">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="truncate">{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
+                <span className="break-words">{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="truncate">{formatPlaca(carr.placa)}</span>
+                <span className="break-words">{formatPlaca(carr.placa)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="truncate">{carr.motorista}</span>
+                <span className="break-words">{carr.motorista}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="truncate">{formatCPF(carr.documento)}</span>
+                <span className="break-words">{formatCPF(carr.documento)}</span>
               </div>
             </div>
           </Link>
@@ -391,13 +391,13 @@ const Carregamentos = () => {
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <Truck className="h-4 w-4 text-purple-600" />
-                <span className="text-xs text-purple-600 font-medium w-20 sm:w-24">Carregamento:</span>
+                <span className="text-xs text-purple-600 font-medium">Carregamento:</span>
               </Link>
               
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
-                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help min-w-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div 
@@ -418,7 +418,7 @@ const Carregamentos = () => {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-10 sm:w-12">
+                    <span className="text-xs text-muted-foreground font-medium w-8 text-right">
                       {carr.percentual_carregamento}%
                     </span>
                   </div>
@@ -569,7 +569,7 @@ const Carregamentos = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Carregamentos Ativos ({carregamentosAtivos.length})</h2>
+            <h2 className="text-base md:text-lg font-semibold">Carregamentos Ativos ({carregamentosAtivos.length})</h2>
           </div>
           
           <div className="grid gap-3">
@@ -577,7 +577,7 @@ const Carregamentos = () => {
             {carregamentosAtivos.length === 0 && (
               <div className="text-center py-8">
                 <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm md:text-base">
                   {hasActiveFilters
                     ? "Nenhum carregamento ativo encontrado com os filtros aplicados"
                     : "Nenhum carregamento ativo no momento"}
@@ -601,7 +601,8 @@ const Carregamentos = () => {
         {carregamentosFinalizados.length > 0 && (
           <div className="space-y-4">
             <Button
-              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent btn-secondary min-h-[44px] max-md:min-h-[44px]"
+              variant="ghost"
+              className="flex items-center gap-2 p-0 h-auto text-base md:text-lg font-semibold hover:bg-transparent min-h-[44px] max-md:min-h-[44px]"
               onClick={() => setSecaoFinalizadosExpandida(!secaoFinalizadosExpandida)}
             >
               {secaoFinalizadosExpandida ? (
@@ -627,7 +628,7 @@ const Carregamentos = () => {
         {carregamentosAtivos.length === 0 && carregamentosFinalizados.length === 0 && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base">
               {hasActiveFilters
                 ? "Nenhum carregamento encontrado com os filtros aplicados"
                 : "Nenhum carregamento cadastrado ainda"}
