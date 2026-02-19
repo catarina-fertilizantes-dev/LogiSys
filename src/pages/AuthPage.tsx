@@ -51,45 +51,49 @@ const AuthPage = () => {
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
-              className="h-52 w-52 object-contain" 
+              className="h-32 w-32 sm:h-40 sm:w-40 md:h-52 md:w-52 object-contain" 
             />
           </div>
-          <CardTitle className="text-2xl font-bold -mt-2">NEXOR</CardTitle>
-          <CardDescription className="-mt-1">Sistema de Gestão Logística</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold -mt-2">NEXOR</CardTitle>
+          <CardDescription className="-mt-1 text-sm sm:text-base">Sistema de Gestão Logística</CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email-login">Email</Label>
+              <Label htmlFor="email-login" className="text-sm font-medium">Email</Label>
               <Input
                 id="email-login"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                placeholder="seu@email.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password-login">Senha</Label>
+              <Label htmlFor="password-login" className="text-sm font-medium">Senha</Label>
               <Input
                 id="password-login"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
+                placeholder="Sua senha"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full btn-primary" 
+              className="w-full btn-primary min-h-[44px] max-md:min-h-[44px]" 
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
-            <div className="text-center">
+            <div className="text-center pt-2">
               <Link 
                 to="/forgot-password" 
-                className="text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline inline-block min-h-[44px] max-md:min-h-[44px] flex items-center justify-center"
               >
                 Esqueci minha senha
               </Link>
