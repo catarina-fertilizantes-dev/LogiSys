@@ -314,22 +314,22 @@ const Carregamentos = () => {
 
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-5">
+      <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <Link 
               to={`/carregamentos/${carr.id}`} 
-              className="flex items-start gap-4 flex-1 text-inherit no-underline"
+              className="flex items-start gap-3 md:gap-4 flex-1 w-full text-inherit no-underline"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
-                <Truck className="h-5 w-5 text-white" />
+              <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+                <Truck className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Pedido: {carr.pedido}</h3>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground text-sm md:text-base">Pedido: {carr.pedido}</h3>
                 <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{carr.cliente}</span></p>
                 <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{carr.produto}</span></p>
-                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
+                <p className="text-xs text-muted-foreground break-words">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
                 <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
                 {carr.numero_nf && (
                   <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
@@ -337,7 +337,7 @@ const Carregamentos = () => {
               </div>
             </Link>
             
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-2 shrink-0">
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
@@ -363,22 +363,22 @@ const Carregamentos = () => {
             className="block text-inherit no-underline"
             style={{ textDecoration: "none", color: "inherit" }}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 text-sm pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm pt-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate">{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-muted-foreground" />
-                <span>{formatPlaca(carr.placa)}</span>
+                <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate">{formatPlaca(carr.placa)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="truncate">{carr.motorista}</span>
               </div>
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>{formatCPF(carr.documento)}</span>
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate">{formatCPF(carr.documento)}</span>
               </div>
             </div>
           </Link>
@@ -387,11 +387,11 @@ const Carregamentos = () => {
             <div className="flex items-center gap-2">
               <Link 
                 to={`/carregamentos/${carr.id}`} 
-                className="flex items-center gap-2 text-inherit no-underline"
+                className="flex items-center gap-2 text-inherit no-underline shrink-0"
                 style={{ textDecoration: "none", color: "inherit" }}
               >
                 <Truck className="h-4 w-4 text-purple-600" />
-                <span className="text-xs text-purple-600 font-medium w-24">Carregamento:</span>
+                <span className="text-xs text-purple-600 font-medium w-20 sm:w-24">Carregamento:</span>
               </Link>
               
               <Tooltip delayDuration={100}>
@@ -414,11 +414,11 @@ const Carregamentos = () => {
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
-                    className="flex items-center gap-1 cursor-help"
+                    className="flex items-center gap-1 cursor-help shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-12">
+                    <span className="text-xs text-muted-foreground font-medium w-10 sm:w-12">
                       {carr.percentual_carregamento}%
                     </span>
                   </div>
@@ -436,7 +436,7 @@ const Carregamentos = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader
           title="Carregamentos"
           subtitle="Acompanhe o progresso dos carregamentos"
@@ -454,7 +454,7 @@ const Carregamentos = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader
           title="Carregamentos"
           subtitle="Acompanhe o progresso dos carregamentos"
@@ -474,43 +474,64 @@ const Carregamentos = () => {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader
           title="Carregamentos"
           subtitle="Acompanhe o progresso dos carregamentos"
           icon={Truck}
         />
 
-        <div className="flex items-center gap-3">
-          <Input className="h-9 flex-1" placeholder="Buscar por cliente, placa, motorista ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
-          </span>
-          <Button size="sm" onClick={() => setFiltersOpen((v) => !v)} className="btn-secondary">
-            <FilterIcon className="h-4 w-4 mr-1" />
-            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-          {hasActiveFilters && (
-            <Button size="sm" onClick={clearFilters} className="gap-1 btn-secondary">
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
+        {/* Barra de filtros - Mobile otimizada */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Input 
+              className="h-9 flex-1 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
+              placeholder="Buscar por cliente, placa, motorista ou pedido..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+            />
+            <Button 
+              size="sm" 
+              onClick={() => setFiltersOpen((v) => !v)} 
+              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px] btn-secondary"
+            >
+              <FilterIcon className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Filtros</span>
+              {activeAdvancedCount ? ` (${activeAdvancedCount})` : ""}
+              {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
-          )}
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
+            </span>
+            {hasActiveFilters && (
+              <Button 
+                size="sm" 
+                onClick={clearFilters} 
+                className="gap-1 min-h-[44px] max-md:min-h-[44px] btn-secondary"
+              >
+                <X className="h-4 w-4" /> 
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Filtros expandidos - Mobile otimizado */}
         {filtersOpen && (
-          <div className="rounded-md border p-3 space-y-6 relative">
+          <div className="rounded-md border p-3 space-y-4">
             <div>
-              <Label className="text-sm font-semibold mb-1">Status do Carregamento</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
+              <Label className="text-sm font-semibold mb-2 block">Status do Carregamento</Label>
+              <div className="flex flex-wrap gap-2">
                 {STATUS_CARREGAMENTO.map((status) => {
                   const active = selectedStatus.includes(status.id);
                   return (
                     <Badge
                       key={status.id}
                       onClick={() => toggleStatus(status.id)}
-                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
+                      className={`cursor-pointer text-xs px-2 py-1 border-0 min-h-[32px] ${
                         active 
                           ? "bg-gradient-primary text-white"
                           : status.cor
@@ -521,22 +542,37 @@ const Carregamentos = () => {
                 })}
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-semibold mb-1">Período</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              <div className="flex-1"></div>
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Período</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input 
+                  type="date" 
+                  value={dateFrom} 
+                  onChange={(e) => setDateFrom(e.target.value)} 
+                  className="min-h-[44px] max-md:min-h-[44px]" 
+                  placeholder="Data inicial"
+                />
+                <Input 
+                  type="date" 
+                  value={dateTo} 
+                  onChange={(e) => setDateTo(e.target.value)} 
+                  className="min-h-[44px] max-md:min-h-[44px]" 
+                  placeholder="Data final"
+                />
+              </div>
             </div>
           </div>
         )}
 
+        {/* Lista de Carregamentos Ativos - Mobile Otimizada */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Carregamentos Ativos ({carregamentosAtivos.length})</h2>
           </div>
           
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {carregamentosAtivos.map(renderCarregamentoCard)}
             {carregamentosAtivos.length === 0 && (
               <div className="text-center py-8">
@@ -550,7 +586,7 @@ const Carregamentos = () => {
                   <Button 
                     size="sm" 
                     onClick={clearFilters}
-                    className="mt-2 btn-secondary"
+                    className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Limpar Filtros
@@ -561,10 +597,11 @@ const Carregamentos = () => {
           </div>
         </div>
 
+        {/* Seção de Carregamentos Finalizados - Mobile Otimizada */}
         {carregamentosFinalizados.length > 0 && (
           <div className="space-y-4">
             <Button
-              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent btn-secondary"
+              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent btn-secondary min-h-[44px] max-md:min-h-[44px]"
               onClick={() => setSecaoFinalizadosExpandida(!secaoFinalizadosExpandida)}
             >
               {secaoFinalizadosExpandida ? (
@@ -579,13 +616,14 @@ const Carregamentos = () => {
             </Button>
             
             {secaoFinalizadosExpandida && (
-              <div className="grid gap-4 ml-7">
+              <div className="grid gap-3 ml-0 sm:ml-7">
                 {carregamentosFinalizados.map(renderCarregamentoCard)}
               </div>
             )}
           </div>
         )}
 
+        {/* Estado vazio geral - Mobile Otimizado */}
         {carregamentosAtivos.length === 0 && carregamentosFinalizados.length === 0 && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -598,7 +636,7 @@ const Carregamentos = () => {
                 <Button 
                   size="sm" 
                   onClick={clearFilters}
-                  className="mt-2 btn-secondary"
+                  className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Limpar Filtros
