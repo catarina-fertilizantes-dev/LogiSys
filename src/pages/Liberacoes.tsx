@@ -577,9 +577,31 @@ const Liberacoes = () => {
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          <div className="flex items-start justify-between gap-3">
+          {/* Layout Mobile-First: Badge no topo em mobile, ao lado em desktop */}
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            {/* Badge - Primeiro em mobile, à direita em desktop */}
+            <div className="flex justify-start md:order-2 md:justify-end">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Badge className={`${getStatusColor(lib.status)} text-xs px-2 py-1 text-center`}>
+                      {getStatusLabel(lib.status)}
+                    </Badge>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+  
+            {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <div 
-              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0"
+              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0 md:order-1"
               onClick={() => setDetalhesLiberacao(lib)}
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
@@ -608,25 +630,9 @@ const Liberacoes = () => {
                 </div>
               </div>
             </div>
-            
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <div 
-                  className="flex items-center gap-1 cursor-help shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Badge className={`${getStatusColor(lib.status)} text-xs px-2 py-1 text-center`}>
-                    {getStatusLabel(lib.status)}
-                  </Badge>
-                  <Info className="h-3 w-3 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-sm">{getLiberacaoStatusTooltip(lib.status)}</p>
-              </TooltipContent>
-            </Tooltip>
           </div>
-
+  
+          {/* Barra de progresso - Sempre na parte inferior */}
           <div 
             className="pt-2 border-t"
             onClick={() => setDetalhesLiberacao(lib)}
