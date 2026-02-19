@@ -39,7 +39,7 @@ const NotFound = () => {
           </div>
           <Button 
             onClick={() => window.location.href = "/"} 
-            className="w-full bg-gradient-primary max-md:min-h-[44px]"
+            className="w-full btn-primary max-md:min-h-[44px]"
           >
             <Home className="h-4 w-4 mr-2" />
             Voltar ao Início
