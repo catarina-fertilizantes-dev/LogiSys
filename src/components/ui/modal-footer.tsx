@@ -27,7 +27,7 @@ export const ModalFooter = ({
 }: ModalFooterProps) => {
   const confirmButtonClass = confirmVariant === 'destructive' 
     ? "w-full md:w-auto bg-destructive hover:bg-destructive/90 min-h-[44px] max-md:min-h-[44px]"
-    : "w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]";
+    : "w-full md:w-auto btn-primary min-h-[44px] max-md:min-h-[44px]";
 
   if (variant === 'single') {
     return (
@@ -36,7 +36,7 @@ export const ModalFooter = ({
           variant="outline"
           onClick={onClose}
           disabled={isLoading}
-          className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+          className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-secondary"
         >
           {closeText}
         </Button>
@@ -50,7 +50,7 @@ export const ModalFooter = ({
         variant="outline" 
         onClick={onClose}
         disabled={isLoading}
-        className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+        className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2 btn-secondary"
       >
         {closeText}
       </Button>
