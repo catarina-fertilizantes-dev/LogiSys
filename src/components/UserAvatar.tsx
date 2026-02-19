@@ -131,7 +131,7 @@ export const UserAvatar = () => {
             {/* Configurações */}
             <Button
               variant="ghost"
-              className="w-full justify-start min-h-[44px] p-3 text-left rounded-md transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:shadow-sm group"
+              className="w-full justify-start min-h-[44px] p-3 text-left rounded-md transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700/60 hover:shadow-sm group"
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Implementar página de configurações
@@ -139,7 +139,7 @@ export const UserAvatar = () => {
             >
               <Settings className="h-4 w-4 mr-3 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 flex-shrink-0 transition-colors duration-200" />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">Configurações</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">Configurações</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">Preferências da conta</p>
               </div>
             </Button>
