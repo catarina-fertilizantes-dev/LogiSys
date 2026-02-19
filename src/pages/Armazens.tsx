@@ -437,10 +437,11 @@ const Armazens = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Armazéns" subtitle="Carregando..." icon={Warehouse} actions={<></>} />
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando armazéns...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando armazéns...</p>
         </div>
       </div>
     );
@@ -448,9 +449,10 @@ const Armazens = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Armazéns" subtitle="Erro ao carregar dados" icon={Warehouse} actions={<></>} />
         <div className="text-center">
-          <p className="text-destructive">Erro ao carregar armazéns</p>
+          <p className="text-destructive">Erro: {error}</p>
         </div>
       </div>
     );
@@ -475,7 +477,7 @@ const Armazens = () => {
                 </Button>
               </DialogTrigger>
               
-              {/* Modal de Criação com Botões Não-Fixos */}
+              {/* Modal de Criação - Mobile Otimizado */}
               <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
                 <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Armazém</DialogTitle>
@@ -483,7 +485,7 @@ const Armazens = () => {
                 
                 <div className="py-4 px-1 space-y-6">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-2">
                         <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
                         <Input
@@ -614,7 +616,7 @@ const Armazens = () => {
                     </p>
                   </div>
 
-                  {/* Adicionar import do ModalFooter no topo do arquivo */}
+                  {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
                     onClose={() => setDialogOpen(false)}
@@ -630,9 +632,9 @@ const Armazens = () => {
         }
       />
 
-      {/* Filtros e busca - Otimizado para mobile */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+      {/* Filtros e busca - Mobile otimizado */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex gap-2 items-center">
             <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | "ativo" | "inativo")}>
@@ -665,7 +667,7 @@ const Armazens = () => {
         )}
       </div>
 
-      {/* Modal de credenciais com botões não-fixos */}
+      {/* Modal de credenciais - Mobile Otimizado */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -688,7 +690,7 @@ const Armazens = () => {
               </p>
               <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
                 <p className="text-sm font-medium">Credenciais de acesso para:</p>
-                <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+                <p className="text-base font-semibold break-words">{credenciaisModal.nome}</p>
                 <div className="space-y-2">
                   <div>
                     <Label className="text-xs text-muted-foreground">Acesse:</Label>
@@ -723,7 +725,7 @@ const Armazens = () => {
                 }}
                 className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2 btn-secondary"
               >
-                �� Copiar credenciais
+                📋 Copiar credenciais
               </Button>
               <Button 
                 onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
@@ -736,7 +738,7 @@ const Armazens = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de detalhes com botões não-fixos */}
+      {/* Modal de detalhes - Mobile Otimizado */}
       <Dialog open={!!detalhesArmazem} onOpenChange={open => !open && setDetalhesArmazem(null)}>
         <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
           <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
@@ -747,14 +749,14 @@ const Armazens = () => {
             <div className="space-y-4">
               {detalhesArmazem && (
                 <>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     {detalhesArmazem?.nome}
                   </p>
                   {/* Informações Básicas - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Email:</Label>
-                      <p className="font-semibold break-all">{detalhesArmazem.email ?? "—"}</p>
+                      <p className="font-semibold text-sm break-all">{detalhesArmazem.email ?? "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
@@ -766,11 +768,11 @@ const Armazens = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
-                      <p className="font-semibold break-all">{detalhesArmazem.cnpj_cpf ? formatCpfCnpj(detalhesArmazem.cnpj_cpf) : "—"}</p>
+                      <p className="font-semibold text-sm break-all">{detalhesArmazem.cnpj_cpf ? formatCpfCnpj(detalhesArmazem.cnpj_cpf) : "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                      <p className="font-semibold">{detalhesArmazem.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.telefone ? formatPhone(detalhesArmazem.telefone) : "—"}</p>
                     </div>
                   </div>
         
@@ -778,22 +780,22 @@ const Armazens = () => {
                   <div className="border-t"></div>
         
                   {/* Localização - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cidade:</Label>
-                      <p className="font-semibold">{detalhesArmazem.cidade || "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.cidade || "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Estado:</Label>
-                      <p className="font-semibold">{detalhesArmazem.estado || "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.estado || "—"}</p>
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Endereço:</Label>
-                      <p className="font-semibold break-words">{detalhesArmazem.endereco || "—"}</p>
+                      <p className="font-semibold text-sm break-words">{detalhesArmazem.endereco || "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">CEP:</Label>
-                      <p className="font-semibold">{detalhesArmazem.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.cep ? formatCEP(detalhesArmazem.cep) : "—"}</p>
                     </div>
                   </div>
         
@@ -801,14 +803,14 @@ const Armazens = () => {
                   <div className="border-t"></div>
         
                   {/* Capacidade - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Capacidade Total:</Label>
-                      <p className="font-semibold">{detalhesArmazem.capacidade_total ?? "—"} t</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.capacidade_total ?? "—"} t</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Capacidade Disponível:</Label>
-                      <p className="font-semibold">{detalhesArmazem.capacidade_disponivel ?? "—"} t</p>
+                      <p className="font-semibold text-sm">{detalhesArmazem.capacidade_disponivel ?? "—"} t</p>
                     </div>
                   </div>
                 </>
@@ -838,7 +840,7 @@ const Armazens = () => {
       </Dialog>
 
       {/* Grid de armazéns - Cards responsivos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredArmazens.map((armazem) => (
           <Card
             key={armazem.id}
@@ -848,7 +850,7 @@ const Armazens = () => {
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg leading-tight">{armazem.nome}</h3>
+                  <h3 className="font-semibold text-base md:text-lg leading-tight">{armazem.nome}</h3>
                   <p className="text-sm text-muted-foreground">{armazem.cidade}/{armazem.estado}</p>
                 </div>
                 <div className="flex flex-col gap-2 items-end ml-2">
