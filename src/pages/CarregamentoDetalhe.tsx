@@ -851,6 +851,7 @@ const CarregamentoDetalhe = () => {
                         size="sm"
                         disabled={!files.pdf || !files.xml || subEtapaMutation.isPending}
                         onClick={() => subEtapaMutation.mutate(subEtapa.id)}
+                        className="btn-primary"
                       >
                         {subEtapaMutation.isPending ? (
                           <>
@@ -899,11 +900,10 @@ const CarregamentoDetalhe = () => {
                       </label>
                       <div className="space-y-2">
                         <Button
-                          variant="outline"
                           size="sm"
                           onClick={() => document.getElementById(`pdf-upload-${subEtapa.id}`)?.click()}
                           disabled={subEtapaMutation.isPending}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 btn-secondary"
                         >
                           <Upload className="h-4 w-4" />
                           {files.pdf ? "Alterar PDF" : "Anexar PDF"}
@@ -929,13 +929,13 @@ const CarregamentoDetalhe = () => {
                             <FileText className="h-4 w-4 text-green-600" />
                             <span className="text-sm text-green-700 flex-1">{files.pdf.name}</span>
                             <Button
-                              variant="ghost"
                               size="sm"
                               onClick={() => setSubEtapaFiles(prev => ({
                                 ...prev,
                                 [subEtapa.id]: { ...prev[subEtapa.id], pdf: null }
                               }))}
                               disabled={subEtapaMutation.isPending}
+                              className="btn-secondary"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -951,11 +951,10 @@ const CarregamentoDetalhe = () => {
                       </label>
                       <div className="space-y-2">
                         <Button
-                          variant="outline"
                           size="sm"
                           onClick={() => document.getElementById(`xml-upload-${subEtapa.id}`)?.click()}
                           disabled={subEtapaMutation.isPending}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 btn-secondary"
                         >
                           <Upload className="h-4 w-4" />
                           {files.xml ? "Alterar XML" : "Anexar XML"}
@@ -981,13 +980,13 @@ const CarregamentoDetalhe = () => {
                             <FileText className="h-4 w-4 text-green-600" />
                             <span className="text-sm text-green-700 flex-1">{files.xml.name}</span>
                             <Button
-                              variant="ghost"
                               size="sm"
                               onClick={() => setSubEtapaFiles(prev => ({
                                 ...prev,
                                 [subEtapa.id]: { ...prev[subEtapa.id], xml: null }
                               }))}
                               disabled={subEtapaMutation.isPending}
+                              className="btn-secondary"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -1099,7 +1098,7 @@ const CarregamentoDetalhe = () => {
               <Button
                 disabled={!stageFile || proximaEtapaMutation.isPending || isUploadingPhoto}
                 size="sm"
-                className="px-6"
+                className="px-6 btn-primary"
                 onClick={() => {
                   proximaEtapaMutation.mutate();
                 }}
@@ -1165,22 +1164,20 @@ const CarregamentoDetalhe = () => {
                 <div className="space-y-3">
                   {canUseCamera ? (
                     <Button
-                      variant="outline"
                       size="sm"
                       onClick={() => handleStartPhotoCapture(selectedEtapa)}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 btn-secondary"
                     >
                       <Camera className="h-4 w-4" />
                       Anexar Foto
                     </Button>
                   ) : (
                     <Button
-                      variant="outline"
                       size="sm"
                       onClick={() => document.getElementById('file-upload-foto')?.click()}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 btn-secondary"
                     >
                       <Upload className="h-4 w-4" />
                       {stageFile ? "Alterar Foto" : "Anexar Foto"}
@@ -1204,10 +1201,10 @@ const CarregamentoDetalhe = () => {
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       <span className="text-sm text-green-700 flex-1">{stageFile.name}</span>
                       <Button
-                        variant="ghost"
                         size="sm"
                         onClick={() => setStageFile(null)}
                         disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
+                        className="btn-secondary"
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -1403,7 +1400,7 @@ const CarregamentoDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
@@ -1427,7 +1424,7 @@ const CarregamentoDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
@@ -1455,7 +1452,7 @@ const CarregamentoDetalhe = () => {
             variant="ghost"
             size="sm"
             onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
