@@ -14,6 +14,7 @@ import { Plus, Package, X, Filter as FilterIcon, ChevronDown, ChevronUp, AlertCi
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 type StockStatus = "normal" | "baixo";
 type Unidade = "t" | "kg";
@@ -80,9 +81,8 @@ const EmptyStateCard = ({
       {description}
     </p>
     <Button 
-      variant="outline" 
       size="sm" 
-      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20 min-h-[44px] max-md:min-h-[44px]"
+      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20 min-h-[44px] max-md:min-h-[44px] btn-secondary"
       onClick={() => window.location.href = actionUrl}
     >
       <ExternalLink className="h-4 w-4 mr-2" />
@@ -674,10 +674,9 @@ const Estoque = () => {
           </p>
           {hasActiveFilters && (
             <Button 
-              variant="outline" 
               size="sm" 
               onClick={clearFilters}
-              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+              className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
@@ -759,7 +758,7 @@ const Estoque = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+                <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Entrada de Estoque
                 </Button>
@@ -972,36 +971,21 @@ const Estoque = () => {
                   </div>
 
                   {/* Botões no final do conteúdo */}
-                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                      onClick={handleCreateProduto}
-                      disabled={
-                        !temProdutosDisponiveis || 
-                        !temArmazensDisponiveis || 
-                        !notaRemessaFile || 
-                        !xmlRemessaFile || 
-                        isCreating
-                      }
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        "Salvar"
-                      )}
-                    </Button>
-                  </div>
+                  {/* Adicionar import do ModalFooter no topo do arquivo */}
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateProduto}
+                    confirmText="Salvar"
+                    isLoading={isCreating}
+                    disabled={
+                      !temProdutosDisponiveis || 
+                      !temArmazensDisponiveis || 
+                      !notaRemessaFile || 
+                      !xmlRemessaFile || 
+                      isCreating
+                    }
+                  />
                 </div>
               </DialogContent>
             </Dialog>
@@ -1021,9 +1005,8 @@ const Estoque = () => {
                 onChange={(e) => setSearch(e.target.value)}
               />
               <Button 
-                variant="outline" 
                 size="sm" 
-                className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]" 
+                className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px] btn-secondary" 
                 onClick={() => setFiltersOpen((v) => !v)}
               >
                 <FilterIcon className="h-4 w-4 mr-1" />
@@ -1038,10 +1021,9 @@ const Estoque = () => {
               </span>
               {hasActiveFilters && (
                 <Button 
-                  variant="ghost" 
                   size="sm" 
                   onClick={clearFilters} 
-                  className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+                  className="gap-1 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                 >
                   <X className="h-4 w-4" /> 
                   Limpar Filtros
@@ -1127,9 +1109,8 @@ const Estoque = () => {
                 onChange={(e) => setSearch(e.target.value)}
               />
               <Button 
-                variant="outline" 
                 size="sm" 
-                className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]" 
+                className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px] btn-secondary" 
                 onClick={() => setFiltersOpen((v) => !v)}
               >
                 <FilterIcon className="h-4 w-4 mr-1" />
@@ -1145,10 +1126,9 @@ const Estoque = () => {
               </span>
               {hasActiveFilters && (
                 <Button 
-                  variant="ghost" 
                   size="sm" 
                   onClick={clearFilters} 
-                  className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+                  className="gap-1 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                 >
                   <X className="h-4 w-4" /> 
                   Limpar Filtros
@@ -1313,10 +1293,9 @@ const Estoque = () => {
                 </p>
                 {hasActiveFilters && (
                   <Button 
-                    variant="outline" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+                    className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Limpar Filtros
