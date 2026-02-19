@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 import {
   Dialog,
   DialogContent,
@@ -680,7 +681,7 @@ const Clientes = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+                <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Cliente
                 </Button>
@@ -760,10 +761,9 @@ const Clientes = () => {
                         </Select>
                         {novoCliente.representante_id && (
                           <Button
-                            variant="ghost"
                             size="sm"
                             onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
-                            className="mt-1 h-6 px-2 text-xs"
+                            className="mt-1 h-6 px-2 text-xs btn-secondary"
                           >
                             <X className="h-3 w-3 mr-1" />
                             Remover representante
@@ -849,33 +849,14 @@ const Clientes = () => {
                   </div>
 
                   {/* Botões no final do conteúdo */}
-                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                      onClick={handleCreateCliente}
-                      disabled={isCreating}
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Criar Cliente
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateCliente}
+                    confirmText="Criar Cliente"
+                    confirmIcon={<Plus className="h-4 w-4" />}
+                    isLoading={isCreating}
+                  />
                 </div>
               </DialogContent>
             </Dialog>
@@ -935,10 +916,9 @@ const Clientes = () => {
         
         {hasActiveFilters && (
           <Button 
-            variant="ghost" 
             size="sm" 
             onClick={handleClearFilters}
-            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px] btn-secondary"
           >
             <X className="h-4 w-4" /> 
             Limpar Filtros
@@ -996,20 +976,19 @@ const Clientes = () => {
             {/* Botões no final do conteúdo */}
             <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
               <Button
-                variant="outline"
                 onClick={() => {
                   const baseUrl = window.location.origin;
                   const texto = `Credenciais de acesso ao LogiSys\n\nAcesse: ${baseUrl}\nEmail: ${credenciaisModal.email}\nSenha: ${credenciaisModal.senha}\n\nImportante: Troque a senha no primeiro acesso.`;
                   navigator.clipboard.writeText(texto);
                   toast({ title: "Credenciais copiadas!" });
                 }}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2 btn-secondary"
               >
                 📋 Copiar credenciais
               </Button>
               <Button 
                 onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-primary"
               >
                 Fechar
               </Button>
@@ -1030,13 +1009,13 @@ const Clientes = () => {
           <AlertDialogFooter className="flex-col-reverse gap-2 md:flex-row md:gap-0">
             <AlertDialogCancel 
               onClick={handleConfirmarFechamento}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               Fechar sem salvar
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleSalvarEFechar}
-              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+              className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-primary"
             >
               Salvar e fechar
             </AlertDialogAction>
@@ -1103,10 +1082,9 @@ const Clientes = () => {
                         <Label className="text-xs text-muted-foreground">Representante:</Label>
                         {canCreate && !editandoRepresentante && (
                           <Button
-                            variant="ghost"
                             size="sm"
                             onClick={handleIniciarEdicao}
-                            className="h-8 px-2 text-xs min-h-[32px]"
+                            className="h-8 px-2 text-xs min-h-[32px] btn-secondary"
                           >
                             <Edit3 className="h-3 w-3 mr-1" />
                             Editar
@@ -1145,7 +1123,7 @@ const Clientes = () => {
                               size="sm"
                               onClick={handleSalvarRepresentante}
                               disabled={salvandoRepresentante}
-                              className="flex-1 min-h-[44px] max-md:min-h-[44px]"
+                              className="flex-1 min-h-[44px] max-md:min-h-[44px] btn-primary"
                             >
                               {salvandoRepresentante ? (
                                 <>
@@ -1160,11 +1138,10 @@ const Clientes = () => {
                               )}
                             </Button>
                             <Button
-                              variant="outline"
                               size="sm"
                               onClick={handleCancelarEdicao}
                               disabled={salvandoRepresentante}
-                              className="flex-1 sm:flex-initial min-h-[44px] max-md:min-h-[44px]"
+                              className="flex-1 sm:flex-initial min-h-[44px] max-md:min-h-[44px] btn-secondary"
                             >
                               Cancelar
                             </Button>
@@ -1216,9 +1193,8 @@ const Clientes = () => {
             <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
               {canCreate && detalhesCliente?.temp_password && (
                 <Button
-                  variant="outline"
                   onClick={() => handleShowCredentials(detalhesCliente)}
-                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
+                  className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2 btn-secondary"
                   disabled={editandoRepresentante}
                 >
                   <Key className="h-4 w-4 mr-2" />
@@ -1228,7 +1204,7 @@ const Clientes = () => {
               <Button 
                 onClick={handleFecharModal}
                 disabled={editandoRepresentante}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-primary"
               >
                 Fechar
               </Button>
@@ -1311,10 +1287,9 @@ const Clientes = () => {
           </p>
           {hasActiveFilters && (
             <Button 
-              variant="outline" 
               size="sm" 
               onClick={handleClearFilters}
-              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+              className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
