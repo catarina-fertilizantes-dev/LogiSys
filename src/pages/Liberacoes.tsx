@@ -577,22 +577,24 @@ const Liberacoes = () => {
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div 
-              className="flex items-start gap-3 md:gap-4 flex-1"
+              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0"
               onClick={() => setDetalhesLiberacao(lib)}
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
                 <ClipboardList className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground text-sm md:text-base truncate">Pedido: {lib.pedido}</h3>
-                <p className="text-xs text-muted-foreground truncate">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
-                <p className="text-xs text-muted-foreground truncate">Produto: <span className="font-semibold">{lib.produto}</span></p>
-                <p className="text-xs text-muted-foreground truncate">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
+              <div className="flex-1 min-w-0 space-y-1">
+                <h3 className="font-semibold text-foreground text-sm md:text-base">Pedido: {lib.pedido}</h3>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><span className="font-semibold">Cliente:</span> {lib.cliente}</p>
+                  <p><span className="font-semibold">Produto:</span> {lib.produto}</p>
+                  <p className="break-words"><span className="font-semibold">Armazém:</span> {lib.armazem}</p>
+                </div>
                 
                 <div className="mt-2 text-xs text-muted-foreground">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
                     <span className="whitespace-nowrap">
                       <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
                     </span>
@@ -610,14 +612,11 @@ const Liberacoes = () => {
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <div 
-                  className="flex items-center gap-1 cursor-help shrink-0 ml-2"
+                  className="flex items-center gap-1 cursor-help shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Badge className={`${getStatusColor(lib.status)} text-xs px-2 py-1`}>
-                    <span className="sm:hidden">
-                      {lib.status === "disponivel" ? "Disp." : 
-                       lib.status === "parcialmente_agendada" ? "Parc." : "Total"}
-                    </span>
+                  <Badge className={`${getStatusColor(lib.status)} text-xs px-2 py-1 text-center`}>
+                    {getStatusLabel(lib.status)}
                   </Badge>
                   <Info className="h-3 w-3 text-muted-foreground" />
                 </div>
@@ -634,12 +633,12 @@ const Liberacoes = () => {
           >
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
-              <span className="text-xs text-blue-600 font-medium w-16 sm:w-20 shrink-0">Agendamento:</span>
+              <span className="text-xs text-blue-600 font-medium shrink-0">Agendamento:</span>
               
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
-                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help min-w-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div 
@@ -660,7 +659,7 @@ const Liberacoes = () => {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-8 sm:w-12 text-right">
+                    <span className="text-xs text-muted-foreground font-medium w-8 text-right">
                       {lib.percentualAgendado}%
                     </span>
                   </div>
