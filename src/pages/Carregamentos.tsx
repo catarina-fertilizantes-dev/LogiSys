@@ -486,13 +486,13 @@ const Carregamentos = () => {
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
           </span>
-          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
+          <Button size="sm" onClick={() => setFiltersOpen((v) => !v)} className="btn-secondary">
             <FilterIcon className="h-4 w-4 mr-1" />
             Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
             {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
           </Button>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+            <Button size="sm" onClick={clearFilters} className="gap-1 btn-secondary">
               <X className="h-4 w-4" /> 
               Limpar Filtros
             </Button>
@@ -548,10 +548,9 @@ const Carregamentos = () => {
                 </p>
                 {hasActiveFilters && (
                   <Button 
-                    variant="outline" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="mt-2"
+                    className="mt-2 btn-secondary"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Limpar Filtros
@@ -565,8 +564,7 @@ const Carregamentos = () => {
         {carregamentosFinalizados.length > 0 && (
           <div className="space-y-4">
             <Button
-              variant="ghost"
-              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent"
+              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent btn-secondary"
               onClick={() => setSecaoFinalizadosExpandida(!secaoFinalizadosExpandida)}
             >
               {secaoFinalizadosExpandida ? (
@@ -597,15 +595,14 @@ const Carregamentos = () => {
                 : "Nenhum carregamento cadastrado ainda"}
             </p>
             {hasActiveFilters && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={clearFilters}
-                className="mt-2"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Limpar Filtros
-              </Button>
+                <Button 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="mt-2 btn-secondary"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Limpar Filtros
+                </Button>
             )}
           </div>
         )}
