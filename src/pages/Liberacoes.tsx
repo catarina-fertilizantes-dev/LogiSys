@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
@@ -87,9 +88,8 @@ const EmptyStateCard = ({
       {description}
     </p>
     <Button 
-      variant="outline" 
       size="sm" 
-      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20 min-h-[44px] max-md:min-h-[44px]"
+      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20 min-h-[44px] max-md:min-h-[44px] btn-secondary"
       onClick={() => window.location.href = actionUrl}
     >
       <ExternalLink className="h-4 w-4 mr-2" />
@@ -722,7 +722,7 @@ const Liberacoes = () => {
                 setDialogOpen(open);
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+                  <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Liberação
                   </Button>
@@ -890,38 +890,22 @@ const Liberacoes = () => {
                   </div>
                   
                   {/* Botões no final do conteúdo */}
-                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                      onClick={handleCreateLiberacao}
-                      disabled={
-                        !temProdutosDisponiveis || 
-                        !temArmazensDisponiveis || 
-                        !temClientesDisponiveis || 
-                        !temEstoqueCadastrado || 
-                        !quantidadeValida || 
-                        validandoEstoque ||
-                        isCreating
-                      }
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        "Criar Liberação"
-                      )}
-                    </Button>
-                  </div>
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateLiberacao}
+                    confirmText="Criar Liberação"
+                    isLoading={isCreating}
+                    disabled={
+                      !temProdutosDisponiveis || 
+                      !temArmazensDisponiveis || 
+                      !temClientesDisponiveis || 
+                      !temEstoqueCadastrado || 
+                      !quantidadeValida || 
+                      validandoEstoque ||
+                      isCreating
+                    }
+                  />
                 </DialogContent>
               </Dialog>
             ) : null
@@ -938,9 +922,8 @@ const Liberacoes = () => {
               onChange={(e) => setSearch(e.target.value)} 
             />
             <Button 
-              variant="outline" 
               size="sm" 
-              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]" 
+              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px] btn-secondary" 
               onClick={() => setFiltersOpen((v) => !v)}
             >
               <FilterIcon className="h-4 w-4 mr-1" />
@@ -956,10 +939,9 @@ const Liberacoes = () => {
             </span>
             {hasActiveFilters && (
               <Button 
-                variant="ghost" 
                 size="sm" 
                 onClick={clearFilters} 
-                className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+                className="gap-1 min-h-[44px] max-md:min-h-[44px] btn-secondary"
               >
                 <X className="h-4 w-4" /> 
                 Limpar Filtros
@@ -1101,7 +1083,7 @@ const Liberacoes = () => {
             <div className="pt-4 border-t border-border bg-background flex justify-end">
               <Button 
                 onClick={() => setDetalhesLiberacao(null)}
-                className="min-h-[44px] max-md:min-h-[44px] w-full md:w-auto"
+                className="min-h-[44px] max-md:min-h-[44px] w-full md:w-auto btn-primary"
               >
                 Fechar
               </Button>
@@ -1127,10 +1109,9 @@ const Liberacoes = () => {
                 </p>
                 {hasActiveFilters && (
                   <Button 
-                    variant="outline" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+                    className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Limpar Filtros
@@ -1176,15 +1157,14 @@ const Liberacoes = () => {
                 : "Nenhuma liberação cadastrada ainda"}
             </p>
             {hasActiveFilters && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={clearFilters}
-                className="mt-2 min-h-[44px] max-md:min-h-[44px]"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Limpar Filtros
-              </Button>
+                <Button 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Limpar Filtros
+                </Button>
             )}
           </div>
         )}
