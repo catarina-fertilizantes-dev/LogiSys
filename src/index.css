@@ -200,15 +200,32 @@ All colors MUST be HSL.
     @apply transform hover:scale-[1.02] active:scale-[0.98];
   }
 
-  /* 🎯 BOTÃO SECUNDÁRIO - Estilo roxo claro com animação */
+  /* 🎯 BOTÃO SECUNDÁRIO - Estilo roxo claro com animação FORÇADO */
   .btn-secondary {
-    @apply bg-primary/10 text-primary border border-primary/20;
-    @apply hover:bg-primary/15 hover:text-primary hover:border-primary/30;
-    @apply hover:shadow-md hover:shadow-primary/10;
-    @apply active:bg-primary/20;
-    @apply transition-all duration-200 ease-out;
-    @apply transform hover:scale-[1.02] active:scale-[0.98];
-    @apply font-medium;
+    background-color: hsl(217 91% 60% / 0.1) !important;
+    color: hsl(217 91% 60%) !important;
+    border: 1px solid hsl(217 91% 60% / 0.2) !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease-out !important;
+    transform: scale(1) !important;
+  }
+
+  .btn-secondary:hover {
+    background-color: hsl(217 91% 60% / 0.15) !important;
+    color: hsl(217 91% 60%) !important;
+    border-color: hsl(217 91% 60% / 0.3) !important;
+    box-shadow: 0 4px 6px -1px hsl(217 91% 60% / 0.1) !important;
+    transform: scale(1.02) !important;
+  }
+
+  .btn-secondary:active {
+    background-color: hsl(217 91% 60% / 0.2) !important;
+    transform: scale(0.98) !important;
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5 !important;
+    transform: scale(1) !important;
   }
 
   /* 🎯 ALTERNATIVA - Botão secundário com fundo sutil colorido */
