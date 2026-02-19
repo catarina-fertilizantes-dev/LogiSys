@@ -953,7 +953,7 @@ const Agendamentos = () => {
                   <div className="py-4 px-1 space-y-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="liberacao" className="                        <Label htmlFor="liberacao" className="text-sm font-medium">Liberação *</Label>
+                        <Label htmlFor="liberacao" className="text-sm font-medium">Liberação *</Label>
                         {temLiberacoesDisponiveis ? (
                           <Select
                             value={novoAgendamento.liberacao}
