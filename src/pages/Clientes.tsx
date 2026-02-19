@@ -990,7 +990,7 @@ const Clientes = () => {
               </Button>
               <Button 
                 onClick={() => setCredenciaisModal({ show: false, email: "", senha: "", nome: "" })}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-primary"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-secondary"
               >
                 Fechar
               </Button>
@@ -1206,7 +1206,7 @@ const Clientes = () => {
               <Button 
                 onClick={handleFecharModal}
                 disabled={editandoRepresentante}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-primary"
+                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-secondary"
               >
                 Fechar
               </Button>
