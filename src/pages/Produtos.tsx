@@ -251,7 +251,7 @@ const Produtos = () => {
               setDialogOpen(open);
             }}>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+                <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Produto
                 </Button>
@@ -338,10 +338,9 @@ const Produtos = () => {
         </div>
         {hasActiveFilters && (
           <Button 
-            variant="ghost" 
             size="sm" 
             onClick={handleClearFilters}
-            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px]"
+            className="gap-1 self-start min-h-[44px] max-md:min-h-[44px] btn-secondary"
           >
             <X className="h-4 w-4" /> 
             Limpar Filtros
@@ -455,10 +454,9 @@ const Produtos = () => {
           </p>
           {hasActiveFilters && (
             <Button 
-              variant="outline" 
               size="sm" 
               onClick={handleClearFilters}
-              className="mt-2 min-h-[44px] max-md:min-h-[44px]"
+              className="mt-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <X className="h-4 w-4 mr-2" />
               Limpar Filtros
