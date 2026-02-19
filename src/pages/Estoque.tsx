@@ -697,7 +697,7 @@ const Estoque = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg leading-tight">{produto.produto}</h3>
+                  <h3 className="font-semibold text-base md:text-lg leading-tight">{produto.produto}</h3>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
                     <span className="text-xl sm:text-2xl font-bold text-primary">
                       {produto.quantidade.toLocaleString('pt-BR')} {produto.unidade}
@@ -764,7 +764,7 @@ const Estoque = () => {
                 </Button>
               </DialogTrigger>
               
-              {/* Modal de Entrada de Estoque com Botões Não-Fixos */}
+              {/* Modal de Entrada de Estoque - Mobile Otimizado */}
               <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
                 <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Registrar Entrada de Estoque</DialogTitle>
@@ -865,7 +865,7 @@ const Estoque = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor="numero-remessa" className="text-sm font-medium">Número da Remessa</Label>
                             <Input
@@ -878,7 +878,7 @@ const Estoque = () => {
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                             />
                           </div>
-                          <div className="md:col-span-2 space-y-2">
+                          <div className="lg:col-span-2 space-y-2">
                             <Label htmlFor="observacoes" className="text-sm font-medium">Observações</Label>
                             <Input
                               id="observacoes"
@@ -904,7 +904,7 @@ const Estoque = () => {
                                 <FileText className="h-4 w-4" />
                                 Nota de Remessa (PDF) *
                               </Label>
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                              <div className="flex flex-col gap-2">
                                 <Input
                                   id="nota-remessa"
                                   type="file"
@@ -919,11 +919,11 @@ const Estoque = () => {
                                       e.target
                                     );
                                   }}
-                                  className="flex-1 min-h-[44px] max-md:min-h-[44px]"
+                                  className="min-h-[44px] max-md:min-h-[44px]"
                                   disabled={isCreating}
                                 />
                                 {notaRemessaFile && (
-                                  <Badge variant="secondary" className="text-xs break-all">
+                                  <Badge variant="secondary" className="text-xs break-all self-start">
                                     ✓ {notaRemessaFile.name}
                                   </Badge>
                                 )}
@@ -935,7 +935,7 @@ const Estoque = () => {
                                 <FileText className="h-4 w-4" />
                                 Arquivo XML da Remessa *
                               </Label>
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                              <div className="flex flex-col gap-2">
                                 <Input
                                   id="xml-remessa"
                                   type="file"
@@ -950,11 +950,11 @@ const Estoque = () => {
                                       e.target
                                     );
                                   }}
-                                  className="flex-1 min-h-[44px] max-md:min-h-[44px]"
+                                  className="min-h-[44px] max-md:min-h-[44px]"
                                   disabled={isCreating}
                                 />
                                 {xmlRemessaFile && (
-                                  <Badge variant="secondary" className="text-xs break-all">
+                                  <Badge variant="secondary" className="text-xs break-all self-start">
                                     ✓ {xmlRemessaFile.name}
                                   </Badge>
                                 )}
@@ -971,7 +971,6 @@ const Estoque = () => {
                   </div>
 
                   {/* Botões no final do conteúdo */}
-                  {/* Adicionar import do ModalFooter no topo do arquivo */}
                   <ModalFooter 
                     variant="double"
                     onClose={() => setDialogOpen(false)}
@@ -1012,7 +1011,7 @@ const Estoque = () => {
                 <FilterIcon className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Filtros</span>
                 {activeAdvancedCount ? ` (${activeAdvancedCount})` : ""}
-                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
               </Button>
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
@@ -1233,8 +1232,8 @@ const Estoque = () => {
                       <Package className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base md:text-lg truncate">{armazem.nome}</h3>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <h3 className="font-semibold text-base md:text-lg break-words">{armazem.nome}</h3>
+                      <p className="text-xs text-muted-foreground break-words">
                         {armazem.cidade}{armazem.estado ? `/${armazem.estado}` : ""}
                       </p>
                       <span className="text-xs text-muted-foreground">
@@ -1260,7 +1259,7 @@ const Estoque = () => {
                             <CardContent className="w-full p-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                  <span className="font-medium truncate">{produto.produto}</span>
+                                  <span className="font-medium break-words">{produto.produto}</span>
                                   <span className="font-mono text-sm text-primary font-bold">{produto.quantidade} {produto.unidade}</span>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs text-muted-foreground sm:items-center mt-1">
