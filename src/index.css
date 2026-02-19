@@ -162,12 +162,14 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Esconder barra de rolagem mas manter funcionalidade */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
     scrollbar-width: none;     /* Firefox */
   }
+  
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;             /* Chrome, Safari, Opera */
+    display: none;             /* Safari and Chrome */
   }
 
   /* Touch targets mobile para SidebarTrigger */
