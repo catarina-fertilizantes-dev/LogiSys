@@ -255,13 +255,15 @@ const Representantes = () => {
     }
   };
 
+  const canCreate = hasRole("logistica") || hasRole("admin");
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('modal') === 'novo' && canCreate) {
       setDialogOpen(true);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [canCreate]);
 
   useEffect(() => {
     fetchRepresentantes();
@@ -476,7 +478,6 @@ const Representantes = () => {
   }, [representantes, filterStatus, searchTerm]);
 
   const hasActiveFilters = searchTerm.trim() || filterStatus !== "all";
-  const canCreate = hasRole("logistica") || hasRole("admin");
 
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -485,10 +486,13 @@ const Representantes = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando representantes...</p>
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Representantes" subtitle="Carregando..." icon={UserCheck} actions={<></>} />
+        <div className="flex justify-center items-center h-40">
+          <div className="text-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando representantes...</p>
+          </div>
         </div>
       </div>
     );
@@ -496,9 +500,12 @@ const Representantes = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-destructive">Erro ao carregar representantes</p>
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Representantes" subtitle="Erro ao carregar dados" icon={UserCheck} actions={<></>} />
+        <div className="flex justify-center items-center h-40">
+          <div className="text-center">
+            <p className="text-destructive">Erro ao carregar representantes</p>
+          </div>
         </div>
       </div>
     );
@@ -681,7 +688,7 @@ const Representantes = () => {
               </p>
               <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
                 <p className="text-sm font-medium">Credenciais de acesso para:</p>
-                <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+                <p className="text-base font-semibold break-words">{credenciaisModal.nome}</p>
                 <div className="space-y-2">
                   <div>
                     <Label className="text-xs text-muted-foreground">Acesse:</Label>
@@ -743,7 +750,7 @@ const Representantes = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground break-words">
                   {clientesModal.representante?.nome} - {clientesModal.clientes.length} cliente(s)
                 </p>
                 {clientesModal.clientes.length > 0 ? (
@@ -759,7 +766,7 @@ const Representantes = () => {
                         <Card key={cliente.id} className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold truncate">{cliente.nome}</h4>
+                              <h4 className="font-semibold break-words">{cliente.nome}</h4>
                               <p className="text-sm text-muted-foreground break-all">{cliente.email}</p>
                               <p className="text-sm text-muted-foreground">
                                 CNPJ/CPF: {formatCpfCnpj(cliente.cnpj_cpf)}
@@ -804,13 +811,13 @@ const Representantes = () => {
             <div className="space-y-4">
               {detalhesRepresentante && (
                 <>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     {detalhesRepresentante?.nome}
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Email:</Label>
-                      <p className="font-semibold break-all">{detalhesRepresentante.email}</p>
+                      <p className="font-semibold text-sm md:text-base break-all">{detalhesRepresentante.email}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
@@ -822,17 +829,17 @@ const Representantes = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">CPF/CNPJ:</Label>
-                      <p className="font-semibold break-all">{detalhesRepresentante.cpf ? formatCpfCnpj(detalhesRepresentante.cpf) : "—"}</p>
+                      <p className="font-semibold text-sm md:text-base break-all">{detalhesRepresentante.cpf ? formatCpfCnpj(detalhesRepresentante.cpf) : "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                      <p className="font-semibold">{detalhesRepresentante.telefone ? formatPhone(detalhesRepresentante.telefone) : "—"}</p>
+                      <p className="font-semibold text-sm md:text-base">{detalhesRepresentante.telefone ? formatPhone(detalhesRepresentante.telefone) : "—"}</p>
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Região de Atuação:</Label>
-                      <p className="font-semibold break-words">{detalhesRepresentante.regiao_atuacao || "—"}</p>
+                      <p className="font-semibold text-sm md:text-base break-words">{detalhesRepresentante.regiao_atuacao || "—"}</p>
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Clientes Atribuídos:</Label>
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1">
                         <Badge variant="outline" className="flex items-center gap-1">
@@ -843,7 +850,7 @@ const Representantes = () => {
                           <Button
                             size="sm"
                             onClick={() => fetchClientesRepresentante(detalhesRepresentante.id, detalhesRepresentante.nome)}
-                            className="text-xs min-h-[32px] btn-secondary"
+                            className="text-xs min-h-[44px] max-md:min-h-[44px] btn-secondary"
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             Ver Clientes
@@ -886,7 +893,7 @@ const Representantes = () => {
           >
             <CardContent className="p-4 space-y-3">
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg leading-tight">{representante.nome}</h3>
+                <h3 className="font-semibold text-base md:text-lg leading-tight break-words">{representante.nome}</h3>
                 <p className="text-sm text-muted-foreground break-all">{representante.email}</p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">CPF/CNPJ:</span> 
@@ -894,7 +901,7 @@ const Representantes = () => {
                 </p>
                 
                 {/* Espaço reservado para clientes - altura fixa */}
-                <div className="h-5 flex items-center">
+                <div className="h-6 flex items-center">
                   {(representante.clientes_count || 0) > 0 ? (
                     <Button
                       variant="ghost"
@@ -903,7 +910,7 @@ const Representantes = () => {
                         e.stopPropagation();
                         fetchClientesRepresentante(representante.id, representante.nome);
                       }}
-                      className="h-5 px-1 text-xs text-primary hover:text-primary-foreground"
+                      className="h-6 px-1 text-xs text-primary hover:text-primary-foreground min-h-[44px] max-md:min-h-[44px]"
                     >
                       <Users className="h-3 w-3 mr-1" />
                       {representante.clientes_count} cliente(s)
@@ -923,13 +930,14 @@ const Representantes = () => {
                   <Badge variant={representante.ativo ? "default" : "secondary"}>
                     {representante.ativo ? "Ativo" : "Inativo"}
                   </Badge>
-                  <div className="relative">
+                  <div className="relative min-h-[44px] max-md:min-h-[44px] flex items-center">
                     <Switch
                       id={`switch-${representante.id}`}
                       checked={representante.ativo}
                       onCheckedChange={() => handleToggleAtivo(representante.id, representante.ativo)}
                       onClick={e => e.stopPropagation()}
                       disabled={isTogglingStatus[representante.id]}
+                      className="data-[state=checked]:bg-primary"
                     />
                     {isTogglingStatus[representante.id] && (
                       <div className="absolute inset-0 flex items-center justify-center">
