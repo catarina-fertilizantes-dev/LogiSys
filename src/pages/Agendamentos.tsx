@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
@@ -1082,29 +1083,15 @@ const Agendamentos = () => {
                       </>
                     )}
                   </div>
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="bg-gradient-primary" 
-                      onClick={handleCreateAgendamento}
-                      disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade || isCreating}
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        "Criar Agendamento"
-                      )}
-                    </Button>
-                  </DialogFooter>
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateAgendamento}
+                    confirmText="Criar Agendamento"
+                    confirmIcon={<Plus className="h-4 w-4" />}
+                    isLoading={isCreating}
+                    disabled={!temLiberacoesDisponiveis || !quantidadeValida || validandoQuantidade}
+                  />
                 </DialogContent>
               </Dialog>
             ) : null
@@ -1243,11 +1230,10 @@ const Agendamentos = () => {
                 </>
               )}
             </div>
-            <DialogFooter>
-              <Button onClick={() => setDetalhesAgendamento(null)}>
-                Fechar
-              </Button>
-            </DialogFooter>
+            <ModalFooter 
+              variant="single"
+              onClose={() => setDetalhesAgendamento(null)}
+            />
           </DialogContent>
         </Dialog>
 
