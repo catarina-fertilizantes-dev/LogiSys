@@ -172,6 +172,16 @@ All colors MUST be HSL.
     display: none;             /* Safari and Chrome */
   }
 
+  /* Mostrar barra de rolagem em telas pequenas de desktop */
+  .scrollbar-default {
+    -ms-overflow-style: auto;  /* Internet Explorer 10+ */
+    scrollbar-width: auto;     /* Firefox */
+  }
+  
+  .scrollbar-default::-webkit-scrollbar {
+    display: block;            /* Safari and Chrome */
+  }
+
   /* Touch targets mobile para SidebarTrigger */
   @media (max-width: 767px) {
     button[data-sidebar="trigger"],
