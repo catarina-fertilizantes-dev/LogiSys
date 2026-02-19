@@ -62,30 +62,30 @@ const ForgotPassword = () => {
             <img 
               src="/nexor-auth-logo.png" 
               alt="NEXOR" 
-              className="h-8 w-8 object-contain" 
+              className="h-10 w-10 sm:h-12 sm:w-12 object-contain" 
             />
-            <span className="text-sm font-medium text-muted-foreground">NEXOR</span>
+            <span className="text-sm sm:text-base font-medium text-muted-foreground">NEXOR</span>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           {emailSent ? (
             <div className="space-y-6">
               <div className="flex justify-center">
-                <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                  <Check className="h-12 w-12 text-white" />
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                  <Check className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
                 </div>
               </div>
               <div className="text-center space-y-3">
-                <CardTitle className="text-xl">Email enviado!</CardTitle>
-                <CardDescription className="text-base">
-                  Enviamos um link de recuperação para <strong>{email}</strong>
+                <CardTitle className="text-lg sm:text-xl">Email enviado!</CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  Enviamos um link de recuperação para <strong className="break-all">{email}</strong>
                 </CardDescription>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Verifique sua caixa de entrada e spam. O link expira em 1 hora.
                 </p>
               </div>
               <Link to="/auth" className="block">
-                <Button className="w-full max-md:min-h-[44px] btn-secondary">
+                <Button className="w-full min-h-[44px] max-md:min-h-[44px] btn-secondary">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar ao Login
                 </Button>
@@ -94,19 +94,19 @@ const ForgotPassword = () => {
           ) : (
             <div className="space-y-6">
               <div className="flex justify-center">
-                <div className="h-20 w-20 rounded-xl bg-gradient-primary flex items-center justify-center">
-                  <Mail className="h-12 w-12 text-white" />
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl bg-gradient-primary flex items-center justify-center">
+                  <Mail className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
                 </div>
               </div>
               <div className="text-center space-y-3">
-                <CardTitle className="text-xl">Esqueci minha senha</CardTitle>
-                <CardDescription className="text-base">
+                <CardTitle className="text-lg sm:text-xl">Esqueci minha senha</CardTitle>
+                <CardDescription className="text-sm sm:text-base">
                   Digite seu email para receber instruções de recuperação
                 </CardDescription>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -115,18 +115,18 @@ const ForgotPassword = () => {
                     required
                     disabled={loading}
                     placeholder="seu@email.com"
-                    className="max-md:min-h-[44px]"
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                   />
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full btn-primary max-md:min-h-[44px]" 
+                  className="w-full btn-primary min-h-[44px] max-md:min-h-[44px]" 
                   disabled={loading}
                 >
                   {loading ? "Enviando..." : "Enviar link de recuperação"}
                 </Button>
                 <Link to="/auth" className="block">
-                  <Button className="w-full max-md:min-h-[44px] btn-secondary">
+                  <Button className="w-full min-h-[44px] max-md:min-h-[44px] btn-secondary">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Voltar ao Login
                   </Button>
