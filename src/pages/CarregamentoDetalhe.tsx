@@ -692,107 +692,110 @@ const CarregamentoDetalhe = () => {
       style={{ marginTop: `${ARROW_HEIGHT + 8}px`, marginBottom: "28px" }}
     >
       <div className="relative">
-        <div className="flex items-end justify-between w-full max-w-4xl mx-auto relative">
-          {ETAPAS.map((etapa, idx) => {
-            const etapaIndex = etapa.id;
-            const etapaAtual = carregamento?.etapa_atual ?? 1;
-            const isFinalizada = etapaIndex < etapaAtual;
-            const isAtual = etapaIndex === etapaAtual;
-            const isSelected = selectedEtapa === etapaIndex;
-            const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto && !subEtapaMutation.isPending;
-            
-            let circleClasses = "rounded-full flex items-center justify-center transition-all";
-            let shadowStyle = "none";
-            
-            if (isSelected) {
-              circleClasses += " bg-white text-primary border-4 border-primary font-bold";
-              shadowStyle = "0 2px 8px 0 rgba(59, 130, 246, 0.3)";
-            } else if (isAtual) {
-              circleClasses += " bg-blue-500 text-white";
-            } else if (isFinalizada) {
-              circleClasses += " bg-green-500 text-white";
-            } else {
-              circleClasses += " bg-gray-200 text-gray-600";
-            }
-            
-            if (podeClicar) {
-              circleClasses += " cursor-pointer hover:scale-105";
-            } else {
-              circleClasses += " cursor-not-allowed opacity-70";
-            }
-  
-            const getDataEtapa = () => {
-              switch (etapaIndex) {
-                case 1: return carregamento?.data_chegada;
-                case 2: return carregamento?.data_inicio;
-                case 3: return carregamento?.data_carregando;
-                case 4: return carregamento?.data_finalizacao;
-                case 5: return carregamento?.data_documentacao;
-                default: return null;
+        {/* Container com scroll horizontal - barra visível */}
+        <div className="overflow-x-auto">
+          <div className="flex items-end justify-between w-full min-w-[600px] lg:min-w-0 max-w-4xl mx-auto relative">
+            {ETAPAS.map((etapa, idx) => {
+              const etapaIndex = etapa.id;
+              const etapaAtual = carregamento?.etapa_atual ?? 1;
+              const isFinalizada = etapaIndex < etapaAtual;
+              const isAtual = etapaIndex === etapaAtual;
+              const isSelected = selectedEtapa === etapaIndex;
+              const podeClicar = !proximaEtapaMutation.isPending && !isUploadingPhoto && !subEtapaMutation.isPending;
+              
+              let circleClasses = "rounded-full flex items-center justify-center transition-all";
+              let shadowStyle = "none";
+              
+              if (isSelected) {
+                circleClasses += " bg-white text-primary border-4 border-primary font-bold";
+                shadowStyle = "0 2px 8px 0 rgba(59, 130, 246, 0.3)";
+              } else if (isAtual) {
+                circleClasses += " bg-blue-500 text-white";
+              } else if (isFinalizada) {
+                circleClasses += " bg-green-500 text-white";
+              } else {
+                circleClasses += " bg-gray-200 text-gray-600";
               }
-            };
-            
-            return (
-              <div
-                key={etapa.id}
-                className="flex flex-col items-center flex-1 min-w-[90px] relative"
-              >
-                {idx < ETAPAS.length - 1 && (
+              
+              if (podeClicar) {
+                circleClasses += " cursor-pointer hover:scale-105";
+              } else {
+                circleClasses += " cursor-not-allowed opacity-70";
+              }
+  
+              const getDataEtapa = () => {
+                switch (etapaIndex) {
+                  case 1: return carregamento?.data_chegada;
+                  case 2: return carregamento?.data_inicio;
+                  case 3: return carregamento?.data_carregando;
+                  case 4: return carregamento?.data_finalizacao;
+                  case 5: return carregamento?.data_documentacao;
+                  default: return null;
+                }
+              };
+              
+              return (
+                <div
+                  key={etapa.id}
+                  className="flex flex-col items-center flex-1 min-w-[90px] relative"
+                >
+                  {idx < ETAPAS.length - 1 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: `-${ARROW_HEIGHT}px`,
+                        left: "50%",
+                        transform: "translateX(0)",
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <ArrowRight className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
                   <div
+                    className={circleClasses}
                     style={{
-                      position: "absolute",
-                      top: `-${ARROW_HEIGHT}px`,
-                      left: "50%",
-                      transform: "translateX(0)",
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "center"
+                      width: 36,
+                      height: 36,
+                      fontSize: "1.1rem",
+                      marginBottom: 3,
+                      boxShadow: shadowStyle,
+                    }}
+                    onClick={() => {
+                      if (podeClicar) {
+                        setSelectedEtapa(etapaIndex);
+                      }
                     }}
                   >
-                    <ArrowRight className="w-6 h-6 text-gray-400" />
+                    {isFinalizada && !isSelected ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
                   </div>
-                )}
-                <div
-                  className={circleClasses}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    fontSize: "1.1rem",
-                    marginBottom: 3,
-                    boxShadow: shadowStyle,
-                  }}
-                  onClick={() => {
-                    if (podeClicar) {
-                      setSelectedEtapa(etapaIndex);
+                  <div
+                    className={
+                      "text-xs text-center leading-tight " +
+                      (isSelected ? "text-primary font-bold" : "text-foreground") +
+                      (podeClicar ? " cursor-pointer" : " cursor-not-allowed opacity-70")
                     }
-                  }}
-                >
-                  {isFinalizada && !isSelected ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
+                    style={{
+                      minHeight: 32,
+                      marginTop: 2,
+                    }}
+                    onClick={() => {
+                      if (podeClicar) {
+                        setSelectedEtapa(etapaIndex);
+                      }
+                    }}
+                  >
+                    {etapa.nome}
+                  </div>
+                  <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
+                    {formatarDataHora(getDataEtapa())}
+                  </div>
                 </div>
-                <div
-                  className={
-                    "text-xs text-center leading-tight " +
-                    (isSelected ? "text-primary font-bold" : "text-foreground") +
-                    (podeClicar ? " cursor-pointer" : " cursor-not-allowed opacity-70")
-                  }
-                  style={{
-                    minHeight: 32,
-                    marginTop: 2,
-                  }}
-                  onClick={() => {
-                    if (podeClicar) {
-                      setSelectedEtapa(etapaIndex);
-                    }
-                  }}
-                >
-                  {etapa.nome}
-                </div>
-                <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
-                  {formatarDataHora(getDataEtapa())}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
