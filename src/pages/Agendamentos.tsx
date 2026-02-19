@@ -16,6 +16,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 const getStatusCarregamento = (etapaAtual: number) => {
   if (etapaAtual === 1) {
@@ -228,6 +230,18 @@ const Agendamentos = () => {
   const queryClient = useQueryClient();
   const { hasRole, userRole, user } = useAuth();
   const { representanteId, clientesDoRepresentante } = usePermissions();
+  
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
   
   const canCreate = hasRole("admin") || hasRole("logistica") || hasRole("cliente") || hasRole("representante");
   const [isCreating, setIsCreating] = useState(false);
@@ -498,6 +512,15 @@ const Agendamentos = () => {
     setFormError("");
     setQuantidadeDisponivel(0);
     setValidandoQuantidade(false);
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetFormNovoAgendamento(); // ✅ Limpar dados ao fechar
+    });
   };
 
   const atualizarQuantidadeDisponivel = async (liberacaoId: string) => {
@@ -623,6 +646,8 @@ const Agendamentos = () => {
         }
         return;
       }
+
+      markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
 
       toast({
         title: "Agendamento criado com sucesso!",
@@ -890,6 +915,14 @@ const Agendamentos = () => {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        
+        {/* ✅ Componente de alerta */}
+        <UnsavedChangesAlert 
+          open={showAlert}
+          onConfirm={confirmClose}
+          onCancel={cancelClose}
+        />
+
         <PageHeader
           title="Agendamentos de Retirada"
           subtitle="Gerencie os agendamentos de retirada de produtos"
@@ -897,8 +930,12 @@ const Agendamentos = () => {
           actions={
             canCreate ? (
               <Dialog open={dialogOpen} onOpenChange={(open) => {
-                if (!open && isCreating) return;
-                setDialogOpen(open);
+                if (!open && isCreating) return; // Não fechar durante criação
+                if (!open) {
+                  handleCloseModal(); // ✅ Usar nova função
+                } else {
+                  setDialogOpen(open);
+                }
               }}>
                 <DialogTrigger asChild>
                   <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -916,12 +953,13 @@ const Agendamentos = () => {
                   <div className="py-4 px-1 space-y-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="liberacao" className="text-sm font-medium">Liberação *</Label>
+                        <Label htmlFor="liberacao" className="                        <Label htmlFor="liberacao" className="text-sm font-medium">Liberação *</Label>
                         {temLiberacoesDisponiveis ? (
                           <Select
                             value={novoAgendamento.liberacao}
                             onValueChange={async (v) => {
                               setNovoAgendamento((s) => ({ ...s, liberacao: v, quantidade: "" }));
+                              markAsChanged(); // ✅ Marcar como alterado
                               await atualizarQuantidadeDisponivel(v);
                             }}
                             disabled={isCreating}
@@ -974,7 +1012,10 @@ const Agendamentos = () => {
                                 min="0"
                                 max={quantidadeDisponivel || undefined}
                                 value={novoAgendamento.quantidade}
-                                onChange={(e) => setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }))}
+                                onChange={(e) => {
+                                  setNovoAgendamento((s) => ({ ...s, quantidade: e.target.value }));
+                                  markAsChanged(); // ✅ Marcar como alterado
+                                }}
                                 placeholder="0.00"
                                 className={`min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base ${
                                   novoAgendamento.quantidade && !quantidadeValida 
@@ -1001,7 +1042,10 @@ const Agendamentos = () => {
                                 id="data"
                                 type="date"
                                 value={novoAgendamento.data}
-                                onChange={(e) => setNovoAgendamento((s) => ({ ...s, data: e.target.value }))}
+                                onChange={(e) => {
+                                  setNovoAgendamento((s) => ({ ...s, data: e.target.value }));
+                                  markAsChanged(); // ✅ Marcar como alterado
+                                }}
                                 disabled={isCreating}
                                 className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                               />
@@ -1013,12 +1057,13 @@ const Agendamentos = () => {
                             <Input
                               id="placa"
                               value={novoAgendamento.placa}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setNovoAgendamento((s) => ({
                                   ...s,
                                   placa: maskPlaca(e.target.value),
-                                }))
-                              }
+                                }));
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               placeholder="Ex: ABC-1234 ou ABC-1D23"
                               maxLength={9}
                               autoCapitalize="characters"
@@ -1036,7 +1081,10 @@ const Agendamentos = () => {
                               <Input
                                 id="motorista"
                                 value={novoAgendamento.motorista}
-                                onChange={(e) => setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }))}
+                                onChange={(e) => {
+                                  setNovoAgendamento((s) => ({ ...s, motorista: e.target.value }));
+                                  markAsChanged(); // ✅ Marcar como alterado
+                                }}
                                 placeholder="Ex: João Silva"
                                 disabled={isCreating}
                                 className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -1048,12 +1096,13 @@ const Agendamentos = () => {
                               <Input
                                 id="documento"
                                 value={novoAgendamento.documento}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setNovoAgendamento((s) => ({
                                     ...s,
                                     documento: maskCPF(e.target.value),
-                                  }))
-                                }
+                                  }));
+                                  markAsChanged(); // ✅ Marcar como alterado
+                                }}
                                 placeholder="Ex: 123.456.789-00"
                                 maxLength={14}
                                 disabled={isCreating}
@@ -1067,7 +1116,10 @@ const Agendamentos = () => {
                             <Input
                               id="tipoCaminhao"
                               value={novoAgendamento.tipoCaminhao}
-                              onChange={(e) => setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }))}
+                              onChange={(e) => {
+                                setNovoAgendamento((s) => ({ ...s, tipoCaminhao: e.target.value }));
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               placeholder="Ex: Bitrem, Carreta, Truck"
                               disabled={isCreating}
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -1079,7 +1131,10 @@ const Agendamentos = () => {
                             <Input
                               id="observacoes"
                               value={novoAgendamento.observacoes}
-                              onChange={(e) => setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }))}
+                              onChange={(e) => {
+                                setNovoAgendamento((s) => ({ ...s, observacoes: e.target.value }));
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               placeholder="Informações adicionais sobre o agendamento"
                               disabled={isCreating}
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -1098,7 +1153,7 @@ const Agendamentos = () => {
                     {/* Botões no final do conteúdo */}
                     <ModalFooter 
                       variant="double"
-                      onClose={() => setDialogOpen(false)}
+                      onClose={() => handleCloseModal()}
                       onConfirm={handleCreateAgendamento}
                       confirmText="Criar Agendamento"
                       confirmIcon={<Plus className="h-4 w-4" />}
