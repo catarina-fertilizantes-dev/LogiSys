@@ -85,7 +85,7 @@ const ForgotPassword = () => {
                 </p>
               </div>
               <Link to="/auth" className="block">
-                <Button variant="outline" className="w-full max-md:min-h-[44px]">
+                <Button className="w-full max-md:min-h-[44px] btn-secondary">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar ao Login
                 </Button>
@@ -120,13 +120,13 @@ const ForgotPassword = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-primary max-md:min-h-[44px]" 
+                  className="w-full btn-primary max-md:min-h-[44px]" 
                   disabled={loading}
                 >
                   {loading ? "Enviando..." : "Enviar link de recuperação"}
                 </Button>
                 <Link to="/auth" className="block">
-                  <Button variant="ghost" className="w-full max-md:min-h-[44px]">
+                  <Button className="w-full max-md:min-h-[44px] btn-secondary">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Voltar ao Login
                   </Button>
