@@ -81,7 +81,7 @@ const AuthPage = () => {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-gradient-primary" 
+              className="w-full btn-primary" 
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}
