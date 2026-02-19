@@ -80,7 +80,7 @@ const EmptyStateCard = ({
 }) => (
   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-3">
     <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-      <AlertCircle className="h-5 w-5" />
+      <AlertCircle className="h-5 w-5 flex-shrink-0" />
       <span className="font-medium">{title}</span>
     </div>
     <p className="text-sm text-amber-700 dark:text-amber-300">
@@ -89,7 +89,7 @@ const EmptyStateCard = ({
     <Button 
       variant="outline" 
       size="sm" 
-      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
+      className="w-full border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20 min-h-[44px] max-md:min-h-[44px]"
       onClick={() => window.location.href = actionUrl}
     >
       <ExternalLink className="h-4 w-4 mr-2" />
@@ -575,31 +575,31 @@ const Liberacoes = () => {
 
   const renderLiberacaoCard = (lib: LiberacaoItem) => (
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-5">
+      <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
           <div className="flex items-start justify-between">
             <div 
-              className="flex items-start gap-4 flex-1"
+              className="flex items-start gap-3 md:gap-4 flex-1"
               onClick={() => setDetalhesLiberacao(lib)}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
                 <ClipboardList className="h-5 w-5 text-white" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Pedido: {lib.pedido}</h3>
-                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
-                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{lib.produto}</span></p>
-                <p className="text-xs text-muted-foreground">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground text-sm md:text-base truncate">Pedido: {lib.pedido}</h3>
+                <p className="text-xs text-muted-foreground truncate">Cliente: <span className="font-semibold">{lib.cliente}</span></p>
+                <p className="text-xs text-muted-foreground truncate">Produto: <span className="font-semibold">{lib.produto}</span></p>
+                <p className="text-xs text-muted-foreground truncate">Armazém: <span className="font-semibold">{lib.armazem}</span></p>
                 
                 <div className="mt-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-4">
-                    <span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                    <span className="whitespace-nowrap">
                       <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
                     </span>
-                    <span>
+                    <span className="whitespace-nowrap">
                       <span className="font-medium text-blue-600">Agendada:</span> {lib.quantidadeAgendada.toLocaleString('pt-BR')}t
                     </span>
-                    <span>
+                    <span className="whitespace-nowrap">
                       <span className="font-medium text-orange-600">Retirada:</span> {lib.quantidadeRetirada.toLocaleString('pt-BR')}t
                     </span>
                   </div>
@@ -610,11 +610,14 @@ const Liberacoes = () => {
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
                 <div 
-                  className="flex items-center gap-1 cursor-help"
+                  className="flex items-center gap-1 cursor-help shrink-0 ml-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Badge className={getStatusColor(lib.status)}>
-                    {getStatusLabel(lib.status)}
+                  <Badge className={`${getStatusColor(lib.status)} text-xs px-2 py-1`}>
+                    <span className="sm:hidden">
+                      {lib.status === "disponivel" ? "Disp." : 
+                       lib.status === "parcialmente_agendada" ? "Parc." : "Total"}
+                    </span>
                   </Badge>
                   <Info className="h-3 w-3 text-muted-foreground" />
                 </div>
@@ -630,8 +633,8 @@ const Liberacoes = () => {
             onClick={() => setDetalhesLiberacao(lib)}
           >
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-blue-600 font-medium w-20">Agendamento:</span>
+              <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
+              <span className="text-xs text-blue-600 font-medium w-16 sm:w-20 shrink-0">Agendamento:</span>
               
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
@@ -653,11 +656,11 @@ const Liberacoes = () => {
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
-                    className="flex items-center gap-1 cursor-help"
+                    className="flex items-center gap-1 cursor-help shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-12">
+                    <span className="text-xs text-muted-foreground font-medium w-8 sm:w-12 text-right">
                       {lib.percentualAgendado}%
                     </span>
                   </div>
@@ -679,7 +682,7 @@ const Liberacoes = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader title="Liberações de Produtos" subtitle="Carregando..." icon={ClipboardList} actions={<></>} />
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -691,7 +694,7 @@ const Liberacoes = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader title="Liberações de Produtos" subtitle="Erro ao carregar dados" icon={ClipboardList} actions={<></>} />
         <div className="text-center">
           <p className="text-destructive">Erro: {(error as Error).message}</p>
@@ -702,7 +705,7 @@ const Liberacoes = () => {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader
           title="Liberações de Produtos"
           subtitle="Gerencie as liberações de produtos para clientes"
@@ -714,36 +717,37 @@ const Liberacoes = () => {
                 setDialogOpen(open);
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-primary">
+                  <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Liberação
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Nova Liberação</DialogTitle>
+                <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-lg max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
+                  <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
+                    <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Nova Liberação</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4 py-2">
+                  <div className="py-4 px-1 space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="pedido">Número do Pedido *</Label>
+                      <Label htmlFor="pedido" className="text-sm font-medium">Número do Pedido *</Label>
                       <Input
                         id="pedido"
                         value={novaLiberacao.pedido}
                         onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
                         placeholder="Ex: PED-2024-001"
                         disabled={isCreating}
+                        className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="produto">Produto *</Label>
+                      <Label htmlFor="produto" className="text-sm font-medium">Produto *</Label>
                       {temProdutosDisponiveis ? (
                         <Select 
                           value={novaLiberacao.produto} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }))}
                           disabled={isCreating}
                         >
-                          <SelectTrigger id="produto">
+                          <SelectTrigger id="produto" className="min-h-[44px] max-md:min-h-[44px]">
                             <SelectValue placeholder="Selecione o produto" />
                           </SelectTrigger>
                           <SelectContent>
@@ -763,20 +767,20 @@ const Liberacoes = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="armazem">Armazém *</Label>
+                      <Label htmlFor="armazem" className="text-sm font-medium">Armazém *</Label>
                       {temArmazensDisponiveis ? (
                         <Select 
                           value={novaLiberacao.armazem} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }))}
                           disabled={isCreating}
                         >
-                          <SelectTrigger id="armazem">
+                          <SelectTrigger id="armazem" className="min-h-[44px] max-md:min-h-[44px]">
                             <SelectValue placeholder="Selecione o armazém" />
                           </SelectTrigger>
                           <SelectContent>
                             {armazens?.map((a) => (
                               <SelectItem key={a.id} value={a.id}>
-                                {a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}
+                                <span className="break-words">{a.cidade}{a.estado ? "/" + a.estado : ""} - {a.nome}</span>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -792,20 +796,20 @@ const Liberacoes = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="cliente">Cliente *</Label>
+                      <Label htmlFor="cliente" className="text-sm font-medium">Cliente *</Label>
                       {temClientesDisponiveis ? (
                         <Select 
                           value={novaLiberacao.cliente_id} 
                           onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}
                           disabled={isCreating}
                         >
-                          <SelectTrigger id="cliente">
+                          <SelectTrigger id="cliente" className="min-h-[44px] max-md:min-h-[44px]">
                             <SelectValue placeholder="Selecione o cliente" />
                           </SelectTrigger>
                           <SelectContent>
                             {clientesData?.map((cliente) => (
                               <SelectItem key={cliente.id} value={cliente.id}>
-                                {cliente.nome} - {cliente.cnpj_cpf}
+                                <span className="break-words">{cliente.nome} - {cliente.cnpj_cpf}</span>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -831,7 +835,7 @@ const Liberacoes = () => {
                     
                     {temProdutosDisponiveis && temArmazensDisponiveis && temClientesDisponiveis && temEstoqueCadastrado && (
                       <div className="space-y-2">
-                        <Label htmlFor="quantidade">Quantidade (t) *</Label>
+                        <Label htmlFor="quantidade" className="text-sm font-medium">Quantidade (t) *</Label>
                         {novaLiberacao.produto && novaLiberacao.armazem && (
                           <div className="text-sm text-muted-foreground mb-1">
                             {validandoEstoque ? (
@@ -855,13 +859,13 @@ const Liberacoes = () => {
                           value={novaLiberacao.quantidade}
                           onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
                           placeholder="0.00"
-                          className={
+                          className={`min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base ${
                             novaLiberacao.quantidade && !quantidadeValida 
                               ? "border-red-500 focus:border-red-500" 
                               : novaLiberacao.quantidade && quantidadeValida
                               ? "border-green-500 focus:border-green-500"
                               : ""
-                          }
+                          }`}
                           disabled={isCreating}
                         />
                         {novaLiberacao.quantidade && !quantidadeValida && (
@@ -874,17 +878,24 @@ const Liberacoes = () => {
                         )}
                       </div>
                     )}
+                    
+                    <p className="text-xs text-muted-foreground">
+                      * Campos obrigatórios
+                    </p>
                   </div>
-                  <DialogFooter>
+                  
+                  {/* Botões no final do conteúdo */}
+                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
                     <Button 
                       variant="outline" 
                       onClick={() => setDialogOpen(false)}
                       disabled={isCreating}
+                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
                     >
                       Cancelar
                     </Button>
                     <Button 
-                      className="bg-gradient-primary" 
+                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
                       onClick={handleCreateLiberacao}
                       disabled={
                         !temProdutosDisponiveis || 
@@ -905,41 +916,66 @@ const Liberacoes = () => {
                         "Criar Liberação"
                       )}
                     </Button>
-                  </DialogFooter>
+                  </div>
                 </DialogContent>
               </Dialog>
             ) : null
           }
         />
         
-        <div className="flex items-center gap-3">
-          <Input className="h-9 flex-1" placeholder="Buscar por produto, cliente ou pedido..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span></span>
-          <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)}>
-            <FilterIcon className="h-4 w-4 mr-1" />
-            Filtros {activeAdvancedCount ? `(${activeAdvancedCount})` : ""}
-            {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
-          </Button>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-              <X className="h-4 w-4" /> 
-              Limpar Filtros
+        {/* Barra de filtros otimizada para mobile */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Input 
+              className="h-9 flex-1 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
+              placeholder="Buscar por produto, cliente ou pedido..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+            />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]" 
+              onClick={() => setFiltersOpen((v) => !v)}
+            >
+              <FilterIcon className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Filtros</span>
+              {activeAdvancedCount ? ` (${activeAdvancedCount})` : ""}
+              {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </Button>
-          )}
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Mostrando <span className="font-medium">{showingCount}</span> de <span className="font-medium">{totalCount}</span>
+            </span>
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters} 
+                className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+              >
+                <X className="h-4 w-4" /> 
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Filtros otimizados para mobile */}
         {filtersOpen && (
-          <div className="rounded-md border p-3 space-y-6 relative">
+          <div className="rounded-md border p-3 space-y-4">
             <div>
-              <Label className="text-sm font-semibold mb-1">Status da Liberação</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
+              <Label className="text-sm font-semibold mb-2 block">Status da Liberação</Label>
+              <div className="flex flex-wrap gap-2">
                 {STATUS_LIBERACAO.map((status) => {
                   const active = selectedStatuses.includes(status.id as StatusLiberacao);
                   return (
                     <Badge
                       key={status.id}
                       onClick={() => toggleStatus(status.id as StatusLiberacao)}
-                      className={`cursor-pointer text-xs px-2 py-1 border-0 ${
+                      className={`cursor-pointer text-xs px-2 py-1 border-0 min-h-[32px] ${
                         active 
                           ? "bg-gradient-primary text-white"
                           : status.cor
@@ -950,14 +986,21 @@ const Liberacoes = () => {
                 })}
               </div>
             </div>
+            
             {allArmazens.length > 0 && (
               <div>
-                <Label className="text-sm font-semibold mb-1">Armazém</Label>
-                <div className="flex flex-wrap gap-2 mt-1">
+                <Label className="text-sm font-semibold mb-2 block">Armazém</Label>
+                <div className="flex flex-wrap gap-2">
                   {allArmazens.map((a) => {
                     const active = selectedArmazens.includes(a);
                     return (
-                      <Badge key={a} onClick={() => toggleArmazem(a)} className={`cursor-pointer text-xs px-2 py-1 ${active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                      <Badge 
+                        key={a} 
+                        onClick={() => toggleArmazem(a)} 
+                        className={`cursor-pointer text-xs px-2 py-1 min-h-[32px] break-words ${
+                          active ? "bg-gradient-primary text-white" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         {a}
                       </Badge>
                     );
@@ -965,34 +1008,49 @@ const Liberacoes = () => {
                 </div>
               </div>
             )}
-            <div className="flex items-center gap-4">
-              <Label className="text-sm font-semibold mb-1">Período</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-[160px]" />
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-[160px]" />
-              <div className="flex-1"></div>
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Período</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input 
+                  type="date" 
+                  value={dateFrom} 
+                  onChange={(e) => setDateFrom(e.target.value)} 
+                  className="min-h-[44px] max-md:min-h-[44px]" 
+                  placeholder="Data inicial"
+                />
+                <Input 
+                  type="date" 
+                  value={dateTo} 
+                  onChange={(e) => setDateTo(e.target.value)} 
+                  className="min-h-[44px] max-md:min-h-[44px]" 
+                  placeholder="Data final"
+                />
+              </div>
             </div>
           </div>
         )}
 
+        {/* Modal de detalhes otimizado para mobile */}
         <Dialog open={!!detalhesLiberacao} onOpenChange={open => !open && setDetalhesLiberacao(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Detalhes da Liberação</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[90vh] overflow-y-auto my-4 md:my-8">
+            <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
+              <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Detalhes da Liberação</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
                 Pedido: {detalhesLiberacao?.pedido}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="py-4 px-1 space-y-4">
               {detalhesLiberacao && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Data de Criação:</Label>
-                      <p className="font-semibold">{detalhesLiberacao.data}</p>
+                      <p className="font-semibold text-sm md:text-base">{detalhesLiberacao.data}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
-                      <Badge className={getStatusColor(detalhesLiberacao.status)}>
+                      <Badge className={`${getStatusColor(detalhesLiberacao.status)} mt-1`}>
                         {getStatusLabel(detalhesLiberacao.status)}
                       </Badge>
                     </div>
@@ -1000,14 +1058,14 @@ const Liberacoes = () => {
 
                   <div className="border-t"></div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Cliente:</Label>
-                      <p className="font-semibold">{detalhesLiberacao.cliente}</p>
+                      <p className="font-semibold text-sm md:text-base break-words">{detalhesLiberacao.cliente}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Armazém:</Label>
-                      <p className="font-semibold">{detalhesLiberacao.armazem}</p>
+                      <p className="font-semibold text-sm md:text-base break-words">{detalhesLiberacao.armazem}</p>
                     </div>
                   </div>
 
@@ -1015,46 +1073,49 @@ const Liberacoes = () => {
 
                   <div>
                     <Label className="text-xs text-muted-foreground">Produto:</Label>
-                    <p className="font-semibold">{detalhesLiberacao.produto}</p>
+                    <p className="font-semibold text-sm md:text-base break-words">{detalhesLiberacao.produto}</p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade Liberada:</Label>
-                      <p className="font-semibold text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
+                      <p className="font-semibold text-base md:text-lg">{detalhesLiberacao.quantidade.toLocaleString('pt-BR')}t</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade Agendada:</Label>
-                      <p className="font-semibold text-lg text-blue-600">{detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t</p>
+                      <p className="font-semibold text-base md:text-lg text-blue-600">{detalhesLiberacao.quantidadeAgendada.toLocaleString('pt-BR')}t</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade Retirada:</Label>
-                      <p className="font-semibold text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
+                      <p className="font-semibold text-base md:text-lg text-orange-600">{detalhesLiberacao.quantidadeRetirada.toLocaleString('pt-BR')}t</p>
                     </div>
                   </div>
                 </>
               )}
             </div>
-            <DialogFooter>
-              <Button onClick={() => setDetalhesLiberacao(null)}>
+            <div className="pt-4 border-t border-border bg-background flex justify-end">
+              <Button 
+                onClick={() => setDetalhesLiberacao(null)}
+                className="min-h-[44px] max-md:min-h-[44px] w-full md:w-auto"
+              >
                 Fechar
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Liberações Ativas ({liberacoesAtivas.length})</h2>
+            <h2 className="text-base md:text-lg font-semibold">Liberações Ativas ({liberacoesAtivas.length})</h2>
           </div>
           
-          <div className="grid gap-4">
+          <div className="grid gap-3 md:gap-4">
             {liberacoesAtivas.map(renderLiberacaoCard)}
             {liberacoesAtivas.length === 0 && (
               <div className="text-center py-8">
                 <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm md:text-base">
                   {hasActiveFilters
                     ? "Nenhuma liberação ativa encontrada com os filtros aplicados"
                     : "Nenhuma liberação ativa no momento"}
@@ -1064,7 +1125,7 @@ const Liberacoes = () => {
                     variant="outline" 
                     size="sm" 
                     onClick={clearFilters}
-                    className="mt-2"
+                    className="mt-2 min-h-[44px] max-md:min-h-[44px]"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Limpar Filtros
@@ -1079,7 +1140,7 @@ const Liberacoes = () => {
           <div className="space-y-4">
             <Button
               variant="ghost"
-              className="flex items-center gap-2 p-0 h-auto text-lg font-semibold hover:bg-transparent"
+              className="flex items-center gap-2 p-0 h-auto text-base md:text-lg font-semibold hover:bg-transparent min-h-[44px] max-md:min-h-[44px]"
               onClick={() => setSecaoFinalizadasExpandida(!secaoFinalizadasExpandida)}
             >
               {secaoFinalizadasExpandida ? (
@@ -1094,7 +1155,7 @@ const Liberacoes = () => {
             </Button>
             
             {secaoFinalizadasExpandida && (
-              <div className="grid gap-4 ml-7">
+              <div className="grid gap-3 md:gap-4 ml-7">
                 {liberacoesFinalizadas.map(renderLiberacaoCard)}
               </div>
             )}
@@ -1104,7 +1165,7 @@ const Liberacoes = () => {
         {liberacoesAtivas.length === 0 && liberacoesFinalizadas.length === 0 && (
           <div className="text-center py-12">
             <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm md:text-base">
               {hasActiveFilters
                 ? "Nenhuma liberação encontrada com os filtros aplicados"
                 : "Nenhuma liberação cadastrada ainda"}
@@ -1114,7 +1175,7 @@ const Liberacoes = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={clearFilters}
-                className="mt-2"
+                className="mt-2 min-h-[44px] max-md:min-h-[44px]"
               >
                 <X className="h-4 w-4 mr-2" />
                 Limpar Filtros
