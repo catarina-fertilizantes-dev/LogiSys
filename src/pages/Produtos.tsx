@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 type Unidade = "t" | "kg" | "";
@@ -297,33 +298,14 @@ const Produtos = () => {
                   </div>
 
                   {/* Botões no final do conteúdo */}
-                  <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      disabled={isCreating}
-                      className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]" 
-                      onClick={handleCreateProduto}
-                      disabled={isCreating}
-                    >
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Criar Produto
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <ModalFooter 
+                    variant="double"
+                    onClose={() => setDialogOpen(false)}
+                    onConfirm={handleCreateProduto}
+                    confirmText="Criar Produto"
+                    confirmIcon={<Plus className="h-4 w-4" />}
+                    isLoading={isCreating}
+                  />
                 </div>
               </DialogContent>
             </Dialog>
@@ -405,14 +387,10 @@ const Produtos = () => {
             </div>
 
             {/* Botão no final do conteúdo */}
-            <div className="pt-4 border-t border-border bg-background">
-              <Button 
-                onClick={() => setDetalhesProduto(null)}
-                className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px]"
-              >
-                Fechar
-              </Button>
-            </div>
+            <ModalFooter 
+              variant="single"
+              onClose={() => setDetalhesProduto(null)}
+            />
           </div>
         </DialogContent>
       </Dialog>
