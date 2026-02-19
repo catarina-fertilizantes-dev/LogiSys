@@ -188,3 +188,33 @@ All colors MUST be HSL.
     }
   }
 }
+
+@layer components {
+  /* 🎯 BOTÃO PRINCIPAL - Gradient com hover melhorado */
+  .btn-primary {
+    @apply bg-gradient-to-br from-primary to-accent text-white font-medium;
+    @apply hover:from-primary/90 hover:to-accent/90;
+    @apply hover:shadow-lg hover:shadow-primary/25;
+    @apply active:from-primary/95 active:to-accent/95;
+    @apply transition-all duration-200 ease-out;
+    @apply transform hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  /* 🎯 BOTÃO SECUNDÁRIO - Estilo mais reconhecível */
+  .btn-secondary {
+    @apply bg-muted/50 text-muted-foreground border border-border/60;
+    @apply hover:bg-accent hover:text-accent-foreground hover:border-accent/50;
+    @apply active:bg-accent/90;
+    @apply transition-all duration-200 ease-out;
+    @apply font-medium;
+  }
+
+  /* 🎯 ALTERNATIVA - Botão secundário com fundo sutil colorido */
+  .btn-secondary-alt {
+    @apply bg-primary/5 text-primary border border-primary/20;
+    @apply hover:bg-primary hover:text-primary-foreground hover:border-primary;
+    @apply active:bg-primary/90;
+    @apply transition-all duration-200 ease-out;
+    @apply font-medium;
+  }
+}
