@@ -144,12 +144,12 @@ const ChangePassword = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Lock className="h-6 w-6 text-white" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-primary flex items-center justify-center">
+              <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Alterar Senha</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-xl sm:text-2xl text-center">Alterar Senha</CardTitle>
+          <CardDescription className="text-center text-sm sm:text-base">
             {recoveryMode 
               ? "Crie uma nova senha para sua conta"
               : needsPasswordChange 
@@ -162,7 +162,7 @@ const ChangePassword = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {requireCurrentPassword && (
               <div className="space-y-2">
-                <Label htmlFor="current-password">Senha Atual</Label>
+                <Label htmlFor="current-password" className="text-sm font-medium">Senha Atual</Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -171,11 +171,12 @@ const ChangePassword = () => {
                   required
                   disabled={loading}
                   placeholder="Digite sua senha atual"
+                  className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                 />
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="new-password">Nova Senha</Label>
+              <Label htmlFor="new-password" className="text-sm font-medium">Nova Senha</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -184,10 +185,11 @@ const ChangePassword = () => {
                 required
                 disabled={loading}
                 placeholder="Mínimo 6 caracteres"
+                className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+              <Label htmlFor="confirm-password" className="text-sm font-medium">Confirmar Nova Senha</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -196,9 +198,14 @@ const ChangePassword = () => {
                 required
                 disabled={loading}
                 placeholder="Digite a senha novamente"
+                className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
               />
             </div>
-            <Button type="submit" className="w-full btn-primary" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full btn-primary min-h-[44px] max-md:min-h-[44px]" 
+              disabled={loading}
+            >
               {loading ? "Alterando..." : "Alterar Senha"}
             </Button>
           </form>
