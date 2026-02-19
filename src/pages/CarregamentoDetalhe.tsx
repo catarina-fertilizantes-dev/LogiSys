@@ -1406,7 +1406,7 @@ const CarregamentoDetalhe = () => {
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Voltar
+              <span className="hidden sm:inline">Voltar</span>
             </Button>
           }
         />
@@ -1430,7 +1430,7 @@ const CarregamentoDetalhe = () => {
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Voltar
+              <span className="hidden sm:inline">Voltar</span>
             </Button>
           }
         />
@@ -1458,7 +1458,7 @@ const CarregamentoDetalhe = () => {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar
+            <span className="hidden sm:inline">Voltar</span>
           </Button>
         }
       />
@@ -1468,7 +1468,7 @@ const CarregamentoDetalhe = () => {
         {renderAreaEtapas()}
         {renderInformacoesProcesso()}
       </div>
-
+  
       {showPhotoCapture && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-2xl">
