@@ -131,6 +131,34 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* 🔧 CORREÇÃO: Remove outline padrão do navegador em elementos focáveis */
+  button:focus,
+  button:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 🔧 CORREÇÃO: Remove outline especificamente em Dialogs */
+  [data-radix-dialog-content] button:focus,
+  [data-radix-dialog-content] button:focus-visible,
+  [data-radix-dialog-content] [role="button"]:focus,
+  [data-radix-dialog-content] [role="button"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 🔧 CORREÇÃO: Mantém acessibilidade com ring customizado */
+  button:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2;
+  }
+
+  /* 🔧 CORREÇÃO: Remove ring em contextos específicos onde não queremos */
+  [data-radix-dialog-content] button:focus-visible {
+    @apply ring-0 ring-offset-0;
+  }
 }
 
 @layer utilities {
