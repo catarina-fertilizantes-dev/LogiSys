@@ -33,7 +33,7 @@ export const ModalFooter = ({
     return (
       <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
         <Button 
-          variant="outline"
+          // 🔧 REMOVIDO: variant="outline"
           onClick={onClose}
           disabled={isLoading}
           className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] btn-secondary"
@@ -47,7 +47,7 @@ export const ModalFooter = ({
   return (
     <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
       <Button 
-        variant="outline" 
+        // 🔧 REMOVIDO: variant="outline"
         onClick={onClose}
         disabled={isLoading}
         className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2 btn-secondary"
