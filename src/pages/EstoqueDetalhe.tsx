@@ -295,19 +295,19 @@ const EstoqueDetalhe = () => {
 
   const renderRemessaCard = (remessa: RemessaItem) => (
     <Card key={remessa.id} className="transition-all hover:shadow-md">
-      <CardContent className="p-4 md:p-5">
-        <div className="space-y-4">
+      <CardContent className="p-4">
+        <div className="space-y-3">
           {/* Header da remessa - Layout responsivo */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary flex-shrink-0">
-                <Package className="h-5 w-5 text-white" />
+              <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary flex-shrink-0">
+                <Package className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground leading-tight">
+                <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight break-words">
                   {remessa.numero_remessa || `Remessa ${remessa.id.slice(-8)}`}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   Quantidade: <span className="font-semibold">{remessa.quantidade_original.toLocaleString('pt-BR')} {estoqueDetalhes?.produto.unidade}</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -325,7 +325,7 @@ const EstoqueDetalhe = () => {
           {remessa.observacoes && (
             <div className="pt-2 border-t">
               <p className="text-xs text-muted-foreground mb-1">Observações:</p>
-              <p className="text-sm bg-muted p-2 rounded-md break-words">{remessa.observacoes}</p>
+              <p className="text-xs md:text-sm bg-muted p-2 rounded-md break-words">{remessa.observacoes}</p>
             </div>
           )}
 
@@ -378,7 +378,8 @@ const EstoqueDetalhe = () => {
           }
         />
         <div className="flex justify-center items-center h-40">
-          <Loader2 className="animate-spin h-8 w-8 text-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="ml-3 text-muted-foreground">Carregando detalhes...</p>
         </div>
       </div>
     );
@@ -437,16 +438,16 @@ const EstoqueDetalhe = () => {
         {/* Card de informações gerais - Otimizado para mobile */}
         <Card className="shadow-sm">
           <CardContent className="p-4 md:p-6">
-            <h2 className="text-lg font-semibold mb-4">Informações do Estoque</h2>
+            <h2 className="text-base md:text-lg font-semibold mb-4">Informações do Estoque</h2>
             
             {/* Layout otimizado responsivo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Produto */}
               <div className="flex items-center gap-3">
                 <Package className="h-5 w-5 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">Produto:</p>
-                  <p className="font-semibold truncate">{estoqueDetalhes.produto.nome}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Produto:</p>
+                  <p className="font-semibold text-sm md:text-base break-words">{estoqueDetalhes.produto.nome}</p>
                 </div>
               </div>
 
@@ -454,8 +455,8 @@ const EstoqueDetalhe = () => {
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">Armazém:</p>
-                  <p className="font-semibold truncate">{estoqueDetalhes.armazem.nome}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Armazém:</p>
+                  <p className="font-semibold text-sm md:text-base break-words">{estoqueDetalhes.armazem.nome}</p>
                 </div>
               </div>
 
@@ -463,8 +464,8 @@ const EstoqueDetalhe = () => {
               <div className="flex items-center gap-3">
                 <Layers className="h-5 w-5 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">Nº de Remessas:</p>
-                  <p className="font-semibold">{numeroRemessasFiltradas}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Nº de Remessas:</p>
+                  <p className="font-semibold text-sm md:text-base">{numeroRemessasFiltradas}</p>
                 </div>
               </div>
 
@@ -472,31 +473,31 @@ const EstoqueDetalhe = () => {
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">Localização:</p>
-                  <p className="font-semibold truncate">{estoqueDetalhes.armazem.cidade}/{estoqueDetalhes.armazem.estado}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Localização:</p>
+                  <p className="font-semibold text-sm md:text-base break-words">{estoqueDetalhes.armazem.cidade}/{estoqueDetalhes.armazem.estado}</p>
                 </div>
               </div>
             </div>
 
             {/* Totalizadores - Layout responsivo */}
             <div className="pt-4 border-t mt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Archive className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="font-medium text-green-800">Entrada Total</span>
+                    <Archive className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                    <span className="font-medium text-green-800 text-sm md:text-base">Entrada Total</span>
                   </div>
-                  <p className="text-lg md:text-xl font-bold text-green-700 break-words">
+                  <p className="text-base md:text-xl font-bold text-green-700 break-words">
                     {entradaTotal.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
 
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="bg-blue-50 p-3 md:p-4 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Package className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <span className="font-medium text-blue-800">Estoque Atual</span>
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                    <span className="font-medium text-blue-800 text-sm md:text-base">Estoque Atual</span>
                   </div>
-                  <p className="text-lg md:text-xl font-bold text-blue-700 break-words">
+                  <p className="text-base md:text-xl font-bold text-blue-700 break-words">
                     {estoqueDetalhes.quantidade_total.toLocaleString('pt-BR')} {estoqueDetalhes.produto.unidade}
                   </p>
                 </div>
@@ -546,7 +547,7 @@ const EstoqueDetalhe = () => {
         {/* Filtros avançados - Mobile otimizado */}
         {filtersOpen && (
           <div className="rounded-md border p-3 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Período */}
               <div>
                 <Label className="text-sm font-semibold mb-2 block">Período</Label>
@@ -555,14 +556,14 @@ const EstoqueDetalhe = () => {
                     type="date" 
                     value={dateFrom} 
                     onChange={(e) => setDateFrom(e.target.value)} 
-                    className="h-9 min-h-[44px] max-md:min-h-[44px]" 
+                    className="min-h-[44px] max-md:min-h-[44px]" 
                     placeholder="De"
                   />
                   <Input 
                     type="date" 
                     value={dateTo} 
                     onChange={(e) => setDateTo(e.target.value)} 
-                    className="h-9 min-h-[44px] max-md:min-h-[44px]" 
+                    className="min-h-[44px] max-md:min-h-[44px]" 
                     placeholder="Até"
                   />
                 </div>
@@ -580,7 +581,7 @@ const EstoqueDetalhe = () => {
                     min="0"
                     value={quantidadeMin} 
                     onChange={(e) => setQuantidadeMin(e.target.value)} 
-                    className="h-9 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
                     placeholder="Mín"
                   />
                   <Input 
@@ -589,7 +590,7 @@ const EstoqueDetalhe = () => {
                     min="0"
                     value={quantidadeMax} 
                     onChange={(e) => setQuantidadeMax(e.target.value)} 
-                    className="h-9 min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
+                    className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base" 
                     placeholder="Máx"
                   />
                 </div>
@@ -602,7 +603,7 @@ const EstoqueDetalhe = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary flex-shrink-0" />
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-base md:text-lg font-semibold">
               Histórico de Remessas 
               {activeFiltersCount > 0 ? (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
@@ -616,7 +617,7 @@ const EstoqueDetalhe = () => {
             </h2>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             {remessasFiltradas.length > 0 ? (
               remessasFiltradas.map(renderRemessaCard)
             ) : hasActiveFilters ? (
