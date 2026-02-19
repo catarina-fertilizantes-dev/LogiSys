@@ -366,13 +366,12 @@ const handleCreateUser = async () => {
               </Button>
             </DialogTrigger>
             
-            {/* 🆕 MODAL SEM FOOTER FIXO - BOTÕES NO CONTEÚDO */}
+            {/* Modal de Criação - Mobile Otimizado */}
             <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
               <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                 <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Criar Novo Colaborador</DialogTitle>
               </DialogHeader>
               
-              {/* 🆕 TODO O CONTEÚDO EM UMA ÚNICA ÁREA SCROLLÁVEL */}
               <div className="py-4 px-1 space-y-6">
                 {/* Formulário */}
                 <div className="space-y-4">
@@ -435,8 +434,7 @@ const handleCreateUser = async () => {
                   </div>
                 </div>
 
-                {/* 🆕 BOTÕES NO FINAL DO CONTEÚDO (NÃO FIXOS) */}
-                {/* Adicionar import do ModalFooter no topo do arquivo */}
+                {/* Botões no final do conteúdo */}
                 <ModalFooter 
                   variant="double"
                   onClose={() => setDialogOpen(false)}
@@ -466,14 +464,14 @@ const handleCreateUser = async () => {
             </div>
           ) : error ? (
             <div className="text-center py-8">
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md mx-auto">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 md:p-6 max-w-md mx-auto">
                 <Shield className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <h3 className="text-lg font-semibold mb-2 text-destructive">Erro ao Carregar Colaboradores</h3>
+                <h3 className="text-base md:text-lg font-semibold mb-2 text-destructive">Erro ao Carregar Colaboradores</h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   Não foi possível carregar a lista de colaboradores. Verifique se a função get_users_with_roles foi atualizada para não usar a tabela profiles.
                 </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Execute a migration: <code className="bg-muted px-2 py-1 rounded">20251120_update_get_users_function.sql</code>
+                <p className="text-xs text-muted-foreground mb-4 break-words">
+                  Execute a migration: <code className="bg-muted px-2 py-1 rounded text-xs">20251120_update_get_users_function.sql</code>
                 </p>
                 <Button 
                   onClick={handleRetry} 
@@ -500,15 +498,15 @@ const handleCreateUser = async () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3 md:space-y-4">
+            <div className="space-y-3">
               {users.map((user) => (
                 <div
                   key={user.id}
                   className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3 md:space-y-0 md:space-x-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground text-base md:text-base truncate">{user.nome}</h3>
-                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                    <h3 className="font-semibold text-foreground text-sm md:text-base break-words">{user.nome}</h3>
+                    <p className="text-sm text-muted-foreground break-all">{user.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
                     </p>
