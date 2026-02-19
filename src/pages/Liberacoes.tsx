@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 type StatusLiberacao = "disponivel" | "parcialmente_agendada" | "totalmente_agendada";
 
@@ -109,7 +111,18 @@ const Liberacoes = () => {
   const { hasRole, userRole, user } = useAuth();
   const { clientesDoRepresentante, representanteId } = usePermissions();
 
-  
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
+
   useEffect(() => {
     if (userRole === "armazem") {
       window.location.href = "/";
@@ -465,6 +478,15 @@ const Liberacoes = () => {
     setQuantidadeEstoque(0);
     setTemEstoqueCadastrado(null);
     setValidandoEstoque(false);
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetFormNovaLiberacao(); // ✅ Limpar dados ao fechar
+    });
   };
 
   const handleCreateLiberacao = async () => {
@@ -528,6 +550,8 @@ const Liberacoes = () => {
       if (errLib) {
         throw new Error(`Erro ao criar liberação: ${errLib.message} (${errLib.code || 'N/A'})`);
       }
+
+      markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
 
       toast({
         title: "Liberação criada com sucesso!",
@@ -713,6 +737,14 @@ const Liberacoes = () => {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        
+        {/* ✅ Componente de alerta */}
+        <UnsavedChangesAlert 
+          open={showAlert}
+          onConfirm={confirmClose}
+          onCancel={cancelClose}
+        />
+
         <PageHeader
           title="Liberações de Produtos"
           subtitle="Gerencie as liberações de produtos para clientes"
@@ -720,8 +752,12 @@ const Liberacoes = () => {
           actions={
             canCreate ? (
               <Dialog open={dialogOpen} onOpenChange={(open) => {
-                if (!open && isCreating) return;
-                setDialogOpen(open);
+                if (!open && isCreating) return; // Não fechar durante criação
+                if (!open) {
+                  handleCloseModal(); // ✅ Usar nova função
+                } else {
+                  setDialogOpen(open);
+                }
               }}>
                 <DialogTrigger asChild>
                   <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -739,7 +775,10 @@ const Liberacoes = () => {
                       <Input
                         id="pedido"
                         value={novaLiberacao.pedido}
-                        onChange={(e) => setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }))}
+                        onChange={(e) => {
+                          setNovaLiberacao((s) => ({ ...s, pedido: e.target.value }));
+                          markAsChanged(); // ✅ Marcar como alterado
+                        }}
                         placeholder="Ex: PED-2024-001"
                         disabled={isCreating}
                         className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -751,7 +790,10 @@ const Liberacoes = () => {
                       {temProdutosDisponiveis ? (
                         <Select 
                           value={novaLiberacao.produto} 
-                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }))}
+                          onValueChange={(v) => {
+                            setNovaLiberacao((s) => ({ ...s, produto: v, quantidade: "" }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="produto" className="min-h-[44px] max-md:min-h-[44px]">
@@ -778,7 +820,10 @@ const Liberacoes = () => {
                       {temArmazensDisponiveis ? (
                         <Select 
                           value={novaLiberacao.armazem} 
-                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }))}
+                          onValueChange={(v) => {
+                            setNovaLiberacao((s) => ({ ...s, armazem: v, quantidade: "" }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="armazem" className="min-h-[44px] max-md:min-h-[44px]">
@@ -807,7 +852,10 @@ const Liberacoes = () => {
                       {temClientesDisponiveis ? (
                         <Select 
                           value={novaLiberacao.cliente_id} 
-                          onValueChange={(v) => setNovaLiberacao((s) => ({ ...s, cliente_id: v }))}
+                          onValueChange={(v) => {
+                            setNovaLiberacao((s) => ({ ...s, cliente_id: v }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="cliente" className="min-h-[44px] max-md:min-h-[44px]">
@@ -864,7 +912,10 @@ const Liberacoes = () => {
                           min="0"
                           max={quantidadeEstoque || undefined}
                           value={novaLiberacao.quantidade}
-                          onChange={(e) => setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }))}
+                          onChange={(e) => {
+                            setNovaLiberacao((s) => ({ ...s, quantidade: e.target.value }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="0.00"
                           className={`min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base ${
                             novaLiberacao.quantidade && !quantidadeValida 
@@ -894,7 +945,7 @@ const Liberacoes = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateLiberacao}
                     confirmText="Criar Liberação"
                     isLoading={isCreating}
