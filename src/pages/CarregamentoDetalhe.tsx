@@ -688,11 +688,11 @@ const CarregamentoDetalhe = () => {
 
   const renderEtapasFluxo = () => (
     <div
-      className="w-full flex flex-col"
-      style={{ marginTop: `${ARROW_HEIGHT + 8}px`, marginBottom: "28px" }}
+      className="w-full flex flex-col px-2 sm:px-0"
+      style={{ marginTop: `${ARROW_HEIGHT + 8}px`,      marginBottom: "28px" }}
     >
       <div className="relative">
-        <div className="flex items-end justify-between w-full max-w-4xl mx-auto relative">
+        <div className="flex items-end justify-between w-full max-w-4xl mx-auto relative overflow-x-auto sm:overflow-x-visible">
           {ETAPAS.map((etapa, idx) => {
             const etapaIndex = etapa.id;
             const etapaAtual = carregamento?.etapa_atual ?? 1;
@@ -735,10 +735,11 @@ const CarregamentoDetalhe = () => {
             return (
               <div
                 key={etapa.id}
-                className="flex flex-col items-center flex-1 min-w-[90px] relative"
+                className="flex flex-col items-center flex-1 min-w-[70px] sm:min-w-[90px] relative"
               >
                 {idx < ETAPAS.length - 1 && (
                   <div
+                    className="hidden sm:block"
                     style={{
                       position: "absolute",
                       top: `-${ARROW_HEIGHT}px`,
@@ -749,15 +750,15 @@ const CarregamentoDetalhe = () => {
                       justifyContent: "center"
                     }}
                   >
-                    <ArrowRight className="w-6 h-6 text-gray-400" />
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                   </div>
                 )}
                 <div
                   className={circleClasses}
                   style={{
-                    width: 36,
-                    height: 36,
-                    fontSize: "1.1rem",
+                    width: 32,
+                    height: 32,
+                    fontSize: "0.9rem",
                     marginBottom: 3,
                     boxShadow: shadowStyle,
                   }}
@@ -767,11 +768,11 @@ const CarregamentoDetalhe = () => {
                     }
                   }}
                 >
-                  {isFinalizada && !isSelected ? <CheckCircle className="w-6 h-6" /> : etapaIndex}
+                  {isFinalizada && !isSelected ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> : etapaIndex}
                 </div>
                 <div
                   className={
-                    "text-xs text-center leading-tight " +
+                    "text-xs text-center leading-tight break-words " +
                     (isSelected ? "text-primary font-bold" : "text-foreground") +
                     (podeClicar ? " cursor-pointer" : " cursor-not-allowed opacity-70")
                   }
@@ -787,7 +788,7 @@ const CarregamentoDetalhe = () => {
                 >
                   {etapa.nome}
                 </div>
-                <div className="text-[11px] text-center text-muted-foreground" style={{ marginTop: 1 }}>
+                <div className="text-[10px] sm:text-[11px] text-center text-muted-foreground break-words" style={{ marginTop: 1 }}>
                   {formatarDataHora(getDataEtapa())}
                 </div>
               </div>
@@ -827,18 +828,18 @@ const CarregamentoDetalhe = () => {
           return (
             <Card key={subEtapa.id} className={`transition-all ${isConcluida ? 'border-green-200 bg-green-50' : podeEditar ? 'border-blue-200 bg-blue-50' : 'border-gray-200'}`}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Badge className={`${subEtapa.cor} border-0 font-medium`}>
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <Badge className={`${subEtapa.cor} border-0 font-medium shrink-0`}>
                       {subEtapa.nome}
                     </Badge>
-                    <div>
-                      <h3 className="font-semibold text-sm">{subEtapa.titulo}</h3>
-                      <p className="text-xs text-muted-foreground">{subEtapa.descricao}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm break-words">{subEtapa.titulo}</h3>
+                      <p className="text-xs text-muted-foreground break-words">{subEtapa.descricao}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {isConcluida && (
                       <Badge className="bg-green-100 text-green-800 border-0">
                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -851,7 +852,7 @@ const CarregamentoDetalhe = () => {
                         size="sm"
                         disabled={!files.pdf || !files.xml || subEtapaMutation.isPending}
                         onClick={() => subEtapaMutation.mutate(subEtapa.id)}
-                        className="btn-primary"
+                        className="btn-primary min-h-[44px] max-md:min-h-[44px]"
                       >
                         {subEtapaMutation.isPending ? (
                           <>
@@ -868,7 +869,7 @@ const CarregamentoDetalhe = () => {
 
                 {isConcluida ? (
                   <div className="space-y-2">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <DocumentViewer
                         url={getDocumentUrl(subEtapa.campo_url)}
                         type="pdf"
@@ -903,7 +904,7 @@ const CarregamentoDetalhe = () => {
                           size="sm"
                           onClick={() => document.getElementById(`pdf-upload-${subEtapa.id}`)?.click()}
                           disabled={subEtapaMutation.isPending}
-                          className="flex items-center gap-2 btn-secondary"
+                          className="flex items-center gap-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
                         >
                           <Upload className="h-4 w-4" />
                           {files.pdf ? "Alterar PDF" : "Anexar PDF"}
@@ -926,8 +927,8 @@ const CarregamentoDetalhe = () => {
                         
                         {files.pdf && (
                           <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                            <FileText className="h-4 w-4 text-green-600" />
-                            <span className="text-sm text-green-700 flex-1">{files.pdf.name}</span>
+                            <FileText className="h-4 w-4 text-green-600 shrink-0" />
+                            <span className="text-sm text-green-700 flex-1 break-words">{files.pdf.name}</span>
                             <Button
                               size="sm"
                               onClick={() => setSubEtapaFiles(prev => ({
@@ -935,7 +936,7 @@ const CarregamentoDetalhe = () => {
                                 [subEtapa.id]: { ...prev[subEtapa.id], pdf: null }
                               }))}
                               disabled={subEtapaMutation.isPending}
-                              className="btn-secondary"
+                              className="btn-secondary min-h-[32px] max-md:min-h-[32px] shrink-0"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -954,7 +955,7 @@ const CarregamentoDetalhe = () => {
                           size="sm"
                           onClick={() => document.getElementById(`xml-upload-${subEtapa.id}`)?.click()}
                           disabled={subEtapaMutation.isPending}
-                          className="flex items-center gap-2 btn-secondary"
+                          className="flex items-center gap-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
                         >
                           <Upload className="h-4 w-4" />
                           {files.xml ? "Alterar XML" : "Anexar XML"}
@@ -977,8 +978,8 @@ const CarregamentoDetalhe = () => {
                         
                         {files.xml && (
                           <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                            <FileText className="h-4 w-4 text-green-600" />
-                            <span className="text-sm text-green-700 flex-1">{files.xml.name}</span>
+                            <FileText className="h-4 w-4 text-green-600 shrink-0" />
+                            <span className="text-sm text-green-700 flex-1 break-words">{files.xml.name}</span>
                             <Button
                               size="sm"
                               onClick={() => setSubEtapaFiles(prev => ({
@@ -986,7 +987,7 @@ const CarregamentoDetalhe = () => {
                                 [subEtapa.id]: { ...prev[subEtapa.id], xml: null }
                               }))}
                               disabled={subEtapaMutation.isPending}
-                              className="btn-secondary"
+                              className="btn-secondary min-h-[32px] max-md:min-h-[32px] shrink-0"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -998,7 +999,7 @@ const CarregamentoDetalhe = () => {
                 ) : (
                   <div className="text-center py-4 text-muted-foreground">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">
+                    <p className="text-sm break-words">
                       {!subEtapa.roles_permitidos.includes(userRole) 
                         ? (() => {
                             // ✅ MENSAGENS PERSONALIZADAS
@@ -1085,11 +1086,11 @@ const CarregamentoDetalhe = () => {
     return (
       <Card className="shadow-sm">
         <CardContent className="p-4 space-y-4">
-          <div className="flex items-center justify-between border-b pb-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{etapaTitulo}</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground break-words">{etapaTitulo}</h2>
               {etapaData.data && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 break-words">
                   Concluída em: {formatarDataHora(etapaData.data)}
                 </p>
               )}
@@ -1098,7 +1099,7 @@ const CarregamentoDetalhe = () => {
               <Button
                 disabled={!stageFile || proximaEtapaMutation.isPending || isUploadingPhoto}
                 size="sm"
-                className="px-6 btn-primary"
+                className="px-6 btn-primary min-h-[44px] max-md:min-h-[44px] shrink-0"
                 onClick={() => {
                   proximaEtapaMutation.mutate();
                 }}
@@ -1136,7 +1137,7 @@ const CarregamentoDetalhe = () => {
                 {etapaData.observacao && (
                   <div className="mb-3">
                     <span className="text-xs font-medium text-green-700">Observações:</span>
-                    <p className="text-xs text-green-600 mt-1 bg-white p-2 rounded border">{etapaData.observacao}</p>
+                    <p className="text-xs text-green-600 mt-1 bg-white p-2 rounded border break-words">{etapaData.observacao}</p>
                   </div>
                 )}
 
@@ -1167,7 +1168,7 @@ const CarregamentoDetalhe = () => {
                       size="sm"
                       onClick={() => handleStartPhotoCapture(selectedEtapa)}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                      className="flex items-center gap-2 btn-secondary"
+                      className="flex items-center gap-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
                     >
                       <Camera className="h-4 w-4" />
                       Anexar Foto
@@ -1177,7 +1178,7 @@ const CarregamentoDetalhe = () => {
                       size="sm"
                       onClick={() => document.getElementById('file-upload-foto')?.click()}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                      className="flex items-center gap-2 btn-secondary"
+                      className="flex items-center gap-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
                     >
                       <Upload className="h-4 w-4" />
                       {stageFile ? "Alterar Foto" : "Anexar Foto"}
@@ -1198,13 +1199,13 @@ const CarregamentoDetalhe = () => {
                   
                   {stageFile && (
                     <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-700 flex-1">{stageFile.name}</span>
+                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                      <span className="text-sm text-green-700 flex-1 break-words">{stageFile.name}</span>
                       <Button
                         size="sm"
                         onClick={() => setStageFile(null)}
                         disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
-                        className="btn-secondary"
+                        className="btn-secondary min-h-[32px] max-md:min-h-[32px] shrink-0"
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -1222,7 +1223,7 @@ const CarregamentoDetalhe = () => {
                   value={stageObs}
                   onChange={e => setStageObs(e.target.value)}
                   rows={2}
-                  className="text-sm"
+                  className="text-sm min-h-[44px] max-md:min-h-[44px]"
                   disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                 />
               </div>
@@ -1254,23 +1255,23 @@ const CarregamentoDetalhe = () => {
           <div className="space-y-4">
             {agendamento && (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Pedido:</span>
-                    <p className="font-semibold text-sm">{carregamento?.liberacao_pedido_interno || "N/A"}</p>
+                    <p className="font-semibold text-sm break-words">{carregamento?.liberacao_pedido_interno || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Produto:</span>
-                    <p className="font-semibold text-sm">{carregamento?.produto_nome || "N/A"}</p>
+                    <p className="font-semibold text-sm break-words">{carregamento?.produto_nome || "N/A"}</p>
                   </div>
                 </div>
 
                 <div className="border-t"></div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Cliente:</span>
-                    <p className="font-semibold text-sm">{carregamento?.cliente_nome || "N/A"}</p>
+                    <p className="font-semibold text-sm break-words">{carregamento?.cliente_nome || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Quantidade:</span>
@@ -1278,11 +1279,11 @@ const CarregamentoDetalhe = () => {
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Placa:</span>
-                    <p className="font-semibold text-sm">{carregamento?.agendamento_placa_caminhao || "N/A"}</p>
+                    <p className="font-semibold text-sm break-words">{carregamento?.agendamento_placa_caminhao || "N/A"}</p>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground">Motorista:</span>
-                    <p className="font-semibold text-sm">
+                    <p className="font-semibold text-sm break-words">
                       {carregamento?.agendamento_motorista_nome || "N/A"}
                       {carregamento?.agendamento_motorista_documento && (
                         <span className="block text-xs text-muted-foreground font-normal">
@@ -1295,7 +1296,7 @@ const CarregamentoDetalhe = () => {
 
                 <div className="border-t"></div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <span className="text-xs text-muted-foreground">Data Agendada:</span>
                     <p className="font-semibold text-sm">
@@ -1319,7 +1320,7 @@ const CarregamentoDetalhe = () => {
                     <div className="border-t"></div>
                     <div>
                       <span className="text-xs text-muted-foreground">Nota Fiscal:</span>
-                      <p className="font-semibold text-sm">{carregamento.numero_nf}</p>
+                      <p className="font-semibold text-sm break-words">{carregamento.numero_nf}</p>
                     </div>
                   </>
                 )}
@@ -1359,7 +1360,7 @@ const CarregamentoDetalhe = () => {
                     <div className="border-t"></div>
                     <div>
                       <h3 className="text-sm font-medium mb-3">Estatísticas de Tempo</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <div>
                           <span className="text-xs text-muted-foreground">Tempo Decorrido:</span>
                           <p className="font-semibold text-sm">{formatarTempo(stats.tempoTotalDecorrido)}</p>
@@ -1392,7 +1393,7 @@ const CarregamentoDetalhe = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Detalhes do Carregamento"
           backButton={
@@ -1400,7 +1401,7 @@ const CarregamentoDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
@@ -1416,7 +1417,7 @@ const CarregamentoDetalhe = () => {
   
   if (error || !carregamento) {
     return (
-      <div className="min-h-screen bg-background p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
         <PageHeader 
           title="Detalhes do Carregamento"
           backButton={
@@ -1424,7 +1425,7 @@ const CarregamentoDetalhe = () => {
               variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar
@@ -1444,7 +1445,7 @@ const CarregamentoDetalhe = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader 
         title="Detalhes do Carregamento"
         backButton={
@@ -1452,7 +1453,7 @@ const CarregamentoDetalhe = () => {
             variant="ghost"
             size="sm"
             onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
@@ -1460,7 +1461,7 @@ const CarregamentoDetalhe = () => {
         }
       />
       
-      <div className="max-w-[1050px] mx-auto space-y-6">
+      <div className="max-w-[1050px] mx-auto space-y-4 md:space-y-6">
         {renderEtapasFluxo()}
         {renderAreaEtapas()}
         {renderInformacoesProcesso()}
