@@ -119,9 +119,11 @@ const Liberacoes = () => {
 
   if (userRole === "armazem") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="mt-4 text-muted-foreground">Redirecionando...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Redirecionando...</p>
+        </div>
       </div>
     );
   }
@@ -575,12 +577,12 @@ const Liberacoes = () => {
 
   const renderLiberacaoCard = (lib: LiberacaoItem) => (
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-4 md:p-5">
+      <CardContent className="p-4">
         <div className="space-y-3">
           {/* Layout Mobile-First: Badge no topo em mobile, ao lado em desktop */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             {/* Badge - Primeiro em mobile, à direita em desktop */}
-            <div className="flex justify-start md:order-2 md:justify-end">
+            <div className="flex justify-start sm:order-2 sm:justify-end">
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
@@ -601,22 +603,22 @@ const Liberacoes = () => {
   
             {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <div 
-              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0 md:order-1"
+              className="flex items-start gap-3 flex-1 min-w-0 sm:order-1"
               onClick={() => setDetalhesLiberacao(lib)}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
-                <ClipboardList className="h-5 w-5 text-white" />
+              <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+                <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0 space-y-1">
-                <h3 className="font-semibold text-foreground text-sm md:text-base">Pedido: {lib.pedido}</h3>
+                <h3 className="font-semibold text-foreground text-sm sm:text-base break-words">Pedido: {lib.pedido}</h3>
                 <div className="space-y-1 text-xs text-muted-foreground">
-                  <p><span className="font-semibold">Cliente:</span> {lib.cliente}</p>
-                  <p><span className="font-semibold">Produto:</span> {lib.produto}</p>
+                  <p><span className="font-semibold">Cliente:</span> <span className="break-words">{lib.cliente}</span></p>
+                  <p><span className="font-semibold">Produto:</span> <span className="break-words">{lib.produto}</span></p>
                   <p className="break-words"><span className="font-semibold">Armazém:</span> {lib.armazem}</p>
                 </div>
                 
                 <div className="mt-2 text-xs text-muted-foreground">
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2">
                     <span className="whitespace-nowrap">
                       <span className="font-medium text-foreground">Liberada:</span> {lib.quantidade.toLocaleString('pt-BR')}t
                     </span>
@@ -1037,9 +1039,11 @@ const Liberacoes = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
-                      <Badge className={`${getStatusColor(detalhesLiberacao.status)} mt-1`}>
-                        {getStatusLabel(detalhesLiberacao.status)}
-                      </Badge>
+                      <div className="mt-1">
+                        <Badge className={`${getStatusColor(detalhesLiberacao.status)}`}>
+                          {getStatusLabel(detalhesLiberacao.status)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
@@ -1097,7 +1101,7 @@ const Liberacoes = () => {
             <h2 className="text-base md:text-lg font-semibold">Liberações Ativas ({liberacoesAtivas.length})</h2>
           </div>
           
-          <div className="grid gap-3 md:gap-4">
+          <div className="grid gap-3">
             {liberacoesAtivas.map(renderLiberacaoCard)}
             {liberacoesAtivas.length === 0 && (
               <div className="text-center py-8">
@@ -1141,7 +1145,7 @@ const Liberacoes = () => {
             </Button>
             
             {secaoFinalizadasExpandida && (
-              <div className="grid gap-3 md:gap-4 ml-7">
+              <div className="grid gap-3 ml-0 sm:ml-7">
                 {liberacoesFinalizadas.map(renderLiberacaoCard)}
               </div>
             )}
