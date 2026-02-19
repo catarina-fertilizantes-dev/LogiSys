@@ -368,10 +368,9 @@ const EstoqueDetalhe = () => {
           title="Detalhes do Estoque"
           backButton={
             <Button
-              variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Voltar</span>
@@ -392,10 +391,9 @@ const EstoqueDetalhe = () => {
           title="Detalhes do Estoque"
           backButton={
             <Button
-              variant="ghost"
               size="sm"
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Voltar</span>
@@ -425,10 +423,9 @@ const EstoqueDetalhe = () => {
         subtitle={`${estoqueDetalhes.produto.nome} - ${estoqueDetalhes.armazem.nome}`}
         backButton={
           <Button
-            variant="ghost"
             size="sm"
             onClick={handleGoBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px]"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mr-2 min-h-[44px] max-md:min-h-[44px] btn-secondary"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Voltar</span>
@@ -518,10 +515,9 @@ const EstoqueDetalhe = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
             <Button 
-              variant="outline" 
               size="sm" 
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px]"
+              className="whitespace-nowrap min-h-[44px] max-md:min-h-[44px] btn-secondary"
             >
               <FilterIcon className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Filtros</span>
@@ -536,10 +532,9 @@ const EstoqueDetalhe = () => {
             </span>
             {hasActiveFilters && (
               <Button 
-                variant="ghost" 
                 size="sm" 
                 onClick={clearFilters} 
-                className="gap-1 min-h-[44px] max-md:min-h-[44px]"
+                className="gap-1 min-h-[44px] max-md:min-h-[44px] btn-secondary"
               >
                 <X className="h-4 w-4" /> 
                 Limpar Filtros
@@ -635,10 +630,9 @@ const EstoqueDetalhe = () => {
                     Nenhuma remessa corresponde aos filtros aplicados.
                   </p>
                   <Button
-                    variant="outline"
                     size="sm"
                     onClick={clearFilters}
-                    className="min-h-[44px] max-md:min-h-[44px]"
+                    className="min-h-[44px] max-md:min-h-[44px] btn-secondary"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Limpar Filtros
