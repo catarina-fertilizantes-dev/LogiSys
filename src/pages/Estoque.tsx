@@ -1011,7 +1011,7 @@ const Estoque = () => {
                 <FilterIcon className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Filtros</span>
                 {activeAdvancedCount ? ` (${activeAdvancedCount})` : ""}
-                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+                {filtersOpen ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
               </Button>
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
