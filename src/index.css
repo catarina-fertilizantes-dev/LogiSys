@@ -200,12 +200,14 @@ All colors MUST be HSL.
     @apply transform hover:scale-[1.02] active:scale-[0.98];
   }
 
-  /* 🎯 BOTÃO SECUNDÁRIO - Estilo mais reconhecível */
+  /* 🎯 BOTÃO SECUNDÁRIO - Estilo roxo claro com animação */
   .btn-secondary {
-    @apply bg-muted/50 text-muted-foreground border border-border/60;
-    @apply hover:bg-accent hover:text-accent-foreground hover:border-accent/50;
-    @apply active:bg-accent/90;
+    @apply bg-primary/10 text-primary border border-primary/20;
+    @apply hover:bg-primary/15 hover:text-primary hover:border-primary/30;
+    @apply hover:shadow-md hover:shadow-primary/10;
+    @apply active:bg-primary/20;
     @apply transition-all duration-200 ease-out;
+    @apply transform hover:scale-[1.02] active:scale-[0.98];
     @apply font-medium;
   }
 
