@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { passwordSchema } from "@/lib/validationSchemas";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { ModalFooter } from "@/components/ui/modal-footer";
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -359,7 +360,7 @@ const handleCreateUser = async () => {
             setDialogOpen(open);
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-primary min-h-[44px] max-md:min-h-[44px]">
+              <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Novo Colaborador
               </Button>
@@ -435,33 +436,15 @@ const handleCreateUser = async () => {
                 </div>
 
                 {/* 🆕 BOTÕES NO FINAL DO CONTEÚDO (NÃO FIXOS) */}
-                <div className="pt-4 border-t border-border bg-background flex flex-col-reverse gap-2 md:flex-row md:gap-0 md:justify-end">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setDialogOpen(false)}
-                    disabled={isCreating}
-                    className="w-full md:w-auto min-h-[44px] max-md:min-h-[44px] md:mr-2"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleCreateUser} 
-                    className="w-full md:w-auto bg-gradient-primary min-h-[44px] max-md:min-h-[44px]"
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Criar Colaborador
-                      </>
-                    )}
-                  </Button>
-                </div>
+                {/* Adicionar import do ModalFooter no topo do arquivo */}
+                <ModalFooter 
+                  variant="double"
+                  onClose={() => setDialogOpen(false)}
+                  onConfirm={handleCreateUser}
+                  confirmText="Criar Colaborador"
+                  confirmIcon={<UserPlus className="h-4 w-4" />}
+                  isLoading={isCreating}
+                />
               </div>
             </DialogContent>
           </Dialog>
@@ -494,9 +477,8 @@ const handleCreateUser = async () => {
                 </p>
                 <Button 
                   onClick={handleRetry} 
-                  variant="outline"
                   disabled={isRetrying}
-                  className="min-h-[44px] max-md:min-h-[44px]"
+                  className="min-h-[44px] max-md:min-h-[44px] btn-secondary"
                 >
                   {isRetrying ? (
                     <>
