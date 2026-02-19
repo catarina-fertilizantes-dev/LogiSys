@@ -198,7 +198,7 @@ const ChangePassword = () => {
                 placeholder="Digite a senha novamente"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full btn-primary" disabled={loading}>
               {loading ? "Alterando..." : "Alterar Senha"}
             </Button>
           </form>
