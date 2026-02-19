@@ -649,10 +649,11 @@ const Clientes = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Clientes" subtitle="Carregando..." icon={Users} actions={<></>} />
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando clientes...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando clientes...</p>
         </div>
       </div>
     );
@@ -660,9 +661,10 @@ const Clientes = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+        <PageHeader title="Clientes" subtitle="Erro ao carregar dados" icon={Users} actions={<></>} />
         <div className="text-center">
-          <p className="text-destructive">Erro ao carregar clientes</p>
+          <p className="text-destructive">Erro: {error}</p>
         </div>
       </div>
     );
@@ -687,7 +689,7 @@ const Clientes = () => {
                 </Button>
               </DialogTrigger>
               
-              {/* Modal de Criação com Botões Não-Fixos */}
+              {/* Modal de Criação - Mobile Otimizado */}
               <DialogContent className="max-w-[calc(100vw-2rem)] md:max-w-2xl max-h-[calc(100vh-8rem)] md:max-h-[calc(100vh-4rem)] overflow-y-auto my-4 md:my-8">
                 <DialogHeader className="pt-2 pb-3 border-b border-border pr-8">
                   <DialogTitle className="text-lg md:text-xl pr-2 mt-1">Cadastrar Novo Cliente</DialogTitle>
@@ -695,7 +697,7 @@ const Clientes = () => {
                 
                 <div className="py-4 px-1 space-y-6">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="md:col-span-2">
                         <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
                         <Input
@@ -763,7 +765,7 @@ const Clientes = () => {
                           <Button
                             size="sm"
                             onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
-                            className="mt-1 h-6 px-2 text-xs btn-secondary"
+                            className="mt-1 h-6 px-2 text-xs min-h-[32px] btn-secondary"
                           >
                             <X className="h-3 w-3 mr-1" />
                             Remover representante
@@ -864,9 +866,9 @@ const Clientes = () => {
         }
       />
 
-      {/* Filtros e busca - Otimizado para mobile */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+      {/* Filtros e busca - Mobile otimizado */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div className="flex gap-2 items-center">
               <FilterIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -926,7 +928,7 @@ const Clientes = () => {
         )}
       </div>
 
-      {/* Modal de credenciais com botões não-fixos */}
+      {/* Modal de credenciais - Mobile Otimizado */}
       <Dialog
         open={credenciaisModal.show}
         onOpenChange={(open) =>
@@ -949,7 +951,7 @@ const Clientes = () => {
               </p>
               <div className="rounded-lg border p-4 space-y-3 bg-muted/50">
                 <p className="text-sm font-medium">Credenciais de acesso para:</p>
-                <p className="text-base font-semibold">{credenciaisModal.nome}</p>
+                <p className="text-base font-semibold break-words">{credenciaisModal.nome}</p>
                 <div className="space-y-2">
                   <div>
                     <Label className="text-xs text-muted-foreground">Acesse:</Label>
@@ -997,7 +999,7 @@ const Clientes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Alert Dialog para salvar antes de fechar */}
+      {/* Alert Dialog - Mobile Otimizado */}
       <AlertDialog open={alertaSalvarAberto} onOpenChange={setAlertaSalvarAberto}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] md:max-w-md">
           <AlertDialogHeader>
@@ -1023,7 +1025,7 @@ const Clientes = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de detalhes com botões não-fixos */}
+      {/* Modal de detalhes - Mobile Otimizado */}
       <Dialog 
         open={!!detalhesCliente} 
         onOpenChange={(open) => {
@@ -1054,10 +1056,10 @@ const Clientes = () => {
                   )}
 
                   {/* Informações Básicas - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground">Email:</Label>
-                      <p className="font-semibold break-all">{detalhesCliente.email}</p>
+                      <p className="font-semibold text-sm break-all">{detalhesCliente.email}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Status:</Label>
@@ -1069,15 +1071,15 @@ const Clientes = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">CNPJ/CPF:</Label>
-                      <p className="font-semibold break-all">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
+                      <p className="font-semibold text-sm break-all">{detalhesCliente.cnpj_cpf ? formatCpfCnpj(detalhesCliente.cnpj_cpf) : "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Telefone:</Label>
-                      <p className="font-semibold">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesCliente.telefone ? formatPhone(detalhesCliente.telefone) : "—"}</p>
                     </div>
                     
                     {/* SEÇÃO DE REPRESENTANTE COM EDIÇÃO */}
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <div className="flex items-center justify-between mb-2">
                         <Label className="text-xs text-muted-foreground">Representante:</Label>
                         {canCreate && !editandoRepresentante && (
@@ -1153,10 +1155,10 @@ const Clientes = () => {
                           {detalhesCliente.representantes ? (
                             <div className="flex items-center gap-2">
                               <UserCheck className="h-4 w-4 text-primary flex-shrink-0" />
-                              <span className="font-semibold">{detalhesCliente.representantes.nome}</span>
+                              <span className="font-semibold text-sm">{detalhesCliente.representantes.nome}</span>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground">Nenhum representante atribuído</span>
+                            <span className="text-muted-foreground text-sm">Nenhum representante atribuído</span>
                           )}
                         </div>
                       )}
@@ -1167,22 +1169,22 @@ const Clientes = () => {
                   <div className="border-t"></div>
 
                   {/* Endereço - Layout responsivo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Endereço:</Label>
-                      <p className="font-semibold break-words">{detalhesCliente.endereco || "—"}</p>
+                      <p className="font-semibold text-sm break-words">{detalhesCliente.endereco || "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Cidade:</Label>
-                      <p className="font-semibold">{detalhesCliente.cidade || "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesCliente.cidade || "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Estado:</Label>
-                      <p className="font-semibold">{detalhesCliente.estado || "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesCliente.estado || "—"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">CEP:</Label>
-                      <p className="font-semibold">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
+                      <p className="font-semibold text-sm">{detalhesCliente.cep ? formatCEP(detalhesCliente.cep) : "—"}</p>
                     </div>
                   </div>
                 </>
@@ -1214,7 +1216,7 @@ const Clientes = () => {
       </Dialog>
 
       {/* Lista de clientes - Cards responsivos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredClientes.map((cliente) => (
           <Card
             key={cliente.id}
@@ -1226,7 +1228,7 @@ const Clientes = () => {
           >
             <CardContent className="p-4 space-y-3">
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg leading-tight">{cliente.nome}</h3>
+                <h3 className="font-semibold text-base md:text-lg leading-tight">{cliente.nome}</h3>
                 <p className="text-sm text-muted-foreground break-all">{cliente.email}</p>
                 <p className="text-sm">
                   <span className="text-muted-foreground">CNPJ/CPF:</span> 
