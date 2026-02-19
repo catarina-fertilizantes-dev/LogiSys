@@ -1087,7 +1087,7 @@ const Liberacoes = () => {
             <div className="pt-4 border-t border-border bg-background flex justify-end">
               <Button 
                 onClick={() => setDetalhesLiberacao(null)}
-                className="min-h-[44px] max-md:min-h-[44px] w-full md:w-auto btn-primary"
+                className="min-h-[44px] max-md:min-h-[44px] w-full md:w-auto btn-secondary"
               >
                 Fechar
               </Button>
