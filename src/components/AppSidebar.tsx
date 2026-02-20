@@ -27,12 +27,14 @@ import {
 } from "@/components/ui/sidebar";
 
 const upperMenuItems = [
-  {
-    title: "Dashboard",
-    url: "/",
-    icon: LayoutDashboard,
-    resource: null,
-  },
+  // TODO: Dashboard temporariamente desabilitado para release público
+  // Será reabilitado após otimização dos dashboards por perfil
+  // {
+  //   title: "Dashboard",
+  //   url: "/",
+  //   icon: LayoutDashboard,
+  //   resource: null,
+  // },
   {
     title: "Liberações",
     url: "/liberacoes",
@@ -178,7 +180,7 @@ export function AppSidebar() {
   };
 
   const visibleUpperMenuItems = permissionsLoading
-    ? [upperMenuItems[0]]
+    ? [] // Alterado: removido upperMenuItems[0] já que Dashboard foi comentado
     : filterMenuItems(upperMenuItems);
 
   const visibleLowerMenuItems = permissionsLoading
