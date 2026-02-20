@@ -782,9 +782,31 @@ const Agendamentos = () => {
     <Card key={ag.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+          {/* Layout Mobile-First: Badge no topo em mobile, ao lado em desktop */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            {/* Badge - Primeiro em mobile, à direita em desktop */}
+            <div className="flex justify-start sm:order-2 sm:justify-end">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Badge className={`${getStatusColor(ag.status)} text-xs px-2 py-1 text-center`}>
+                      {getStatusLabel(ag.status)}
+                    </Badge>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{getAgendamentoStatusTooltip(ag.status)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+  
+            {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <div 
-              className="flex items-start gap-3 md:gap-4 flex-1 w-full"
+              className="flex items-start gap-3 md:gap-4 flex-1 w-full sm:order-1"
               onClick={() => setDetalhesAgendamento(ag)}
             >
               <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
@@ -798,25 +820,9 @@ const Agendamentos = () => {
                 <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
               </div>
             </div>
-            
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <div 
-                  className="flex items-center gap-1 cursor-help shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Badge className={getStatusColor(ag.status)}>
-                    {getStatusLabel(ag.status)}
-                  </Badge>
-                  <Info className="h-3 w-3 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-sm">{getAgendamentoStatusTooltip(ag.status)}</p>
-              </TooltipContent>
-            </Tooltip>
           </div>
-
+  
+          {/* Grid de informações - Sempre abaixo do conteúdo principal */}
           <div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm pt-2"
             onClick={() => setDetalhesAgendamento(ag)}
@@ -838,7 +844,8 @@ const Agendamentos = () => {
               <span className="truncate">{formatCPF(ag.documento)}</span>
             </div>
           </div>
-
+  
+          {/* Barra de progresso - Sempre na parte inferior */}
           <div className="pt-2 border-t">
             <div className="flex items-center gap-2">
               <div 
