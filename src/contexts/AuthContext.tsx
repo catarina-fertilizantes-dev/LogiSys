@@ -16,6 +16,7 @@ interface AuthContextType {
   needsPasswordChange: boolean;
   recoveryMode: boolean;
   clearRecoveryMode: () => void;
+  getDefaultRouteForRole: (role: string | null) => string; // 🆕 FUNÇÃO TEMPORÁRIA
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +73,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error('❌ [ERROR] Erro inesperado ao buscar role:', err);
       setUserRole(null);
+    }
+  };
+
+  // 🚧 FUNÇÃO TEMPORÁRIA: Redirecionamento por role enquanto Dashboard não está implementado
+  // TODO: REMOVER esta função quando os dashboards personalizados forem implementados
+  // Após implementação dos dashboards, todos os perfis devem ser redirecionados para "/" (Dashboard)
+  const getDefaultRouteForRole = (role: string | null): string => {
+    console.log('🚧 [TEMP] Redirecionamento temporário para role:', role);
+    
+    if (!role) {
+      console.log('🚧 [TEMP] Role não definida, redirecionando para /agendamentos');
+      return "/agendamentos"; // Fallback padrão
+    }
+    
+    switch (role) {
+      case "admin":
+      case "logistica":
+        console.log('🚧 [TEMP] Admin/Logística → /liberacoes');
+        return "/liberacoes"; // Primeira página disponível para admin/logística
+      
+      case "armazem":
+        console.log('🚧 [TEMP] Armazém → /agendamentos');
+        return "/agendamentos"; // Primeira página disponível para armazém
+      
+      case "cliente":
+      case "representante":
+        console.log('🚧 [TEMP] Cliente/Representante → /agendamentos');
+        return "/agendamentos"; // Primeira página disponível para cliente/representante
+      
+      default:
+        console.log('�� [TEMP] Role desconhecida, redirecionando para /agendamentos');
+        return "/agendamentos"; // Fallback padrão
     }
   };
 
@@ -293,7 +326,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       hasRole,
       needsPasswordChange,
       recoveryMode,
-      clearRecoveryMode
+      clearRecoveryMode,
+      getDefaultRouteForRole // 🆕 FUNÇÃO TEMPORÁRIA
     }}>
       {children}
     </AuthContext.Provider>
