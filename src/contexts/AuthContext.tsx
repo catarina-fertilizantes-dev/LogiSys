@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔍 [DEBUG] Auth state change event:', event);
+        console.log('🔍 [DEBUG] Session user ID:', session?.user?.id);
         
         // Handle password recovery event
         if (event === 'PASSWORD_RECOVERY') {
@@ -79,30 +80,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // 🆕 VERIFICAR STATUS ATIVO APÓS MUDANÇA DE AUTH STATE
+          console.log('🔍 [DEBUG] Verificando status do usuário...');
+          
+          // �� VERIFICAR STATUS ATIVO APÓS MUDANÇA DE AUTH STATE
           const statusCheck = await checkUserActiveStatus(session.user.id);
+          console.log('🔍 [DEBUG] Status check result:', statusCheck);
           
           if (!statusCheck.active) {
-            console.log('🚫 [DEBUG] Usuário inativo detectado:', statusCheck);
+            console.log('🚫 [DEBUG] Usuário inativo detectado - fazendo logout');
             
-            // Fazer logout imediato
-            await supabase.auth.signOut();
-            
-            toast({
-              variant: "destructive",
-              title: "Acesso temporariamente indisponível",
-              description: "Entre em contato com o suporte (Código: USR003).",
-            });
+            // 🛡️ PROTEÇÃO CONTRA LOOP INFINITO
+            if (event !== 'SIGNED_OUT') {
+              // Fazer logout imediato
+              await supabase.auth.signOut();
+              
+              toast({
+                variant: "destructive",
+                title: "Acesso temporariamente indisponível",
+                description: "Entre em contato com o suporte (Código: USR003).",
+              });
+            }
             
             return; // Não prosseguir com o login
           }
           
+          console.log('🔍 [DEBUG] Usuário ativo - prosseguindo...');
           await fetchUserRole(session.user.id);
           // Check if user needs to change password
           const forceChange = session.user.user_metadata?.force_password_change === true;
           setNeedsPasswordChange(forceChange);
           console.log('🔍 [DEBUG] Force password change:', forceChange);
         } else {
+          console.log('🔍 [DEBUG] Sem sessão - limpando dados');
           setUserRole(null);
           setNeedsPasswordChange(false);
           setRecoveryMode(false);
