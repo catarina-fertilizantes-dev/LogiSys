@@ -601,7 +601,7 @@ const Liberacoes = () => {
 
   const renderLiberacaoCard = (lib: LiberacaoItem) => (
     <Card key={lib.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-4">
+      <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
           {/* Layout Mobile-First: Badge no topo em mobile, ao lado em desktop */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -627,14 +627,14 @@ const Liberacoes = () => {
   
             {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <div 
-              className="flex items-start gap-3 flex-1 min-w-0 sm:order-1"
+              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0 sm:order-1"
               onClick={() => setDetalhesLiberacao(lib)}
             >
-              <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
-                <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+                <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0 space-y-1">
-                <h3 className="font-semibold text-foreground text-sm sm:text-base break-words">Pedido: {lib.pedido}</h3>
+                <h3 className="font-semibold text-foreground text-sm md:text-base break-words">Pedido: {lib.pedido}</h3>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <p><span className="font-semibold">Cliente:</span> <span className="break-words">{lib.cliente}</span></p>
                   <p><span className="font-semibold">Produto:</span> <span className="break-words">{lib.produto}</span></p>
