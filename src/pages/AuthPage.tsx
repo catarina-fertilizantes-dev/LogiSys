@@ -63,7 +63,9 @@ const AuthPage = () => {
               <Label htmlFor="email-login" className="text-sm font-medium">Email</Label>
               <Input
                 id="email-login"
+                name="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -75,7 +77,9 @@ const AuthPage = () => {
               <Label htmlFor="password-login" className="text-sm font-medium">Senha</Label>
               <Input
                 id="password-login"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
