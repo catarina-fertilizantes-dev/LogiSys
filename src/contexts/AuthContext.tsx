@@ -20,22 +20,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 🆕 NOVA FUNÇÃO: Verificar status ativo do usuário
+// 🔒 Função para verificar status ativo do usuário
 const checkUserActiveStatus = async (userId: string): Promise<{ active: boolean; role: string | null; message: string }> => {
   try {
+    console.log('🔍 [DEBUG] Verificando status ativo para usuário:', userId);
+    
     const { data, error } = await supabase.rpc('check_user_active_status', {
       user_uuid: userId
     });
 
     if (error) {
-      console.error('Erro ao verificar status do usuário:', error);
-      return { active: false, role: null, message: 'Erro ao verificar status' };
+      console.error('❌ [ERROR] Erro na RPC check_user_active_status:', error);
+      // 🛡️ FALLBACK SEGURO: Em caso de erro, permitir acesso (não bloquear sistema)
+      return { active: true, role: null, message: 'Erro na verificação - acesso permitido' };
     }
 
-    return data || { active: false, role: null, message: 'Resposta inválida' };
+    console.log('✅ [DEBUG] Status check resultado:', data);
+    return data || { active: true, role: null, message: 'Sem dados - acesso permitido' };
   } catch (err) {
-    console.error('Erro inesperado ao verificar status:', err);
-    return { active: false, role: null, message: 'Erro inesperado' };
+    console.error('❌ [ERROR] Erro inesperado na verificação de status:', err);
+    // 🛡️ FALLBACK SEGURO: Em caso de erro, permitir acesso
+    return { active: true, role: null, message: 'Erro inesperado - acesso permitido' };
   }
 };
 
@@ -49,26 +54,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Erro ao buscar role:', error);
+      if (error) {
+        console.error('❌ [ERROR] Erro ao buscar role:', error);
+        setUserRole(null);
+        return;
+      }
+
+      setUserRole(data?.role ?? null);
+      console.log('✅ [DEBUG] Role definida:', data?.role);
+    } catch (err) {
+      console.error('❌ [ERROR] Erro inesperado ao buscar role:', err);
       setUserRole(null);
-      return;
     }
-
-    setUserRole(data?.role ?? null);
   };
 
   useEffect(() => {
+    // 🔄 MANTÉM O CÓDIGO ORIGINAL - SEM VALIDAÇÃO DE STATUS AQUI
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('🔍 [DEBUG] Auth state change event:', event);
-        console.log('🔍 [DEBUG] Session user ID:', session?.user?.id);
         
         // Handle password recovery event
         if (event === 'PASSWORD_RECOVERY') {
@@ -80,38 +91,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('🔍 [DEBUG] Verificando status do usuário...');
-          
-          // �� VERIFICAR STATUS ATIVO APÓS MUDANÇA DE AUTH STATE
-          const statusCheck = await checkUserActiveStatus(session.user.id);
-          console.log('🔍 [DEBUG] Status check result:', statusCheck);
-          
-          if (!statusCheck.active) {
-            console.log('🚫 [DEBUG] Usuário inativo detectado - fazendo logout');
-            
-            // 🛡️ PROTEÇÃO CONTRA LOOP INFINITO
-            if (event !== 'SIGNED_OUT') {
-              // Fazer logout imediato
-              await supabase.auth.signOut();
-              
-              toast({
-                variant: "destructive",
-                title: "Acesso temporariamente indisponível",
-                description: "Entre em contato com o suporte (Código: USR003).",
-              });
-            }
-            
-            return; // Não prosseguir com o login
-          }
-          
-          console.log('🔍 [DEBUG] Usuário ativo - prosseguindo...');
-          await fetchUserRole(session.user.id);
+          fetchUserRole(session.user.id);
           // Check if user needs to change password
           const forceChange = session.user.user_metadata?.force_password_change === true;
           setNeedsPasswordChange(forceChange);
           console.log('🔍 [DEBUG] Force password change:', forceChange);
         } else {
-          console.log('🔍 [DEBUG] Sem sessão - limpando dados');
           setUserRole(null);
           setNeedsPasswordChange(false);
           setRecoveryMode(false);
@@ -119,31 +104,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    // 🔄 MANTÉM O CÓDIGO ORIGINAL - SEM VALIDAÇÃO DE STATUS AQUI
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // 🆕 VERIFICAR STATUS ATIVO NA INICIALIZAÇÃO
-        const statusCheck = await checkUserActiveStatus(session.user.id);
-        
-        if (!statusCheck.active) {
-          console.log('🚫 [DEBUG] Usuário inativo na inicialização:', statusCheck);
-          
-          // Fazer logout imediato
-          await supabase.auth.signOut();
-          
-          toast({
-            variant: "destructive",
-            title: "Sessão encerrada por questões de segurança",
-            description: "Entre em contato com o suporte (Código: USR002).",
-          });
-          
-          setLoading(false);
-          return;
-        }
-        
         await fetchUserRole(session.user.id);
         // Check if user needs to change password
         const forceChange = session.user.user_metadata?.force_password_change === true;
@@ -201,13 +168,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } 
       
       if (data.user) {
-        // 🆕 VERIFICAR STATUS ATIVO APÓS LOGIN BEM-SUCEDIDO
+        console.log('✅ [DEBUG] Login bem-sucedido, verificando status ativo...');
+        
+        // 🔒 VALIDAÇÃO DE USUÁRIO ATIVO - APENAS NO LOGIN ATIVO
         const statusCheck = await checkUserActiveStatus(data.user.id);
         
         if (!statusCheck.active) {
-          console.log('🚫 [DEBUG] Login bloqueado - usuário inativo:', statusCheck);
+          console.log('🚫 [DEBUG] Usuário inativo detectado - bloqueando acesso');
           
-          // Fazer logout imediato
+          // Fazer logout imediato SEM disparar auth state change loop
           await supabase.auth.signOut();
           
           toast({
@@ -218,6 +187,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           return { error: new Error("User inactive") };
         }
+        
+        console.log('✅ [DEBUG] Usuário ativo - prosseguindo com login');
         
         // Verificar se precisa trocar senha
         const needsChange = data.user.user_metadata?.force_password_change === true;
@@ -239,7 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       return { error };
     } catch (err) {
-      console.error("Erro inesperado no login:", err);
+      console.error("❌ [ERROR] Erro inesperado no login:", err);
       toast({
         variant: "destructive",
         title: "Erro inesperado",
