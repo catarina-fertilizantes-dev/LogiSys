@@ -24,6 +24,8 @@ import { Navigate } from "react-router-dom";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
 import type { Database } from "@/integrations/supabase/types";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 // Helpers de máscara e formatação
 function maskPhoneInput(value: string): string {
@@ -122,6 +124,18 @@ type Armazem = {
 const Armazens = () => {
   useScrollToTop();
   
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
@@ -173,6 +187,15 @@ const Armazens = () => {
       capacidade_total: "",
       cep: "",
       cnpj_cpf: "",
+    });
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetForm(); // ✅ Limpar dados ao fechar
     });
   };
 
@@ -334,6 +357,8 @@ const Armazens = () => {
       }
 
       if (data && data.success) {
+        markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+
         toast({
           title: "Armazém criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
@@ -460,6 +485,14 @@ const Armazens = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Armazéns"
         subtitle="Gerencie os armazéns do sistema"
@@ -467,8 +500,12 @@ const Armazens = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open && isCreating) return;
-              setDialogOpen(open);
+              if (!open && isCreating) return; // Não fechar durante criação
+              if (!open) {
+                handleCloseModal(); // ✅ Usar nova função
+              } else {
+                setDialogOpen(open);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -491,7 +528,10 @@ const Armazens = () => {
                         <Input
                           id="nome"
                           value={novoArmazem.nome}
-                          onChange={(e) => setNovoArmazem({ ...novoArmazem, nome: e.target.value })}
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, nome: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Nome do armazém"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -502,7 +542,10 @@ const Armazens = () => {
                         <Input
                           id="cidade"
                           value={novoArmazem.cidade}
-                          onChange={(e) => setNovoArmazem({ ...novoArmazem, cidade: e.target.value })}
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, cidade: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Cidade"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -512,7 +555,10 @@ const Armazens = () => {
                         <Label htmlFor="estado" className="text-sm font-medium">Estado (UF) *</Label>
                         <Select
                           value={novoArmazem.estado}
-                          onValueChange={(value) => setNovoArmazem({ ...novoArmazem, estado: value })}
+                          onValueChange={(value) => {
+                            setNovoArmazem({ ...novoArmazem, estado: value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="estado" className="min-h-[44px] max-md:min-h-[44px]">
@@ -528,14 +574,19 @@ const Armazens = () => {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+                        <Label htmlFor="new-armazem-email" className="text-sm font-medium">Email *</Label>
                         <Input
-                          id="email"
+                          id="new-armazem-email"
+                          name="new-armazem-email"
                           type="email"
                           value={novoArmazem.email}
-                          onChange={(e) => setNovoArmazem({ ...novoArmazem, email: e.target.value })}
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, email: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="email@exemplo.com"
                           disabled={isCreating}
+                          autoComplete="new-password" // ✅ Evita preenchimento automático
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                         />
                       </div>
@@ -544,9 +595,10 @@ const Armazens = () => {
                         <Input
                           id="cnpj_cpf"
                           value={novoArmazem.cnpj_cpf}
-                          onChange={(e) =>
-                            setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
-                          }
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, cnpj_cpf: maskCpfCnpjInput(e.target.value) });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="00.000.000/0000-00 ou 000.000.000-00"
                           maxLength={18}
                           disabled={isCreating}
@@ -558,12 +610,13 @@ const Armazens = () => {
                         <Input
                           id="telefone"
                           value={novoArmazem.telefone}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setNovoArmazem({
                               ...novoArmazem,
                               telefone: maskPhoneInput(e.target.value),
-                            })
-                          }
+                            });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="(00) 00000-0000"
                           maxLength={15}
                           disabled={isCreating}
@@ -575,7 +628,10 @@ const Armazens = () => {
                         <Input
                           id="endereco"
                           value={novoArmazem.endereco}
-                          onChange={(e) => setNovoArmazem({ ...novoArmazem, endereco: e.target.value })}
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, endereco: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Rua, número, complemento"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -586,12 +642,13 @@ const Armazens = () => {
                         <Input
                           id="cep"
                           value={novoArmazem.cep}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setNovoArmazem({
                               ...novoArmazem,
                               cep: maskCEPInput(e.target.value),
-                            })
-                          }
+                            });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="00000-000"
                           maxLength={9}
                           disabled={isCreating}
@@ -604,7 +661,10 @@ const Armazens = () => {
                           id="capacidade_total"
                           type="number"
                           value={novoArmazem.capacidade_total}
-                          onChange={(e) => setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value })}
+                          onChange={(e) => {
+                            setNovoArmazem({ ...novoArmazem, capacidade_total: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Ex: 1000"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -619,7 +679,7 @@ const Armazens = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateArmazem}
                     confirmText="Criar Armazém"
                     confirmIcon={<Plus className="h-4 w-4" />}
