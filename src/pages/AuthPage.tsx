@@ -14,14 +14,22 @@ const signInSchema = z.object({
 });
 
 const AuthPage = () => {
-  const { user, signIn } = useAuth();
+  // 🚧 MODIFICAÇÃO TEMPORÁRIA: Adicionado getDefaultRouteForRole para redirecionamento por perfil
+  // TODO: Remover getDefaultRouteForRole quando dashboards personalizados forem implementados
+  // Após implementação dos dashboards, voltar ao redirecionamento original: <Navigate to="/" replace />
+  const { user, userRole, signIn, getDefaultRouteForRole } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 🚧 REDIRECIONAMENTO TEMPORÁRIO: Por perfil enquanto Dashboard não está implementado
+  // ORIGINAL: return <Navigate to="/" replace />;
+  // TODO: Voltar ao redirecionamento original quando dashboards forem implementados
   if (user) {
-    return <Navigate to="/" replace />;
+    const defaultRoute = getDefaultRouteForRole(userRole);
+    console.log('🚧 [TEMP] Redirecionando usuário logado para:', defaultRoute);
+    return <Navigate to={defaultRoute} replace />;
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
