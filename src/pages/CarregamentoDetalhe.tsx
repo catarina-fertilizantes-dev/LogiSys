@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { DocumentViewer } from "@/components/DocumentViewer";
 import PhotoCaptureMethod from "@/components/PhotoCaptureMethod";
+import CameraCapture from "@/components/CameraCapture";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1168,7 +1169,18 @@ const CarregamentoDetalhe = () => {
                   {canUseCamera ? (
                     <Button
                       size="sm"
-                      onClick={() => handleStartPhotoCapture(selectedEtapa)}
+                      onClick={() => {
+                        // 🆕 Detectar se é mobile
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        
+                        if (isMobile) {
+                          // Mobile: abrir câmera diretamente
+                          handleStartPhotoCapture(selectedEtapa);
+                        } else {
+                          // Desktop: manter modal de escolha
+                          handleStartPhotoCapture(selectedEtapa);
+                        }
+                      }}
                       disabled={proximaEtapaMutation.isPending || isUploadingPhoto}
                       className="flex items-center gap-2 btn-secondary min-h-[44px] max-md:min-h-[44px]"
                     >
@@ -1472,12 +1484,22 @@ const CarregamentoDetalhe = () => {
       {showPhotoCapture && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-2xl">
-            <PhotoCaptureMethod
-              onFileSelect={handlePhotoCapture}
-              onCancel={handleCancelPhotoCapture}
-              isUploading={isUploadingPhoto}
-              accept="image/*"
-            />
+            {/* 🆕 Detectar mobile e renderizar componente apropriado */}
+            {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? (
+              <CameraCapture
+                onCapture={handlePhotoCapture}
+                onCancel={handleCancelPhotoCapture}
+                isUploading={isUploadingPhoto}
+                allowFileSelection={true}
+              />
+            ) : (
+              <PhotoCaptureMethod
+                onFileSelect={handlePhotoCapture}
+                onCancel={handleCancelPhotoCapture}
+                isUploading={isUploadingPhoto}
+                accept="image/*"
+              />
+            )}
           </div>
         </div>
       )}
