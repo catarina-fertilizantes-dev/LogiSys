@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 type StockStatus = "normal" | "baixo";
 type Unidade = "t" | "kg";
@@ -98,6 +100,18 @@ const parseDate = (d: string) => {
 
 const Estoque = () => {
   useScrollToTop();
+  
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -413,6 +427,15 @@ const Estoque = () => {
     setXmlRemessaFile(null);
     setNumeroRemessa("");
     setObservacoesRemessa("");
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetFormNovoProduto(); // ✅ Limpar dados ao fechar
+    });
   };
 
   const handleFileChange = (
@@ -424,6 +447,7 @@ const Estoque = () => {
   ) => {
     if (!file) {
       setterFunction(null);
+      markAsChanged(); // ✅ Marcar como alterado mesmo ao remover arquivo
       return;
     }
 
@@ -444,6 +468,7 @@ const Estoque = () => {
     }
 
     setterFunction(file);
+    markAsChanged(); // ✅ Marcar como alterado ao selecionar arquivo
   };
 
   const uploadDocumentos = async (produtoId: string, armazemId: string) => {
@@ -623,6 +648,8 @@ const Estoque = () => {
         }
       }
 
+      markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+
       toast({
         title: "Entrada registrada com sucesso!",
         description: `+${qtdNum}${unidade} de ${produtoSelecionado.nome} em ${armazemData.cidade}/${armazemData.estado}. Estoque atual: ${novaQuantidade}${unidade}. Documentos anexados.`
@@ -743,6 +770,14 @@ const Estoque = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Controle de Estoque"
         subtitle={
@@ -754,8 +789,12 @@ const Estoque = () => {
         actions={
           canCreate ? (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open && isCreating) return;
-              setDialogOpen(open);
+              if (!open && isCreating) return; // Não fechar durante criação
+              if (!open) {
+                handleCloseModal(); // ✅ Usar nova função
+              } else {
+                setDialogOpen(open);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -777,7 +816,10 @@ const Estoque = () => {
                       {temProdutosDisponiveis ? (
                         <Select
                           value={novoProduto.produtoId}
-                          onValueChange={id => setNovoProduto(s => ({ ...s, produtoId: id }))}
+                          onValueChange={id => {
+                            setNovoProduto(s => ({ ...s, produtoId: id }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="produto" className="min-h-[44px] max-md:min-h-[44px]">
@@ -806,7 +848,10 @@ const Estoque = () => {
                       {temArmazensDisponiveis ? (
                         <Select 
                           value={novoProduto.armazem} 
-                          onValueChange={(v) => setNovoProduto((s) => ({ ...s, armazem: v }))}
+                          onValueChange={(v) => {
+                            setNovoProduto((s) => ({ ...s, armazem: v }));
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="armazem" className="min-h-[44px] max-md:min-h-[44px]">
@@ -842,7 +887,10 @@ const Estoque = () => {
                               min="0"
                               placeholder="Ex: 20500.50"
                               value={novoProduto.quantidade}
-                              onChange={(e) => setNovoProduto((s) => ({ ...s, quantidade: e.target.value }))}
+                              onChange={(e) => {
+                                setNovoProduto((s) => ({ ...s, quantidade: e.target.value }));
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               disabled={isCreating}
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                             />
@@ -851,7 +899,10 @@ const Estoque = () => {
                             <Label htmlFor="unidade" className="text-sm font-medium">Unidade</Label>
                             <Select 
                               value={novoProduto.unidade} 
-                              onValueChange={(v) => setNovoProduto((s) => ({ ...s, unidade: v as Unidade }))}
+                              onValueChange={(v) => {
+                                setNovoProduto((s) => ({ ...s, unidade: v as Unidade }));
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               disabled={isCreating}
                             >
                               <SelectTrigger id="unidade" className="min-h-[44px] max-md:min-h-[44px]">
@@ -873,7 +924,10 @@ const Estoque = () => {
                               type="text"
                               placeholder="Ex: REM-001"
                               value={numeroRemessa}
-                              onChange={(e) => setNumeroRemessa(e.target.value)}
+                              onChange={(e) => {
+                                setNumeroRemessa(e.target.value);
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               disabled={isCreating}
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                             />
@@ -885,7 +939,10 @@ const Estoque = () => {
                               type="text"
                               placeholder="Observações sobre esta remessa..."
                               value={observacoesRemessa}
-                              onChange={(e) => setObservacoesRemessa(e.target.value)}
+                              onChange={(e) => {
+                                setObservacoesRemessa(e.target.value);
+                                markAsChanged(); // ✅ Marcar como alterado
+                              }}
                               disabled={isCreating}
                               className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                             />
@@ -973,7 +1030,7 @@ const Estoque = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateProduto}
                     confirmText="Salvar"
                     isLoading={isCreating}
