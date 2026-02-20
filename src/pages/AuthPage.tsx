@@ -17,19 +17,33 @@ const AuthPage = () => {
   // 🚧 MODIFICAÇÃO TEMPORÁRIA: Adicionado getDefaultRouteForRole para redirecionamento por perfil
   // TODO: Remover getDefaultRouteForRole quando dashboards personalizados forem implementados
   // Após implementação dos dashboards, voltar ao redirecionamento original: <Navigate to="/" replace />
-  const { user, userRole, signIn, getDefaultRouteForRole } = useAuth();
+  const { user, userRole, loading, signIn, getDefaultRouteForRole } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
-  // 🚧 REDIRECIONAMENTO TEMPORÁRIO: Por perfil enquanto Dashboard não está implementado
+  // 🚧 REDIRECIONAMENTO TEMPORÁRIO: Aguarda role ser carregada antes de redirecionar
   // ORIGINAL: return <Navigate to="/" replace />;
   // TODO: Voltar ao redirecionamento original quando dashboards forem implementados
-  if (user) {
-    const defaultRoute = getDefaultRouteForRole(userRole);
-    console.log('🚧 [TEMP] Redirecionando usuário logado para:', defaultRoute);
-    return <Navigate to={defaultRoute} replace />;
+  if (user && !loading) {
+    // ⏳ Aguarda a role ser carregada do banco antes de redirecionar
+    if (userRole !== null) {
+      const defaultRoute = getDefaultRouteForRole(userRole);
+      console.log('🚧 [TEMP] Redirecionando usuário logado para:', defaultRoute, 'com role:', userRole);
+      return <Navigate to={defaultRoute} replace />;
+    } else {
+      // 🔄 Role ainda está carregando, mostra loading ou aguarda
+      console.log('⏳ [TEMP] Aguardando role ser carregada...');
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Carregando perfil...</p>
+          </div>
+        </div>
+      );
+    }
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -46,9 +60,9 @@ const AuthPage = () => {
       return;
     }
     
-    setLoading(true);
+    setSigningIn(true);
     await signIn(result.data.email, result.data.password);
-    setLoading(false);
+    setSigningIn(false);
   };
 
   return (
@@ -98,9 +112,9 @@ const AuthPage = () => {
             <Button 
               type="submit" 
               className="w-full btn-primary min-h-[44px] max-md:min-h-[44px]" 
-              disabled={loading}
+              disabled={signingIn || loading}
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {signingIn ? "Entrando..." : "Entrar"}
             </Button>
             <div className="text-center pt-2">
               <Link 
