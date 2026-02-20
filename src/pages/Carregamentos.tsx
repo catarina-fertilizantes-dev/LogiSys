@@ -316,29 +316,27 @@ const Carregamentos = () => {
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          {/* Layout Mobile-First: Badge e fotos no topo em mobile, ao lado em desktop */}
+          {/* Layout Mobile-First: Badge e fotos lado a lado no topo em mobile, empilhados à direita em desktop */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            {/* Badge e Fotos - Primeiro em mobile, à direita em desktop */}
-            <div className="flex justify-start sm:order-2 sm:justify-end">
-              <div className="flex flex-col items-start sm:items-end gap-2">
-                <Tooltip delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <div 
-                      className="flex items-center gap-1 cursor-help"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Badge className={`${carr.cor_carregamento} border-0 font-medium text-xs px-2 py-1 text-center`}>
-                        {carr.status_carregamento}
-                      </Badge>
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-sm">{carr.tooltip_carregamento}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
-              </div>
+            {/* Badge e Fotos - Lado a lado em mobile, empilhados à direita em desktop */}
+            <div className="flex justify-between items-center sm:order-2 sm:flex-col sm:items-end sm:gap-2">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="flex items-center gap-1 cursor-help"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Badge className={`${carr.cor_carregamento} border-0 font-medium text-xs px-2 py-1 text-center`}>
+                      {carr.status_carregamento}
+                    </Badge>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-sm">{carr.tooltip_carregamento}</p>
+                </TooltipContent>
+              </Tooltip>
+              <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
             </div>
   
             {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
