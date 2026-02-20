@@ -34,6 +34,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 const estadosBrasil = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -141,6 +143,18 @@ function maskCEPInput(value: string): string {
 const Clientes = () => {
   useScrollToTop();
   
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
@@ -206,6 +220,15 @@ const Clientes = () => {
       estado: "",
       cep: "",
       representante_id: "",
+    });
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetForm(); // ✅ Limpar dados ao fechar
     });
   };
 
@@ -509,6 +532,8 @@ const Clientes = () => {
           }
         }
 
+        markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+
         toast({
           title: "Cliente criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
@@ -672,6 +697,14 @@ const Clientes = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Clientes"
         subtitle="Gerencie os clientes do sistema"
@@ -679,8 +712,12 @@ const Clientes = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open && isCreating) return;
-              setDialogOpen(open);
+              if (!open && isCreating) return; // Não fechar durante criação
+              if (!open) {
+                handleCloseModal(); // ✅ Usar nova função
+              } else {
+                setDialogOpen(open);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -703,7 +740,10 @@ const Clientes = () => {
                         <Input
                           id="nome"
                           value={novoCliente.nome}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                          onChange={(e) => {
+                            setNovoCliente({ ...novoCliente, nome: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Nome completo"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -714,9 +754,10 @@ const Clientes = () => {
                         <Input
                           id="cnpj_cpf"
                           value={novoCliente.cnpj_cpf}
-                          onChange={(e) =>
-                            setNovoCliente({ ...novoCliente, cnpj_cpf: maskCpfCnpjInput(e.target.value) })
-                          }
+                          onChange={(e) => {
+                            setNovoCliente({ ...novoCliente, cnpj_cpf: maskCpfCnpjInput(e.target.value) });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="00.000.000/0000-00 ou 000.000.000-00"
                           maxLength={18}
                           disabled={isCreating}
@@ -724,14 +765,19 @@ const Clientes = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+                        <Label htmlFor="new-client-email" className="text-sm font-medium">Email *</Label>
                         <Input
-                          id="email"
+                          id="new-client-email"
+                          name="new-client-email"
                           type="email"
                           value={novoCliente.email}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                          onChange={(e) => {
+                            setNovoCliente({ ...novoCliente, email: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="email@exemplo.com"
                           disabled={isCreating}
+                          autoComplete="new-password" // ✅ Evita preenchimento automático
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                         />
                       </div>
@@ -739,7 +785,10 @@ const Clientes = () => {
                         <Label htmlFor="representante_id" className="text-sm font-medium">Representante</Label>
                         <Select
                           value={novoCliente.representante_id || undefined}
-                          onValueChange={(value) => setNovoCliente({ ...novoCliente, representante_id: value || "" })}
+                          onValueChange={(value) => {
+                            setNovoCliente({ ...novoCliente, representante_id: value || "" });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="representante_id" className="min-h-[44px] max-md:min-h-[44px]">
@@ -764,7 +813,10 @@ const Clientes = () => {
                         {novoCliente.representante_id && (
                           <Button
                             size="sm"
-                            onClick={() => setNovoCliente({ ...novoCliente, representante_id: "" })}
+                            onClick={() => {
+                              setNovoCliente({ ...novoCliente, representante_id: "" });
+                              markAsChanged(); // ✅ Marcar como alterado
+                            }}
                             className="mt-1 h-6 px-2 text-xs min-h-[32px] btn-secondary"
                           >
                             <X className="h-3 w-3 mr-1" />
@@ -777,12 +829,13 @@ const Clientes = () => {
                         <Input
                           id="telefone"
                           value={novoCliente.telefone}
-                          onChange={e =>
+                          onChange={e => {
                             setNovoCliente({
                               ...novoCliente,
                               telefone: maskPhoneInput(e.target.value),
-                            })
-                          }
+                            });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="(00) 00000-0000"
                           maxLength={15}
                           disabled={isCreating}
@@ -794,9 +847,10 @@ const Clientes = () => {
                         <Input
                           id="cep"
                           value={novoCliente.cep}
-                          onChange={e =>
-                            setNovoCliente({ ...novoCliente, cep: maskCEPInput(e.target.value) })
-                          }
+                          onChange={e => {
+                            setNovoCliente({ ...novoCliente, cep: maskCEPInput(e.target.value) });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="00000-000"
                           maxLength={9}
                           disabled={isCreating}
@@ -808,7 +862,10 @@ const Clientes = () => {
                         <Input
                           id="endereco"
                           value={novoCliente.endereco}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                          onChange={(e) => {
+                            setNovoCliente({ ...novoCliente, endereco: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Rua, número, complemento"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -819,7 +876,10 @@ const Clientes = () => {
                         <Input
                           id="cidade"
                           value={novoCliente.cidade}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
+                          onChange={(e) => {
+                            setNovoCliente({ ...novoCliente, cidade: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Nome da cidade"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -829,7 +889,10 @@ const Clientes = () => {
                         <Label htmlFor="estado" className="text-sm font-medium">Estado (UF)</Label>
                         <Select
                           value={novoCliente.estado}
-                          onValueChange={(value) => setNovoCliente({ ...novoCliente, estado: value })}
+                          onValueChange={(value) => {
+                            setNovoCliente({ ...novoCliente, estado: value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           disabled={isCreating}
                         >
                           <SelectTrigger id="estado" className="min-h-[44px] max-md:min-h-[44px]">
@@ -853,7 +916,7 @@ const Clientes = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateCliente}
                     confirmText="Criar Cliente"
                     confirmIcon={<Plus className="h-4 w-4" />}
