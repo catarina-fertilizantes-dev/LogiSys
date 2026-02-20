@@ -806,18 +806,25 @@ const Agendamentos = () => {
   
             {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <div 
-              className="flex items-start gap-3 md:gap-4 flex-1 w-full sm:order-1"
+              className="flex items-start gap-3 md:gap-4 flex-1 min-w-0 sm:order-1"
               onClick={() => setDetalhesAgendamento(ag)}
             >
               <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
                 <Calendar className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground text-sm md:text-base">Pedido: {ag.pedido}</h3>
-                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold">{ag.cliente}</span></p>
-                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold">{ag.produto}</span></p>
-                <p className="text-xs text-muted-foreground break-words">Armazém: <span className="font-semibold">{ag.armazem}</span></p>
-                <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{ag.quantidade.toLocaleString('pt-BR')}t</span></p>
+              <div className="flex-1 min-w-0 space-y-1">
+                <h3 className="font-semibold text-foreground text-sm md:text-base break-words">Pedido: {ag.pedido}</h3>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><span className="font-semibold">Cliente:</span> <span className="break-words">{ag.cliente}</span></p>
+                  <p><span className="font-semibold">Produto:</span> <span className="break-words">{ag.produto}</span></p>
+                  <p className="break-words"><span className="font-semibold">Armazém:</span> {ag.armazem}</p>
+                </div>
+                
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p className="whitespace-nowrap">
+                    <span className="font-medium text-foreground">Quantidade:</span> {ag.quantidade.toLocaleString('pt-BR')}t
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -846,20 +853,18 @@ const Agendamentos = () => {
           </div>
   
           {/* Barra de progresso - Sempre na parte inferior */}
-          <div className="pt-2 border-t">
+          <div 
+            className="pt-2 border-t"
+            onClick={() => setDetalhesAgendamento(ag)}
+          >
             <div className="flex items-center gap-2">
-              <div 
-                className="flex items-center gap-2 shrink-0"
-                onClick={() => setDetalhesAgendamento(ag)}
-              >
-                <Truck className="h-4 w-4 text-purple-600" />
-                <span className="text-xs text-purple-600 font-medium w-20 sm:w-24">Carregamento:</span>
-              </div>
+              <Truck className="h-4 w-4 text-purple-600 shrink-0" />
+              <span className="text-xs text-purple-600 font-medium shrink-0">Carregamento:</span>
               
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <div 
-                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help"
+                    className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700 cursor-help min-w-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div 
@@ -880,7 +885,7 @@ const Agendamentos = () => {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Info className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground font-medium w-10 sm:w-12">
+                    <span className="text-xs text-muted-foreground font-medium w-8 text-right">
                       {ag.percentual_carregamento}%
                     </span>
                   </div>
