@@ -268,7 +268,6 @@ const Dashboard = () => {
             id,
             quantidade,
             data_retirada,
-            horario,
             liberacao_id,
             liberacoes!inner(
               pedido_interno,
