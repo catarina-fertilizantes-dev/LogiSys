@@ -316,10 +316,35 @@ const Carregamentos = () => {
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
       <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+          {/* Layout Mobile-First: Badge e fotos no topo em mobile, ao lado em desktop */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            {/* Badge e Fotos - Primeiro em mobile, à direita em desktop */}
+            <div className="flex justify-start sm:order-2 sm:justify-end">
+              <div className="flex flex-col items-start sm:items-end gap-2">
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="flex items-center gap-1 cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Badge className={`${carr.cor_carregamento} border-0 font-medium text-xs px-2 py-1 text-center`}>
+                        {carr.status_carregamento}
+                      </Badge>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-sm">{carr.tooltip_carregamento}</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
+              </div>
+            </div>
+  
+            {/* Conteúdo principal - Segundo em mobile, à esquerda em desktop */}
             <Link 
               to={`/carregamentos/${carr.id}`} 
-              className="flex items-start gap-3 md:gap-4 flex-1 w-full text-inherit no-underline"
+              className="flex items-start gap-3 md:gap-4 flex-1 w-full text-inherit no-underline sm:order-1"
               style={{ textDecoration: "none", color: "inherit" }}
             >
               <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
@@ -336,53 +361,35 @@ const Carregamentos = () => {
                 )}
               </div>
             </Link>
-            
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="flex items-center gap-1 cursor-help"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Badge className={`${carr.cor_carregamento} border-0 font-medium`}>
-                      {carr.status_carregamento}
-                    </Badge>
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-sm">{carr.tooltip_carregamento}</p>
-                </TooltipContent>
-              </Tooltip>
-              <div className="text-xs text-muted-foreground">Fotos: <span className="font-semibold">{carr.fotosTotal}</span></div>
-            </div>
           </div>
-
+  
+          {/* Grid de informações - Igual ao Agendamentos */}
           <Link 
             to={`/carregamentos/${carr.id}`} 
             className="block text-inherit no-underline"
             style={{ textDecoration: "none", color: "inherit" }}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm pt-2">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="break-words">{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
+                <span className="truncate">{carr.data_retirada !== "N/A" ? new Date(carr.data_retirada).toLocaleDateString("pt-BR") : "N/A"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="break-words">{formatPlaca(carr.placa)}</span>
+                <span className="truncate">{formatPlaca(carr.placa)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="break-words">{carr.motorista}</span>
+                <span className="truncate">{carr.motorista}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="break-words">{formatCPF(carr.documento)}</span>
+                <span className="truncate">{formatCPF(carr.documento)}</span>
               </div>
             </div>
           </Link>
-
+  
+          {/* Barra de progresso - Sempre na parte inferior */}
           <div className="pt-2 border-t">
             <div className="flex items-center gap-2">
               <Link 
