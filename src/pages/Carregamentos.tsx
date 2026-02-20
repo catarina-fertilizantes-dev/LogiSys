@@ -314,19 +314,19 @@ const Carregamentos = () => {
 
   const renderCarregamentoCard = (carr: CarregamentoItem) => (
     <Card key={carr.id} className="transition-all hover:shadow-md cursor-pointer">
-      <CardContent className="p-4">
+      <CardContent className="p-4 md:p-5">
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <Link 
               to={`/carregamentos/${carr.id}`} 
-              className="flex items-start gap-3 flex-1 w-full text-inherit no-underline"
+              className="flex items-start gap-3 md:gap-4 flex-1 w-full text-inherit no-underline"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
-                <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
+                <Truck className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground text-sm sm:text-base break-words">Pedido: {carr.pedido}</h3>
+                <h3 className="font-semibold text-foreground text-sm md:text-base break-words">Pedido: {carr.pedido}</h3>
                 <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold break-words">{carr.cliente}</span></p>
                 <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold break-words">{carr.produto}</span></p>
                 <p className="text-xs text-muted-foreground break-words">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
