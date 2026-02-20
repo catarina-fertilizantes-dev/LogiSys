@@ -20,6 +20,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 🆕 NOVA FUNÇÃO: Verificar status ativo do usuário
+const checkUserActiveStatus = async (userId: string): Promise<{ active: boolean; role: string | null; message: string }> => {
+  try {
+    const { data, error } = await supabase.rpc('check_user_active_status', {
+      user_uuid: userId
+    });
+
+    if (error) {
+      console.error('Erro ao verificar status do usuário:', error);
+      return { active: false, role: null, message: 'Erro ao verificar status' };
+    }
+
+    return data || { active: false, role: null, message: 'Resposta inválida' };
+  } catch (err) {
+    console.error('Erro inesperado ao verificar status:', err);
+    return { active: false, role: null, message: 'Erro inesperado' };
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -47,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('🔍 [DEBUG] Auth state change event:', event);
         
         // Handle password recovery event
@@ -60,7 +79,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          fetchUserRole(session.user.id);
+          // 🆕 VERIFICAR STATUS ATIVO APÓS MUDANÇA DE AUTH STATE
+          const statusCheck = await checkUserActiveStatus(session.user.id);
+          
+          if (!statusCheck.active) {
+            console.log('🚫 [DEBUG] Usuário inativo detectado:', statusCheck);
+            
+            // Fazer logout imediato
+            await supabase.auth.signOut();
+            
+            toast({
+              variant: "destructive",
+              title: "Acesso temporariamente indisponível",
+              description: "Entre em contato com o suporte (Código: USR003).",
+            });
+            
+            return; // Não prosseguir com o login
+          }
+          
+          await fetchUserRole(session.user.id);
           // Check if user needs to change password
           const forceChange = session.user.user_metadata?.force_password_change === true;
           setNeedsPasswordChange(forceChange);
@@ -79,6 +116,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // 🆕 VERIFICAR STATUS ATIVO NA INICIALIZAÇÃO
+        const statusCheck = await checkUserActiveStatus(session.user.id);
+        
+        if (!statusCheck.active) {
+          console.log('🚫 [DEBUG] Usuário inativo na inicialização:', statusCheck);
+          
+          // Fazer logout imediato
+          await supabase.auth.signOut();
+          
+          toast({
+            variant: "destructive",
+            title: "Sessão encerrada por questões de segurança",
+            description: "Entre em contato com o suporte (Código: USR002).",
+          });
+          
+          setLoading(false);
+          return;
+        }
+        
         await fetchUserRole(session.user.id);
         // Check if user needs to change password
         const forceChange = session.user.user_metadata?.force_password_change === true;
@@ -131,7 +187,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           title: "Erro no login",
           description: errorMessage,
         });
-      } else if (data.user) {
+        
+        return { error };
+      } 
+      
+      if (data.user) {
+        // 🆕 VERIFICAR STATUS ATIVO APÓS LOGIN BEM-SUCEDIDO
+        const statusCheck = await checkUserActiveStatus(data.user.id);
+        
+        if (!statusCheck.active) {
+          console.log('🚫 [DEBUG] Login bloqueado - usuário inativo:', statusCheck);
+          
+          // Fazer logout imediato
+          await supabase.auth.signOut();
+          
+          toast({
+            variant: "destructive",
+            title: "Não foi possível acessar o sistema",
+            description: "Entre em contato com o suporte (Código: USR001).",
+          });
+          
+          return { error: new Error("User inactive") };
+        }
+        
         // Verificar se precisa trocar senha
         const needsChange = data.user.user_metadata?.force_password_change === true;
         
