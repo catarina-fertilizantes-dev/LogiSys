@@ -14,6 +14,8 @@ import { passwordSchema } from "@/lib/validationSchemas";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 type UserRole = Database['public']['Enums']['user_role'];
 
@@ -61,6 +63,18 @@ const mapAndFilterColaboradores = (usersData: RpcUserData[]): User[] => {
 
 const Colaboradores = () => {
   useScrollToTop();
+  
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
   
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +132,22 @@ const Colaboradores = () => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resetForm = () => {
+    setNewUserEmail("");
+    setNewUserNome("");
+    setNewUserPassword("");
+    setNewUserRole("logistica");
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetForm(); // ✅ Limpar dados ao fechar
+    });
+  };
 
 const handleCreateUser = async () => {
   if (!newUserEmail || !newUserNome || !newUserPassword || !newUserRole) {
@@ -265,14 +295,14 @@ const handleCreateUser = async () => {
 
     if (data.success) {
       console.log('✅ [SUCCESS] Colaborador criado com sucesso:', data);
+      
+      markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+      
       toast({
         title: "Colaborador criado com sucesso!",
         description: `${newUserNome} foi adicionado ao sistema com a role ${newUserRole}`
       });
-      setNewUserEmail("");
-      setNewUserNome("");
-      setNewUserPassword("");
-      setNewUserRole("logistica");
+      resetForm();
       setDialogOpen(false);
       await new Promise(resolve => setTimeout(resolve, 500));
       fetchUsers();
@@ -350,14 +380,26 @@ const handleCreateUser = async () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6"> 
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Colaboradores"
         subtitle="Gerencie colaboradores do sistema (Admin e Logística)"
         icon={BadgeCheck}
         actions={
           <Dialog open={dialogOpen} onOpenChange={(open) => {
-            if (!open && isCreating) return;
-            setDialogOpen(open);
+            if (!open && isCreating) return; // Não fechar durante criação
+            if (!open) {
+              handleCloseModal(); // ✅ Usar nova função
+            } else {
+              setDialogOpen(open);
+            }
           }}>
             <DialogTrigger asChild>
               <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -380,7 +422,10 @@ const handleCreateUser = async () => {
                     <Input
                       id="nome"
                       value={newUserNome}
-                      onChange={(e) => setNewUserNome(e.target.value)}
+                      onChange={(e) => {
+                        setNewUserNome(e.target.value);
+                        markAsChanged(); // ✅ Marcar como alterado
+                      }}
                       placeholder="Nome do usuário"
                       disabled={isCreating}
                       className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -392,7 +437,10 @@ const handleCreateUser = async () => {
                       id="email"
                       type="email"
                       value={newUserEmail}
-                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      onChange={(e) => {
+                        setNewUserEmail(e.target.value);
+                        markAsChanged(); // ✅ Marcar como alterado
+                      }}
                       placeholder="email@exemplo.com"
                       disabled={isCreating}
                       className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -404,7 +452,10 @@ const handleCreateUser = async () => {
                       id="password"
                       type="password"
                       value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      onChange={(e) => {
+                        setNewUserPassword(e.target.value);
+                        markAsChanged(); // ✅ Marcar como alterado
+                      }}
                       placeholder="Senha segura"
                       disabled={isCreating}
                       className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -417,7 +468,10 @@ const handleCreateUser = async () => {
                     <Label htmlFor="role" className="text-sm font-medium">Role</Label>
                     <Select 
                       value={newUserRole} 
-                      onValueChange={(v) => setNewUserRole(v as UserRole)}
+                      onValueChange={(v) => {
+                        setNewUserRole(v as UserRole);
+                        markAsChanged(); // ✅ Marcar como alterado
+                      }}
                       disabled={isCreating}
                     >
                       <SelectTrigger className="min-h-[44px] max-md:min-h-[44px]">
@@ -437,7 +491,7 @@ const handleCreateUser = async () => {
                 {/* Botões no final do conteúdo */}
                 <ModalFooter 
                   variant="double"
-                  onClose={() => setDialogOpen(false)}
+                  onClose={() => handleCloseModal()}
                   onConfirm={handleCreateUser}
                   confirmText="Criar Colaborador"
                   confirmIcon={<UserPlus className="h-4 w-4" />}
