@@ -90,20 +90,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     switch (role) {
       case "admin":
       case "logistica":
-        console.log('🚧 [TEMP] Admin/Logística → /liberacoes');
-        return "/liberacoes"; // Primeira página disponível para admin/logística
+      case "cliente":        // 🆕 CORRIGIDO: Cliente tem acesso a Liberações
+      case "representante":  // �� CORRIGIDO: Representante tem acesso a Liberações
+        console.log('🚧 [TEMP] Admin/Logística/Cliente/Representante → /liberacoes');
+        return "/liberacoes"; // Primeira página disponível para estes perfis
       
       case "armazem":
         console.log('🚧 [TEMP] Armazém → /agendamentos');
-        return "/agendamentos"; // Primeira página disponível para armazém
-      
-      case "cliente":
-      case "representante":
-        console.log('🚧 [TEMP] Cliente/Representante → /agendamentos');
-        return "/agendamentos"; // Primeira página disponível para cliente/representante
+        return "/agendamentos"; // Primeira página disponível para armazém (excluído de liberações)
       
       default:
-        console.log('�� [TEMP] Role desconhecida, redirecionando para /agendamentos');
+        console.log('🚧 [TEMP] Role desconhecida, redirecionando para /agendamentos');
         return "/agendamentos"; // Fallback padrão
     }
   };
