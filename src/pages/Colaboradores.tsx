@@ -432,9 +432,10 @@ const handleCreateUser = async () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                    <Label htmlFor="new-user-email" className="text-sm font-medium">Email</Label>
                     <Input
-                      id="email"
+                      id="new-user-email"
+                      name="new-user-email"
                       type="email"
                       value={newUserEmail}
                       onChange={(e) => {
@@ -443,13 +444,15 @@ const handleCreateUser = async () => {
                       }}
                       placeholder="email@exemplo.com"
                       disabled={isCreating}
+                      autoComplete="new-password" // ✅ Evita preenchimento automático
                       className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                    <Label htmlFor="new-user-password" className="text-sm font-medium">Senha</Label>
                     <Input
-                      id="password"
+                      id="new-user-password"
+                      name="new-user-password"
                       type="password"
                       value={newUserPassword}
                       onChange={(e) => {
@@ -458,6 +461,7 @@ const handleCreateUser = async () => {
                       }}
                       placeholder="Senha segura"
                       disabled={isCreating}
+                      autoComplete="new-password" // ✅ Evita preenchimento automático
                       className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                     />
                     <p className="text-xs text-muted-foreground">
