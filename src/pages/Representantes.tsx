@@ -24,6 +24,8 @@ import { Navigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 type Representante = Database['public']['Tables']['representantes']['Row'] & {
   temp_password?: string | null;
@@ -106,6 +108,18 @@ function maskPhoneInput(value: string): string {
 const Representantes = () => {
   useScrollToTop();
   
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
+  
   const { toast } = useToast();
   const { hasRole } = useAuth();
   const { canAccess, loading: permissionsLoading } = usePermissions();
@@ -162,6 +176,15 @@ const Representantes = () => {
       email: "",
       telefone: "",
       regiao_atuacao: "",
+    });
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetForm(); // ✅ Limpar dados ao fechar
     });
   };
 
@@ -364,6 +387,8 @@ const Representantes = () => {
       }
 
       if (data && data.success) {
+        markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+
         toast({
           title: "Representante criado com sucesso!",
           description: `${nome} foi adicionado ao sistema.`,
@@ -513,6 +538,14 @@ const Representantes = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Representantes"
         subtitle="Gerencie os representantes do sistema"
@@ -520,8 +553,12 @@ const Representantes = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open && isCreating) return;
-              setDialogOpen(open);
+              if (!open && isCreating) return; // Não fechar durante criação
+              if (!open) {
+                handleCloseModal(); // ✅ Usar nova função
+              } else {
+                setDialogOpen(open);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -544,7 +581,10 @@ const Representantes = () => {
                         <Input
                           id="nome"
                           value={novoRepresentante.nome}
-                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, nome: e.target.value })}
+                          onChange={(e) => {
+                            setNovoRepresentante({ ...novoRepresentante, nome: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Nome completo ou razão social"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -555,9 +595,10 @@ const Representantes = () => {
                         <Input
                           id="cpf"
                           value={novoRepresentante.cpf}
-                          onChange={(e) =>
-                            setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfCnpjInput(e.target.value) })
-                          }
+                          onChange={(e) => {
+                            setNovoRepresentante({ ...novoRepresentante, cpf: maskCpfCnpjInput(e.target.value) });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="000.000.000-00 ou 00.000.000/0000-00"
                           maxLength={18}
                           disabled={isCreating}
@@ -565,14 +606,19 @@ const Representantes = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Email *</Label>
+                        <Label htmlFor="new-representante-email" className="text-sm font-medium">Email *</Label>
                         <Input
-                          id="email"
+                          id="new-representante-email"
+                          name="new-representante-email"
                           type="email"
                           value={novoRepresentante.email}
-                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, email: e.target.value })}
+                          onChange={(e) => {
+                            setNovoRepresentante({ ...novoRepresentante, email: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="email@exemplo.com"
                           disabled={isCreating}
+                          autoComplete="new-password" // ✅ Evita preenchimento automático
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
                         />
                       </div>
@@ -581,12 +627,13 @@ const Representantes = () => {
                         <Input
                           id="telefone"
                           value={novoRepresentante.telefone}
-                          onChange={e =>
+                          onChange={e => {
                             setNovoRepresentante({
                               ...novoRepresentante,
                               telefone: maskPhoneInput(e.target.value),
-                            })
-                          }
+                            });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="(00) 00000-0000"
                           maxLength={15}
                           disabled={isCreating}
@@ -598,7 +645,10 @@ const Representantes = () => {
                         <Input
                           id="regiao_atuacao"
                           value={novoRepresentante.regiao_atuacao}
-                          onChange={(e) => setNovoRepresentante({ ...novoRepresentante, regiao_atuacao: e.target.value })}
+                          onChange={(e) => {
+                            setNovoRepresentante({ ...novoRepresentante, regiao_atuacao: e.target.value });
+                            markAsChanged(); // ✅ Marcar como alterado
+                          }}
                           placeholder="Ex: São Paulo, Rio de Janeiro"
                           disabled={isCreating}
                           className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -613,7 +663,7 @@ const Representantes = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateRepresentante}
                     confirmText="Criar Representante"
                     confirmIcon={<Plus className="h-4 w-4" />}
