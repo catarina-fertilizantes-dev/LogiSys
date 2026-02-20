@@ -22,6 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { ModalFooter } from "@/components/ui/modal-footer";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesAlert } from "@/components/UnsavedChangesAlert";
 
 type Produto = Database['public']['Tables']['produtos']['Row'];
 type Unidade = "t" | "kg" | "";
@@ -33,6 +35,18 @@ const unidadeLabels: Record<string, string> = {
 
 const Produtos = () => {
   useScrollToTop();
+  
+  // ✅ Hook para controle de mudanças não salvas
+  const {
+    hasUnsavedChanges,
+    showAlert,
+    markAsChanged,
+    markAsSaved,
+    reset: resetUnsavedChanges,
+    handleClose,
+    confirmClose,
+    cancelClose
+  } = useUnsavedChanges();
   
   const { toast } = useToast();
   const { hasRole } = useAuth();
@@ -58,6 +72,15 @@ const Produtos = () => {
 
   const resetForm = () => {
     setNovoProduto({ nome: "", unidade: "" });
+    resetUnsavedChanges(); // ✅ Limpar estado de mudanças
+  };
+
+  // ✅ Função para fechar modal com verificação
+  const handleCloseModal = () => {
+    handleClose(() => {
+      setDialogOpen(false);
+      resetForm(); // ✅ Limpar dados ao fechar
+    });
   };
 
   // Fetch produtos
@@ -153,6 +176,9 @@ const Produtos = () => {
         });
         return;
       }
+
+      markAsSaved(); // ✅ Marcar como salvo ANTES de resetar
+
       toast({
         title: "Produto criado com sucesso!",
         description: `${nome} foi adicionado ao sistema.`,
@@ -246,6 +272,14 @@ const Produtos = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 space-y-4 md:space-y-6">
+      
+      {/* ✅ Componente de alerta */}
+      <UnsavedChangesAlert 
+        open={showAlert}
+        onConfirm={confirmClose}
+        onCancel={cancelClose}
+      />
+
       <PageHeader
         title="Produtos"
         subtitle="Gerencie os produtos do sistema"
@@ -253,8 +287,12 @@ const Produtos = () => {
         actions={
           canCreate && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open && isCreating) return;
-              setDialogOpen(open);
+              if (!open && isCreating) return; // Não fechar durante criação
+              if (!open) {
+                handleCloseModal(); // ✅ Usar nova função
+              } else {
+                setDialogOpen(open);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button className="btn-primary min-h-[44px] max-md:min-h-[44px]">
@@ -279,7 +317,10 @@ const Produtos = () => {
                       <Input
                         id="nome"
                         value={novoProduto.nome}
-                        onChange={e => setNovoProduto({ ...novoProduto, nome: e.target.value })}
+                        onChange={e => {
+                          setNovoProduto({ ...novoProduto, nome: e.target.value });
+                          markAsChanged(); // ✅ Marcar como alterado
+                        }}
                         placeholder="Nome do produto"
                         disabled={isCreating}
                         className="min-h-[44px] max-md:min-h-[44px] text-base max-md:text-base"
@@ -289,7 +330,10 @@ const Produtos = () => {
                       <Label htmlFor="unidade" className="text-sm font-medium">Unidade *</Label>
                       <Select
                         value={novoProduto.unidade}
-                        onValueChange={value => setNovoProduto({ ...novoProduto, unidade: value as Unidade })}
+                        onValueChange={value => {
+                          setNovoProduto({ ...novoProduto, unidade: value as Unidade });
+                          markAsChanged(); // ✅ Marcar como alterado
+                        }}
                         disabled={isCreating}
                       >
                         <SelectTrigger id="unidade" className="min-h-[44px] max-md:min-h-[44px]">
@@ -306,7 +350,7 @@ const Produtos = () => {
                   {/* Botões no final do conteúdo */}
                   <ModalFooter 
                     variant="double"
-                    onClose={() => setDialogOpen(false)}
+                    onClose={() => handleCloseModal()}
                     onConfirm={handleCreateProduto}
                     confirmText="Criar Produto"
                     confirmIcon={<Plus className="h-4 w-4" />}
