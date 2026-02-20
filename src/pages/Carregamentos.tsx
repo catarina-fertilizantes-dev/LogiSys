@@ -348,15 +348,24 @@ const Carregamentos = () => {
               <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-lg bg-gradient-primary shrink-0">
                 <Truck className="h-4 w-4 md:h-5 md:w-5 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 space-y-1">
                 <h3 className="font-semibold text-foreground text-sm md:text-base break-words">Pedido: {carr.pedido}</h3>
-                <p className="text-xs text-muted-foreground">Cliente: <span className="font-semibold break-words">{carr.cliente}</span></p>
-                <p className="text-xs text-muted-foreground">Produto: <span className="font-semibold break-words">{carr.produto}</span></p>
-                <p className="text-xs text-muted-foreground break-words">Armazém: <span className="font-semibold">{carr.armazem}</span></p>
-                <p className="text-xs text-muted-foreground">Quantidade: <span className="font-semibold">{carr.quantidade.toLocaleString('pt-BR')}t</span></p>
-                {carr.numero_nf && (
-                  <p className="text-xs text-muted-foreground mt-1">Nº NF: <span className="font-semibold">{carr.numero_nf}</span></p>
-                )}
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><span className="font-semibold">Cliente:</span> <span className="break-words">{carr.cliente}</span></p>
+                  <p><span className="font-semibold">Produto:</span> <span className="break-words">{carr.produto}</span></p>
+                  <p className="break-words"><span className="font-semibold">Armazém:</span> {carr.armazem}</p>
+                </div>
+                
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p className="whitespace-nowrap">
+                    <span className="font-medium text-foreground">Quantidade:</span> {carr.quantidade.toLocaleString('pt-BR')}t
+                  </p>
+                  {carr.numero_nf && (
+                    <p className="whitespace-nowrap mt-1">
+                      <span className="font-medium text-foreground">Nº NF:</span> {carr.numero_nf}
+                    </p>
+                  )}
+                </div>
               </div>
             </Link>
           </div>
@@ -388,16 +397,13 @@ const Carregamentos = () => {
           </Link>
   
           {/* Barra de progresso - Sempre na parte inferior */}
-          <div className="pt-2 border-t">
+          <div 
+            className="pt-2 border-t"
+            onClick={() => window.location.href = `/carregamentos/${carr.id}`}
+          >
             <div className="flex items-center gap-2">
-              <Link 
-                to={`/carregamentos/${carr.id}`} 
-                className="flex items-center gap-2 text-inherit no-underline shrink-0"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                <Truck className="h-4 w-4 text-purple-600" />
-                <span className="text-xs text-purple-600 font-medium">Carregamento:</span>
-              </Link>
+              <Truck className="h-4 w-4 text-purple-600 shrink-0" />
+              <span className="text-xs text-purple-600 font-medium shrink-0">Carregamento:</span>
               
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
