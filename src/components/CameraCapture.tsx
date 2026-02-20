@@ -20,13 +20,16 @@ interface CameraCaptureProps {
   onCancel: () => void;
   isUploading?: boolean;
   disabled?: boolean;
+  // 🆕 Nova prop para permitir seleção de arquivo
+  allowFileSelection?: boolean;
 }
 
 export const CameraCapture = ({ 
   onCapture, 
   onCancel, 
   isUploading = false,
-  disabled = false 
+  disabled = false,
+  allowFileSelection = true // 🆕 Padrão true
 }: CameraCaptureProps) => {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,6 +46,20 @@ export const CameraCapture = ({
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
+
+  // 🆕 Função para abrir seletor de arquivo
+  const handleFileSelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        onCapture(file);
+      }
+    };
+    input.click();
+  };
 
   // Inicializar câmera
   const startCamera = useCallback(async () => {
@@ -196,14 +213,29 @@ export const CameraCapture = ({
               <p className="text-sm text-amber-700 mb-4">
                 {cameraError || 'Use o upload de arquivo para anexar uma foto.'}
               </p>
-              <Button 
-                variant="outline" 
-                onClick={onCancel}
-                className="border-amber-300 text-amber-800 hover:bg-amber-100 hover:text-amber-900 hover:border-amber-400"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Usar Upload de Arquivo
-              </Button>
+              
+              {/* 🆕 Botões de ação quando câmera não funciona */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                {allowFileSelection && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleFileSelect}
+                    disabled={isUploading}
+                    className="border-amber-300 text-amber-800 hover:bg-amber-100 hover:text-amber-900 hover:border-amber-400"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Selecionar Arquivo
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  onClick={onCancel}
+                  disabled={isUploading}
+                  className="text-amber-700 hover:bg-amber-100"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -236,6 +268,22 @@ export const CameraCapture = ({
               <X className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* 🆕 Botão "Selecionar Arquivo" no topo (apenas se permitido) */}
+          {allowFileSelection && !capturedImage && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFileSelect}
+                disabled={isUploading}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Selecionar Arquivo
+              </Button>
+            </div>
+          )}
 
           {/* Área de captura */}
           <div className="relative bg-black rounded-lg overflow-hidden">
@@ -278,8 +326,6 @@ export const CameraCapture = ({
                     </div>
                   </div>
                 )}
-          
-                {/* ❌ REMOVIDO: Badge "Gravando" */}
                 
                 {/* Indicador de tipo de câmera */}
                 {isStreaming && isMobile && (
@@ -291,7 +337,7 @@ export const CameraCapture = ({
                 )}
               </div>
             ) : (
-              // Preview da foto capturada (mantém como está)
+              // Preview da foto capturada
               <div className="relative">
                 <img
                   src={capturedImage}
